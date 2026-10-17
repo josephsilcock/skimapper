@@ -7,6 +7,7 @@ import {
   parseReport,
   pipelineCommands,
   runsFor,
+  stageFromAgentPrompt,
   testRole,
   timeline,
 } from './pipeline'
@@ -117,6 +118,16 @@ test('a completion report names its skill and feature', () => {
   expect(parseReport(report)).toEqual({ skill: 'design-feature', featureId: 'F1', slug: 'resort-list' })
   expect(parseReport('✓ /implement — 3 vertical slices built test-first')).toEqual({ skill: 'implement', featureId: null, slug: null })
   expect(parseReport('just chatting')).toBeNull()
+})
+
+test("a /run-pipeline stage brief names the stage's skill and feature", () => {
+  const spec = 'Run the `new-feature` stage of this project\'s feature pipeline. Read `.claude/skills/new-feature/SKILL.md` and follow it exactly.\n\nYour input: backlog ID **C4** (in `docs/BACKLOG.md`).'
+  const design = 'Run the `design-feature` stage of this project\'s feature pipeline.\n\nYour input: `specs/F1-resort-list.md`.'
+
+  expect(stageFromAgentPrompt(spec)).toEqual({ skill: 'new-feature', featureId: 'C4' })
+  expect(stageFromAgentPrompt(design)).toEqual({ skill: 'design-feature', featureId: 'F1' })
+  expect(stageFromAgentPrompt('Run the `review-last-commit` stage')).toBeNull()
+  expect(stageFromAgentPrompt('Review this spec adversarially')).toBeNull()
 })
 
 test('the trunk and the configured test commands are read from PIPELINE.md', () => {

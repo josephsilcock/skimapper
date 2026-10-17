@@ -13,6 +13,7 @@ import {
   parseReport,
   pipelineCommands,
   runsFor,
+  stageFromAgentPrompt,
   testRole,
   timeline,
   withTestResult,
@@ -21,6 +22,7 @@ import {
 const PANE = 'pipeline'
 const MAX_SLICES_SHOWN = 8
 const MAX_RUNS_KEPT = 100
+const MAIN_LOOP = 'main'
 const snapshot = atom({ plugin: 'feature-pipeline', key: 'snapshot' } as const, null)
 const runs = atom({ plugin: 'feature-pipeline', key: 'runs' } as const, [])
 
@@ -98,8 +100,9 @@ function headline(snap: Snapshot, subject: Subject, list: readonly Run[]) {
   if (subject.isFinished) return `${subject.id} · ${slug ?? ''} · finished`
   if (slug !== undefined && slug !== null) return `${subject.id} · ${slug}`
 
-  const title = snap.nextUp.find(one => one.id === subject.id)?.title ?? ''
-  return `${subject.id} · ${title} · not started`
+  const title = snap.nextUp.find(one => one.id === subject.id)?.title
+  const hasStarted = list.some(run => run.featureId === subject.id)
+  return [subject.id, title, hasStarted ? undefined : 'not started'].filter(Boolean).join(' · ')
 }
 
 const totalCost = (rows: readonly TimelineRow[]) => rows.reduce((sum, row) => sum + row.costUsd, 0)
@@ -119,6 +122,28 @@ async function changeRuns($: EngineInterface, storeKey: string, change: (list: R
   if (storeKey !== '') await $.store.set(storeKey, list)
 }
 
+// A stage starting settles the one before it. Its feature is the one named, else the
+// newest spec for a stage past spec; a completion report corrects it later.
+async function startRun($: EngineInterface, storeKey: string, skill: string, named: string | null) {
+  const step = SKILL_STEPS[skill]
+  if (step === undefined) return
+
+  const snap = (await read($, snapshot)) ?? EMPTY
+  const guessed = step === 'backlog' || step === 'spec' ? undefined : snap.inFlight[0]
+  const featureId = named ?? guessed?.id ?? null
+  const run: Run = {
+    skill,
+    step,
+    featureId,
+    slug: snap.inFlight.find(one => one.id === featureId)?.slug ?? null,
+    startedAtMs: await $.clock.now(),
+    status: 'running',
+    costUsd: 0,
+    tests: [],
+  }
+  await changeRuns($, storeKey, list => [...settleLatest(list, ['running', 'needs-you', 'failed'], 'done'), run])
+}
+
 function summary(snap: Snapshot, rows: TimelineRow[], subject: Subject, list: readonly Run[]) {
   const lines = [`${headline(snap, subject, list)}  ${dollars(totalCost(rows))}`, '']
   for (const row of rows) {
@@ -132,6 +157,7 @@ export const register: Register = on => {
   let isEnabled = false
   let storeKey = ''
   let lastCostUsd: number | null = null
+  const busyLoops = new Set<string>()
 
   on('session.start', async ($, e, next) => {
     const started = await next(e)
@@ -153,41 +179,32 @@ export const register: Register = on => {
   })
 
   on('skill.prompt', async ($, e, next) => {
-    const step = SKILL_STEPS[e.skill]
-    if (step !== undefined) {
-      const snap = (await read($, snapshot)) ?? EMPTY
-      const feature = step === 'backlog' || step === 'spec' ? undefined : snap.inFlight[0]
-      const run: Run = {
-        skill: e.skill,
-        step,
-        featureId: feature?.id ?? null,
-        slug: feature?.slug ?? null,
-        startedAtMs: await $.clock.now(),
-        status: 'running',
-        costUsd: 0,
-        tests: [],
-      }
-      await changeRuns($, storeKey, list => [...settleLatest(list, ['running', 'needs-you', 'failed'], 'done'), run])
-    }
+    if (SKILL_STEPS[e.skill] !== undefined) await startRun($, storeKey, e.skill, null)
+    return next(e)
+  })
+
+  on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
+    const stage = stageFromAgentPrompt(e.prompt)
+    if (stage !== null) await startRun($, storeKey, stage.skill, stage.featureId)
     return next(e)
   })
 
   on('turn.start', async ($, e, next) => {
-    if (e.agentId === undefined) {
-      await changeRuns($, storeKey, list => settleLatest(list, ['needs-you', 'failed'], 'running'))
-    }
+    busyLoops.add(e.agentId ?? MAIN_LOOP)
+    await changeRuns($, storeKey, list => settleLatest(list, ['needs-you', 'failed'], 'running'))
     return next(e)
   })
 
-  // A completion report names the run's feature; the main loop going idle mid-stage means
-  // the stage is at its gate, waiting on the person.
+  // A completion report names the run's feature. Every loop idle mid-stage (the main one and
+  // any background stage subagent) means the stage is at its gate, waiting on the person.
   on('turn.complete', async ($, e, next) => {
     const report = parseReport(e.answer)
     if (report?.featureId != null) {
       await changeRuns($, storeKey, list => changeLatest(list, latest =>
         latest.skill === report.skill ? { ...latest, featureId: report.featureId, slug: report.slug } : latest))
     }
-    if (e.agentId === undefined) {
+    busyLoops.delete(e.agentId ?? MAIN_LOOP)
+    if (busyLoops.size === 0) {
       const outcome = e.reason === 'error' ? 'failed' : 'needs-you'
       await changeRuns($, storeKey, list => settleLatest(list, ['running'], outcome))
     }
