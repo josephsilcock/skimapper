@@ -44,7 +44,7 @@ Spawn one `general-purpose` agent per stage with the `Agent` tool — `model: op
 
 When a stage agent returns, act on its handback, then continue **the same agent** with `SendMessage` (load it via `ToolSearch` if it's deferred) — it keeps its context, so the reply needs only the new information.
 
-- `QUESTIONS` → show them to the user **verbatim** and wait. Never answer them yourself, and never trim the recommendations or alternatives. Send back the user's answers as given.
+- `QUESTIONS` → put them to the user **one at a time**, in the round's order. Each message holds one question **verbatim**: its full text, the recommendation and the alternative. Wait for the answer before asking the next. Show the round's preamble (preflight findings, context) once, above the first question. Never answer a question yourself, and never trim the recommendations or alternatives. When every question in the round has an answer, send them all back together, numbered and as the user gave them. If the user says "accept the rest" or similar, record the recommendation for each remaining question as their answer.
 - `GATE` → apply § 3.
 - `DELEGATE` → spawn the briefed agent as specified (it gets a fresh context too, as the stage skills intend), then send its result back unedited.
 - `STOP` → present it to the user and wait; send back their ruling. If the user wants to stop the run, see § 5.
