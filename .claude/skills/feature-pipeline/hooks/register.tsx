@@ -260,7 +260,6 @@ export const register: Register = on => {
 
     const rows = timeline(subject, subject.isFinished ? [] : snap.slices, runsFor(subject, list))
     const others = snap.inFlight.filter(one => one.id !== subject.id)
-    const queue = snap.nextUp.filter(one => one.id !== subject.id).slice(0, 3)
 
     return (
       <Box flexDirection="column">
@@ -317,11 +316,6 @@ export const register: Register = on => {
         {others.length > 0 && (
           <Text dimColor wrap="truncate-end">
             also in flight: {others.map(one => `${one.id} ${one.slug}`).join(', ')}
-          </Text>
-        )}
-        {queue.length > 0 && (
-          <Text dimColor wrap="truncate-end">
-            next up: {queue.map(one => `${one.id} ${one.title}`).join(' · ')}
           </Text>
         )}
         <Text> </Text>
