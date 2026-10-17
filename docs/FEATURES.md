@@ -1,0 +1,9 @@
+# Features
+
+Status index of committed features. **One line + status per entry — behavioural detail lives in the
+area docs at [definitions/](definitions/README.md)** (linked per section below).
+
+**Status:** `done` · `planned` · `deferred` · `in progress` — no status = `planned`
+
+- Bugs and suggestions: [BACKLOG.md](BACKLOG.md)
+- In-flight specs: [../specs/](../specs/README.md) (transient — merged into area docs at finish)
