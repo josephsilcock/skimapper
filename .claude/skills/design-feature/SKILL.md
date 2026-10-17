@@ -131,7 +131,7 @@ Emit the completion report:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ /design-feature — decisions, seams and risks agreed
+✓ /design-feature — <id> <slug> decisions, seams and risks agreed
 Pipeline: spec ✓ · [design] · implement · finish
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Did            • basis chosen from N candidates; N decisions + guiding principles; decomposition + seams; UI sketch; single-home register; test strategy

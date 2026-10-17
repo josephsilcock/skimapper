@@ -118,7 +118,7 @@ Then emit the standard completion report — five fixed fields (**Did · Artefac
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ /implement — N vertical slices built test-first, each committed
+✓ /implement — <id> <slug> N vertical slices built test-first, each committed
 Pipeline: spec ✓ · design ✓ · [implement] · finish
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Did            • N slices, each RED→GREEN→REFACTOR then feature-scoped slow layers + commit; demo pack captured

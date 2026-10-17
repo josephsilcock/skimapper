@@ -64,7 +64,7 @@ End with the standard completion report. This skill is a detour, not a pipeline 
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ /ux-iterate — design settled, debt repaid
+✓ /ux-iterate — <id> <slug> design settled, debt repaid
 Pipeline: detour complete — re-enters at <implement | finish>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Did            • N iterations from checkpoint <sha>; hardening: sweep, refactor, tests restored, feature-scoped layers green
