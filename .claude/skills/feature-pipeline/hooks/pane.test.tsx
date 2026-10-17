@@ -1,4 +1,4 @@
-import type { SessionMeasureInput } from 'claude-code'
+import type { SessionMeasureInput, TurnStepInput, TurnStepResult } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
@@ -68,6 +68,37 @@ test('a stage stays running while its background subagent works, and waits on th
 
   await $.turn.complete({ ...TURN_END, answer: 'QUESTIONS\n1. Which stack?', turnId: 'stage-1-1', agentId: 'stage-1' })
   await seesOnEverySurface($, [/at the gate · \/new-feature waits on you/])
+})
+
+const stepResult = (input: { turnId: string; index: number }, inputTokens: number): TurnStepResult => ({
+  turnId: input.turnId,
+  index: input.index,
+  answer: '',
+  toolUses: [],
+  stopReason: 'end_turn',
+  usage: { model: 'claude-opus-5-5', input_tokens: inputTokens, output_tokens: 10, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+})
+
+async function step($: Engine, input: TurnStepInput) {
+  for await (const _ of $.turn.step(input)) { /* drain */ }
+}
+
+test("each stage subagent shows how full its context is, and the coordinator's own shows in the header", async ($, on) => {
+  mock.clock(on)
+  on('tool.call', { tool: 'Agent' }, () => ({ result: { agentId: 'stage-1' } }))
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('session.measure', (_, e) => ({ changed: e.changed }))
+  on('turn.step', async function* (_, e) {
+    return stepResult(e, e.agentId === undefined ? 30_000 : 50_000)
+  })
+
+  await step($, { turnId: 'main-1', index: 0, model: 'claude-opus-5-5', messageCount: 1 })
+  await $.tool.call({ tool: 'Agent', description: 'C4 spec stage', prompt: STAGE_BRIEF })
+  await $.turn.start({ text: STAGE_BRIEF, turnId: 'stage-1-1', agentId: 'stage-1' })
+  await step($, { turnId: 'stage-1-1', index: 0, model: 'claude-opus-5-5', messageCount: 1, agentId: 'stage-1' })
+  await $.session.measure({ context: { window: 200_000, tokens: 30_000, percent: 15 }, rateLimits: [], changed: ['context'] })
+
+  await seesOnEverySurface($, [/C4 spec stage · ctx 25%/, /coordinator ctx 15%/])
 })
 
 test('a stage runs, costs what the session spends, and waits on the person at its gate', async ($, on) => {

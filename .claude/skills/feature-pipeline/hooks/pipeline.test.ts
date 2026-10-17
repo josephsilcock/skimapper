@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import type { Run } from '../types'
+import type { AgentContext, ContextInfo, Run } from '../types'
 import {
   inFlightFromSpecs,
   nextUpFromBacklog,
@@ -84,6 +84,24 @@ test('a failed full sweep fails its stage; a failing fast test only shows under 
   expect(statuses(rows)).toEqual(['done', 'done', 'done', 'done', 'failed'])
   expect(rows[3]?.children).toEqual([{ status: 'failed', text: 'fast tests failed', atMs: 2 }])
   expect(rows[4]?.children).toEqual([{ status: 'failed', text: 'full sweep failed', atMs: 3 }])
+})
+
+test("each stage lists the subagents spawned while it was live, with how full each one's context is", () => {
+  const spec = run({ skill: 'new-feature', step: 'spec', startedAtMs: 10 })
+  const design = run({ skill: 'design-feature', step: 'design', startedAtMs: 20, status: 'running' })
+  const agents: AgentContext[] = [
+    { id: 'a1', description: 'C4 spec stage', runStartedAtMs: 10, startedAtMs: 11, model: 'claude-opus-5-5', tokens: 150_000, isBusy: false },
+    { id: 'a2', description: 'C4 design stage', runStartedAtMs: 20, startedAtMs: 21, model: 'claude-opus-5-5', tokens: 42_000, isBusy: true },
+    { id: 'a3', description: 'Design skeptic', runStartedAtMs: 20, startedAtMs: 22, model: 'claude-haiku-5-5', tokens: 9_400, isBusy: true },
+  ]
+  const context: ContextInfo = { mainModel: 'claude-opus-5-5', window: 200_000, percent: 12 }
+  const rows = timeline({ id: 'C4', item: null, isFinished: false }, [], [spec, design], agents, context)
+
+  expect(rows[1]?.children).toEqual([{ status: 'done', text: 'C4 spec stage · ctx 75%', atMs: 11 }])
+  expect(rows[2]?.children).toEqual([
+    { status: 'running', text: 'C4 design stage · ctx 21%', atMs: 21 },
+    { status: 'running', text: 'Design skeptic · ctx 9k tokens', atMs: 22 },
+  ])
 })
 
 test('a finished feature reads done all the way along, with nothing next', () => {

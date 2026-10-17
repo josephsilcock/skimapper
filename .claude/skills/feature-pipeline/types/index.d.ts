@@ -44,6 +44,20 @@ export type Run = {
   tests: TestResult[]
 }
 
+// A subagent spawned while a stage was live: its latest request's size, in tokens.
+export type AgentContext = {
+  id: string
+  description: string
+  runStartedAtMs: number
+  startedAtMs: number
+  model: string | null
+  tokens: number | null
+  isBusy: boolean
+}
+
+// The main loop's model and context window, as the session measures them.
+export type ContextInfo = { mainModel: string | null; window: number | null; percent: number | null }
+
 export type TimelineRow = {
   step: Step
   status: Status
@@ -59,6 +73,8 @@ declare module 'claude-code' {
     'feature-pipeline': {
       snapshot: Snapshot | null
       runs: Run[]
+      agents: AgentContext[]
+      context: ContextInfo
     }
   }
 }
