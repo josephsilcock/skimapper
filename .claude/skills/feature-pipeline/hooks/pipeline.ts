@@ -110,6 +110,16 @@ export function parseReport(answer: string): Report | null {
   return { skill, featureId: feature?.[1] ?? null, slug: feature?.[2] ?? null }
 }
 
+// /run-pipeline starts a stage by briefing a subagent to follow the skill's file, not by invoking the skill.
+export function stageFromAgentPrompt(prompt: string): { skill: string; featureId: string | null } | null {
+  const stage = /^Run the `([a-z-]+)` stage of this project's feature pipeline/m.exec(prompt)
+  const skill = stage?.[1]
+  if (skill === undefined || SKILL_STEPS[skill] === undefined) return null
+
+  const input = /^Your input:(.*)$/m.exec(prompt)?.[1] ?? ''
+  return { skill, featureId: /\b([FBC]\d+)\b/.exec(input)?.[1] ?? null }
+}
+
 export function nextCommand(id: string, item: InFlight | null, station: Station): string {
   const spec = item === null ? '' : `specs/${item.id}-${item.slug}`
 
