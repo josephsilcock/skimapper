@@ -72,9 +72,19 @@ When the slice's behaviours are all green, before moving on:
 
    **Don't block on the offer when the session may be unattended.** Absent a reason to stop, keep building: with the note current, an autocompact costs a re-read, not the feature. Only the size alarm and a design-invalidating correction are worth interrupting for.
 
-   **Don't delegate the slice loop to a subagent instead.** Verified RED is temporal — nothing in the finished commit proves the test failed first — so a subagent's report replaces the evidence rules 1, 2 and 4 exist to produce with a claim that they happened; and the loop has to be able to stop and talk to the user (design wrong, size alarm, a case that wants to be a behaviour), which a subagent can't. `/clear` buys the same fresh context with the evidence intact. Delegating *inside* a slice is fine where the output is an artefact rather than a claim about process: `Explore` for bounded "where does X live" searches, and the demo-pack capture below.
+   **Don't delegate the slice loop to a subagent instead.** Verified RED is temporal — nothing in the finished commit proves the test failed first — so a subagent's report replaces the evidence rules 1, 2 and 4 exist to produce with a claim that they happened; and the loop has to be able to stop and talk to the user (design wrong, size alarm, a case that wants to be a behaviour), which a subagent can't. `/clear` buys the same fresh context with the evidence intact. The one exception is `/run-pipeline`, which runs this whole stage as a single subagent: there the evidence is **written, not reported** (§ Evidence log), and every stop goes back to the coordinator as a handback rather than being skipped. Delegating *inside* a slice is fine where the output is an artefact rather than a claim about process: `Explore` for bounded "where does X live" searches, and the demo-pack capture below.
 
 Follow the project's conventions for the layer you're in — its `../../../CLAUDE.md` and `docs/CONVENTIONS.md` are authoritative on endpoint registration, error/result handling, transaction boundaries, state-change routing, query/mutation patterns, test tagging, and shared wire constants. Where the design's guiding principles and a general convention disagree, the design wins for this feature; say so rather than silently picking.
+
+## Evidence log (when run as a subagent)
+
+Under `/run-pipeline` the user never sees this session, so the TDD evidence has to exist as an artefact. For each slice, write `<results-dir>/tdd/<ID>/slice-NN-<short-name>.md`, appending **as each transition happens** — never reconstructed afterwards:
+
+- the slice's demo-test sentence as the heading;
+- per behaviour: the test's name, the **RED** run's command and failure output (trimmed to the failing assertion and its message), the **GREEN** run's pass line, and the **REFACTOR** line — what changed, or "nothing needed", plus the re-run's pass line;
+- at slice close: the feature-scoped slow-layer and E2E pass lines, and the commit SHA.
+
+A RED entry whose output is a compile error, a missing-symbol error, or a pass is not verified RED — fix the test and re-run before writing implementation. The coordinator checks these logs before accepting the stage, and a slice without one counts as not closed.
 
 ## When the design turns out to be wrong
 
