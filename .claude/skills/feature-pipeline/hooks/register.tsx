@@ -77,7 +77,7 @@ async function refresh($: EngineInterface) {
   return next
 }
 
-// The live stage's feature comes first; then the newest spec; then the head of the queue.
+// The live stage's feature comes first, then the newest spec.
 function subjectOf(snap: Snapshot, list: readonly Run[]): Subject | null {
   const latest = list.at(-1)
   if (latest !== undefined && latest.status !== 'done') {
@@ -87,10 +87,7 @@ function subjectOf(snap: Snapshot, list: readonly Run[]): Subject | null {
   }
 
   const item = snap.inFlight[0]
-  if (item !== undefined) return { id: item.id, item, isFinished: false }
-
-  const head = snap.nextUp[0]
-  return head === undefined ? null : { id: head.id, item: null, isFinished: false }
+  return item === undefined ? null : { id: item.id, item, isFinished: false }
 }
 
 function headline(snap: Snapshot, subject: Subject, list: readonly Run[]) {
@@ -244,7 +241,7 @@ export const register: Register = on => {
 
     const list = await read($, runs)
     const subject = subjectOf(snap, list)
-    if (subject === null) return { text: 'Nothing in flight and the queue is empty.' }
+    if (subject === null) return { text: 'Nothing in flight.' }
     return { text: summary(snap, timeline(subject, snap.slices, runsFor(subject, list)), subject, list) }
   })
 
@@ -255,7 +252,7 @@ export const register: Register = on => {
     const subject = subjectOf(snap, list)
 
     if (subject === null) {
-      return <Text dimColor>Nothing in flight and the Next-up queue is empty.</Text>
+      return <Text dimColor>Nothing in flight.</Text>
     }
 
     const rows = timeline(subject, subject.isFinished ? [] : snap.slices, runsFor(subject, list))
