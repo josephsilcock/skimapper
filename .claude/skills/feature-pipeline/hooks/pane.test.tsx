@@ -33,6 +33,10 @@ async function seesOnEverySurface($: Engine, texts: RegExp[]) {
   }
 }
 
+test('with no stage under way and no spec, the pane says nothing is in flight', async $ => {
+  await seesOnEverySurface($, [/^Nothing in flight\.$/])
+})
+
 const STAGE_BRIEF = "Run the `new-feature` stage of this project's feature pipeline. Read `.claude/skills/new-feature/SKILL.md` and follow it exactly.\n\nYour input: backlog ID **C4** (in `docs/BACKLOG.md`)."
 
 test('a stage /run-pipeline briefs a subagent with runs and costs like an invoked one', async ($, on) => {
