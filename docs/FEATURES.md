@@ -7,3 +7,7 @@ area docs at [definitions/](definitions/README.md)** (linked per section below).
 
 - Bugs and suggestions: [BACKLOG.md](BACKLOG.md)
 - In-flight specs: [../specs/](../specs/README.md) (transient — merged into area docs at finish)
+
+## Code
+
+- **C4** Initial technical decisions and walking skeleton — `in progress`
