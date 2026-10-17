@@ -1,4 +1,6 @@
 import type {
+  AgentContext,
+  ContextInfo,
   InFlight,
   QueueItem,
   Run,
@@ -145,7 +147,13 @@ export function runsFor(subject: Subject, runs: readonly Run[]): Run[] {
 
 // One row per step: the newest run speaks for its own step, the files and
 // earlier runs say what is already done, and the first undone step is next.
-export function timeline(subject: Subject, slices: readonly Slice[], runs: readonly Run[]): TimelineRow[] {
+export function timeline(
+  subject: Subject,
+  slices: readonly Slice[],
+  runs: readonly Run[],
+  agents: readonly AgentContext[] = [],
+  context: ContextInfo | null = null,
+): TimelineRow[] {
   const latest = runs.at(-1)
   const reached = latest === undefined ? -1 : STEPS.indexOf(latest.step)
   const rows = STEPS.map((step, i): TimelineRow => {
@@ -165,6 +173,9 @@ export function timeline(subject: Subject, slices: readonly Slice[], runs: reado
       isNext: false,
       costUsd: own.reduce((sum, one) => sum + one.costUsd, 0),
       children: [
+        ...agents
+          .filter(agent => own.some(one => one.startedAtMs === agent.runStartedAtMs))
+          .map(agent => agentChild(agent, context)),
         ...(step === 'implement' ? slices.map(sliceChild) : []),
         ...tests.map(testChild),
       ],
@@ -178,7 +189,23 @@ function latestTests(runs: readonly Run[]): TestResult[] {
   return runs.reduce<TestResult[]>((all, run) => run.tests.reduce(withTestResult, all), [])
 }
 
-const sliceChild = (slice: Slice) => ({ status: 'done' as const, text: `${slice.sha} ${slice.subject}`, atMs: slice.atMs })
+const agentChild = (agent: AgentContext, context: ContextInfo | null) => ({
+  status: agent.isBusy ? ('running' as const) : ('done' as const),
+  text: `${agent.description} · ${contextLabel(agent, context)}`,
+  atMs: agent.startedAtMs,
+})
+
+// A percentage only where the window is known: the session measures its main model's alone.
+export function contextLabel(agent: Pick<AgentContext, 'model' | 'tokens'>, context: ContextInfo | null): string {
+  if (agent.tokens === null) return 'ctx —'
+
+  const window = context !== null && agent.model === context.mainModel ? context.window : null
+  return window === null
+    ? `ctx ${Math.round(agent.tokens / 1000)}k tokens`
+    : `ctx ${Math.round((agent.tokens / window) * 100)}%`
+}
+
+const sliceChild =(slice: Slice) => ({ status: 'done' as const, text: `${slice.sha} ${slice.subject}`, atMs: slice.atMs })
 
 const testChild = (test: TestResult) => ({
   status: test.isPassed ? ('done' as const) : ('failed' as const),

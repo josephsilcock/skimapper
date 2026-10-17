@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Run, Slice, Snapshot, Status, TimelineRow } from '../types'
+import type { AgentContext, Run, Slice, Snapshot, Status, TimelineRow } from '../types'
 import type { Subject } from './pipeline'
 import {
   GLYPHS,
@@ -23,8 +23,11 @@ const PANE = 'pipeline'
 const MAX_SLICES_SHOWN = 8
 const MAX_RUNS_KEPT = 100
 const MAIN_LOOP = 'main'
+const MAX_AGENTS_KEPT = 50
 const snapshot = atom({ plugin: 'feature-pipeline', key: 'snapshot' } as const, null)
 const runs = atom({ plugin: 'feature-pipeline', key: 'runs' } as const, [])
+const agents = atom({ plugin: 'feature-pipeline', key: 'agents' } as const, [])
+const context = atom({ plugin: 'feature-pipeline', key: 'context' } as const, { mainModel: null, window: null, percent: null })
 
 const COLORS: Record<Status, string> = {
   done: 'success',
@@ -141,11 +144,38 @@ async function startRun($: EngineInterface, storeKey: string, skill: string, nam
   await changeRuns($, storeKey, list => [...settleLatest(list, ['running', 'needs-you', 'failed'], 'done'), run])
 }
 
+function spawnedAgentId(result: unknown): string | null {
+  const id = typeof result === 'object' && result !== null ? (result as { agentId?: unknown }).agentId : undefined
+  return typeof id === 'string' ? id : null
+}
+
+// A subagent counts toward the stage live when it was spawned.
+async function trackAgent($: EngineInterface, id: string | null, description: string) {
+  const latest = (await read($, runs)).at(-1)
+  if (id === null || latest === undefined || latest.status === 'done') return
+
+  const agent: AgentContext = {
+    id,
+    description,
+    runStartedAtMs: latest.startedAtMs,
+    startedAtMs: await $.clock.now(),
+    model: null,
+    tokens: null,
+    isBusy: true,
+  }
+  await update($, agents, list => [...list.filter(one => one.id !== id), agent].slice(-MAX_AGENTS_KEPT))
+}
+
+async function changeAgent($: EngineInterface, id: string, change: (agent: AgentContext) => AgentContext) {
+  await update($, agents, list => list.map(agent => (agent.id === id ? change(agent) : agent)))
+}
+
 function summary(snap: Snapshot, rows: TimelineRow[], subject: Subject, list: readonly Run[]) {
   const lines = [`${headline(snap, subject, list)}  ${dollars(totalCost(rows))}`, '']
   for (const row of rows) {
     const at = row.atMs === null ? '     ' : clockTime(row.atMs)
     lines.push(`${at} ${GLYPHS[row.status]} ${row.step.padEnd(10)} ${row.detail}  ${dollars(row.costUsd)}`.trimEnd())
+    for (const child of row.children) lines.push(`        ├ ${GLYPHS[child.status]} ${child.text}`)
   }
   return lines.join('\n')
 }
@@ -183,11 +213,29 @@ export const register: Register = on => {
   on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
     const stage = stageFromAgentPrompt(e.prompt)
     if (stage !== null) await startRun($, storeKey, stage.skill, stage.featureId)
-    return next(e)
+    const ran = await next(e)
+    await trackAgent($, spawnedAgentId(ran.result), e.description)
+    return ran
+  })
+
+  // Each request's input side is how full that loop's context is now.
+  on('turn.step', async function* ($, e, next) {
+    const result = yield* next(e)
+    const usage = result.usage
+    if (usage !== null) {
+      const tokens = usage.input_tokens + usage.cache_read_input_tokens + usage.cache_creation_input_tokens
+      if (e.agentId === undefined) {
+        await update($, context, current => ({ ...current, mainModel: e.model }))
+      } else {
+        await changeAgent($, e.agentId, agent => ({ ...agent, model: e.model, tokens }))
+      }
+    }
+    return result
   })
 
   on('turn.start', async ($, e, next) => {
     busyLoops.add(e.agentId ?? MAIN_LOOP)
+    if (e.agentId !== undefined) await changeAgent($, e.agentId, agent => ({ ...agent, isBusy: true }))
     await changeRuns($, storeKey, list => settleLatest(list, ['needs-you', 'failed'], 'running'))
     return next(e)
   })
@@ -201,6 +249,7 @@ export const register: Register = on => {
         latest.skill === report.skill ? { ...latest, featureId: report.featureId, slug: report.slug } : latest))
     }
     busyLoops.delete(e.agentId ?? MAIN_LOOP)
+    if (e.agentId !== undefined) await changeAgent($, e.agentId, agent => ({ ...agent, isBusy: false }))
     if (busyLoops.size === 0) {
       const outcome = e.reason === 'error' ? 'failed' : 'needs-you'
       await changeRuns($, storeKey, list => settleLatest(list, ['running'], outcome))
@@ -211,6 +260,8 @@ export const register: Register = on => {
 
   // What the session spends while a stage is live is that stage's cost.
   on('session.measure', async ($, e, next) => {
+    const { window, percent } = e.context
+    await update($, context, current => ({ ...current, window, percent: percent ?? current.percent }))
     const usd = e.cost?.usd
     if (usd !== undefined) {
       const spent = lastCostUsd === null ? 0 : usd - lastCostUsd
@@ -242,7 +293,8 @@ export const register: Register = on => {
     const list = await read($, runs)
     const subject = subjectOf(snap, list)
     if (subject === null) return { text: 'Nothing in flight.' }
-    return { text: summary(snap, timeline(subject, snap.slices, runsFor(subject, list)), subject, list) }
+    const rows = timeline(subject, snap.slices, runsFor(subject, list), await read($, agents), await read($, context))
+    return { text: summary(snap, rows, subject, list) }
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
@@ -255,7 +307,8 @@ export const register: Register = on => {
       return <Text dimColor>Nothing in flight.</Text>
     }
 
-    const rows = timeline(subject, subject.isFinished ? [] : snap.slices, runsFor(subject, list))
+    const ctx = await read($, context)
+    const rows = timeline(subject, subject.isFinished ? [] : snap.slices, runsFor(subject, list), await read($, agents), ctx)
     const others = snap.inFlight.filter(one => one.id !== subject.id)
 
     return (
@@ -264,7 +317,9 @@ export const register: Register = on => {
           <Box flexGrow={1} flexShrink={1}>
             <Text bold wrap="truncate-end">{headline(snap, subject, list)}</Text>
           </Box>
-          <Text dimColor>{dollars(totalCost(rows))}</Text>
+          <Text dimColor>
+            {[ctx.percent === null ? '' : `coordinator ctx ${ctx.percent}%`, dollars(totalCost(rows))].filter(Boolean).join(' · ')}
+          </Text>
         </Box>
         <Text dimColor>{snap.branch === null ? '' : `on ${snap.branch}`}</Text>
         <Text> </Text>
