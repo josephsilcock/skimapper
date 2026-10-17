@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F22`, `B1`, `C5`.
+**Next free IDs**: `F22`, `B1`, `C6`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -64,3 +64,4 @@ below that gets picked up out of turn should say why in its spec.
 - **C2** The service can tell requests from genuine installs of the app apart from others, so it can refuse anything that isn't the real app.
 - **C3** Failures in the service and its daily refresh are noticed and reported, with enough detail to find and fix the cause quickly. Depends on F20.
 - **C4** Make the initial technical decisions for the app: tech stack for the mobile app and the service behind it, overall architecture, and hosting. Every feature needs these first, as do the test and sweep commands in `docs/PIPELINE.md` and the E2E approach, which are still TBD. Record the choices and rejected alternatives in `docs/DECISIONS.md` and `docs/ARCHITECTURE.md`.
+- **C5** Continuous integration: run the full test sweep from `docs/PIPELINE.md` automatically on GitHub (the repo's remote) for every push and pull request, so a red sweep is caught before merging into the trunk. Depends on C4, which chooses the stack and the sweep command.
