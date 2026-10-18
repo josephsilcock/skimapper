@@ -59,3 +59,9 @@ boot_device() {
     android) boot_android_emulator ;;
   esac
 }
+
+# Newer Xcode ships DeviceHub in place of Simulator.app; the booted simulator works without either.
+show_simulator_window() {
+  open -a Simulator 2>/dev/null || open -a DeviceHub 2>/dev/null \
+    || echo "note: no Simulator or DeviceHub app to show the simulator; it is running headless" >&2
+}

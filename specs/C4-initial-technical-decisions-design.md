@@ -309,6 +309,7 @@ Recorded forward: the **daily refresh is the one invisible path**. Running out o
 - **No separate Worker unit-test layer.** The Worker has no logic beyond its R2-backed handler yet, and its Miniflare tests run in about a second, so the fast loop runs all endpoint Vitest tests (`npm test`) and the feature-scoped slow command runs `npm run test:integration`. An empty `test/unit` layer would have tripped the sweep's zero-test rule for no benefit.
 - **Sweep layers write straight to their log files and end on process exit.** The first real sweep took 44 min: Gradle/Kotlin daemons inherited the Android layer's output pipe and the sweep waited for them. Covered by a self-test.
 - **Dev config values can be overridden per run from the environment** (`IOS_SIMULATOR="iPhone 99" tools/full-sweep`), which is also how the missing-device case is demonstrated for real.
+- **`tools/dev-app ios` opens Simulator.app, or DeviceHub where Xcode 27 ships that instead, and carries on headless if neither exists.** The demo capture found `open -a Simulator` fatal on this Xcode. Verified by hand (`ENDPOINT_PORT=8788 tools/dev-app ios` reached "A Dart VM Service" with the endpoint serving), not by an automated test: the dev-app command has no test harness of its own; its parts (`boot_device`, the endpoint helpers) are exercised by every E2E run.
 - **iOS simulator is "iPhone 17"** — the newest unique iPhone name on this machine ("iPhone 18 Pro" exists twice, so a name lookup would be ambiguous).
 
 ## Resume

@@ -16,7 +16,7 @@ trap stop_endpoint EXIT
 
 device="$(boot_device "$platform")"
 forward_endpoint_port "$platform" "$device"
-[[ "$platform" == ios ]] && open -a Simulator
+[[ "$platform" == ios ]] && show_simulator_window
 cd "$APP_DIR"
 # shellcheck disable=SC2046
 flutter run --device-id "$device" $(endpoint_dart_defines)
