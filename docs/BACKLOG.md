@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F22`, `B1`, `C7`.
+**Next free IDs**: `F22`, `B2`, `C7`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -54,6 +54,8 @@ below that gets picked up out of turn should say why in its spec.
 ---
 
 ## Bugs
+
+- **B1** Removing the map before it has finished starting throws: `MapLibreMethodChannel.dispose` hits `LateInitializationError` (`late MethodChannel _channel` is set only once the platform view is created, in `maplibre_gl_platform_interface`, 0.27.1 = latest). Seen on CI's slow software-GPU Android emulator, where `patrol_test/endpoint_serving/endpoint_message_test.dart` passes its assertion and then fails in teardown, so the nightly Android E2E is red (found by C5, run 39144214776); passes locally. Fix in the app or plugin, not by changing the E2E test.
 
 ---
 

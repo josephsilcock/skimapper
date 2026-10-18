@@ -63,7 +63,7 @@ At every `GATE`, decide whether the sheet needs the user. The coordinator relaye
 - it would **overturn a recorded decision** in `docs/DECISIONS.md`, or contradict an area doc;
 - any review finding is **🔴 or 🟠**, or any finding whose fix would change visible behaviour or scope;
 - the **UI sketch** introduces a new screen or re-lays-out an existing one, or the **demo pack** came out materially different from the approved sketch (or there was no sketch and the change is user-visible);
-- the step is **irreversible or outward-facing** beyond what the user has already authorised — the commit, merge and push in `/finish-feature` are authorised by `CLAUDE.md`; anything else is not.
+- the step is **irreversible or outward-facing** beyond what the user has already authorised — the commit, branch push, PR creation and PR merge in /finish-feature (and /add-backlog-item) are authorised by CLAUDE.md.
 
 **Otherwise proceed on your own** — every point on the sheet is either already answered by the user, a direct consequence of those answers, or low-stakes and cheap to reverse later; and any findings are 🟡/🔵 that can be resolved without changing behaviour (fix if trivial and structural, else `/add-backlog-item`).
 
@@ -77,7 +77,7 @@ On `DONE`, check before moving on — cheaply, from the files, not by re-doing t
 
 - **spec / design**: the artefact named in the report exists and the gate's rulings are recorded in it.
 - **implement**: every slice in the design doc's `## Slices` is closed with a commit (`git log`), and each has an evidence log under `<results-dir>/tdd/<ID>/` showing a RED failure that is an assertion failing for the absent behaviour — not a compile error or a pass — before its GREEN, plus a REFACTOR line. A missing or doubtful log goes back to the implement agent; it isn't waved through. The demo-pack Artifact URL is in the report.
-- **finish**: the sweep is green per the results dir, and the merge is on the trunk.
+- **finish**: the sweep is green per the results dir, and the PR is merged and its merge commit is on origin/main.
 
 ## 5. Stopping mid-run
 
@@ -93,7 +93,7 @@ After `/finish-feature`'s `DONE`, close with:
 Pipeline: spec ✓ · design ✓ · implement ✓ · finish ✓
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Gates          • spec <stopped|auto> · design <stopped|auto> · demo pack <stopped|auto> · finish <stopped|auto>
-Did            • N slices committed (evidence logs checked); one full sweep green; definitions + FEATURES updated; merged <sha>
+Did            • N slices committed (evidence logs checked); one full sweep green; definitions + FEATURES updated; merged <PR URL> (<sha>)
 Artefacts      • docs/definitions/<area>.md, FEATURES.md, DECISIONS.md (edited); <results-dir>/tdd/<ID>/; demo-pack Artifact URL
 Review         • spec · design · whole-change: <one-phrase verdict each>
 Next → pipeline complete   (next: /run-pipeline <backlog ID>)
