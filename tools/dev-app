@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Dev app: tools/dev-app <ios|android> — boots the dev config's device and runs the app on it.
+source "$(dirname "$0")/lib/common.sh"
+source "$TOOLS_DIR/lib/devices.sh"
+
+platform="${1:-}"
+require_platform "$platform"
+
+device="$(boot_device "$platform")"
+[[ "$platform" == ios ]] && open -a Simulator
+cd "$APP_DIR"
+exec flutter run --device-id "$device"

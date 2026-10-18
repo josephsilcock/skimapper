@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Feature-scoped E2E: tools/e2e <ios|android> [patrol test file...]
+source "$(dirname "$0")/lib/common.sh"
+source "$TOOLS_DIR/lib/devices.sh"
+
+platform="${1:-}"
+require_platform "$platform"
+shift
+targets=()
+for target in "$@"; do targets+=(--target "$target"); done
+
+device="$(boot_device "$platform")"
+cd "$APP_DIR"
+"$PATROL" test --device "$device" ${targets[@]+"${targets[@]}"}
