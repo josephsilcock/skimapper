@@ -105,6 +105,12 @@ test("each real layer counts the tests its runner reports", () => {
   assert.equal(counts["e2e (android)"](patrol), 4);
 });
 
+test("the app layer fixes flutter test's reporter, so its count does not change under GitHub Actions", () => {
+  const app = sweepLayers("/repo").find((layer) => layer.id === "app")!;
+
+  assert.deepEqual(app.command, ["flutter", "test", "--reporter", "expanded"]);
+});
+
 test("the layers are identified, in order, by the ids the --layers switch takes", () => {
   assert.deepEqual(
     sweepLayers("/repo").map((layer) => layer.id),

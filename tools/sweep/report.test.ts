@@ -26,7 +26,7 @@ function report(args: string[]) {
     encoding: "utf8",
     env: { ...process.env, GITHUB_STEP_SUMMARY: summaryFile },
   });
-  return { exitCode: run.status, summary: readFileSync(summaryFile, "utf8"), stderr: run.stderr };
+  return { exitCode: run.status, summary: readFileSync(summaryFile, "utf8"), stdout: run.stdout, stderr: run.stderr };
 }
 
 test("a red layer turns the report red, and the summary names the layer and why", () => {
@@ -51,4 +51,12 @@ test("an expected layer with no result is red, so a job that never ran cannot pa
 
   assert.equal(exitCode, 1, stderr);
   assert.match(summary, /\| e2e \(ios\) \| 🔴 red \| no result \(job did not run\) \|/);
+});
+
+test("the per-layer table is also printed, so the job log names the red layer", () => {
+  const results = jobResults({ "sweep-fast": [{ id: "endpoint", label: "endpoint", verdict: "red", reason: "exited with code 1" }] });
+
+  const { stdout } = report(["--expect", "endpoint", results]);
+
+  assert.match(stdout, /\| endpoint \| 🔴 red \| exited with code 1 \|/);
 });

@@ -12,7 +12,9 @@ const args = process.argv.slice(2);
 
 const expected = selectLayers(sweepLayers(repoDir), listSwitch(args, "--expect"));
 const run = runVerdict(expected, readResults(args.at(-1)!));
-appendFileSync(process.env.GITHUB_STEP_SUMMARY!, summaryTable(run.rows));
+const table = summaryTable(run.rows);
+process.stdout.write(table);
+appendFileSync(process.env.GITHUB_STEP_SUMMARY!, table);
 process.exitCode = run.ok ? 0 : 1;
 
 function readResults(root: string): LayerVerdict[] {

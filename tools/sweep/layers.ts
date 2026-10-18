@@ -8,7 +8,7 @@ export function sweepLayers(repoDir: string): Layer[] {
     {
       id: "app",
       label: "app",
-      command: ["flutter", "test"],
+      command: ["flutter", "test", "--reporter", "expanded"],
       cwd: join(repoDir, "app"),
       countTests: (output) => sumOf(output, /\+(\d+)(?: ~\d+)?(?: -(\d+))?: (?:All tests passed|Some tests failed)/g),
     },
