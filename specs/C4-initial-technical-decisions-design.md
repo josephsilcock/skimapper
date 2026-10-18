@@ -295,6 +295,9 @@ Recorded forward: the **daily refresh is the one invisible path**. Running out o
 
 ## Decisions taken during implement
 
+Implement gate closed 2026-10-18: demo pack accepted (https://claude.ai/artifact/G7qxTyp3fFd9NvycwDDvti); all decisions below noted by the user.
+
+
 - **iOS uses Swift Package Manager, not CocoaPods.** Flutter 3.47 creates SPM projects by default; `maplibre_gl` 0.27.1 and `patrol` 4.10 both ship SPM packages. The Patrol `RunnerUITests` target was added with the `xcodeproj` gem (the scriptable equivalent of Patrol's Xcode GUI steps) and links `FlutterGeneratedPluginSwiftPackage`.
 - **JDK 25 (Corretto 25 LTS) for Android builds**, chosen by the user as the newest JDK Gradle 9.3.1 supports. The dev config holds `ANDROID_JDK_VERSION`; `tools/lib/common.sh` resolves `JAVA_HOME` from it so a stale shell `JAVA_HOME` can't break builds.
 - **Dev config is a sourceable `tools/dev.env`** (bash scripts read it directly; values reach the app via `--dart-define`).
@@ -314,4 +317,4 @@ Recorded forward: the **daily refresh is the one invisible path**. Running out o
 
 ## Resume
 
-All five slices closed and committed; implement is at hand-off (demo pack, then completion report). PIPELINE commands to record at finish: fast = `cd app && flutter test` + `cd endpoint && npm test`; feature-scoped slow = `cd endpoint && npm run test:integration` + `node --test tools/sweep/`; feature-scoped E2E = `tools/e2e <ios|android> [group…]`; full sweep = `tools/full-sweep`; results dir = `test-results/` (sweep writes `test-results/sweep/`, TDD logs `test-results/tdd/C4/`, demo `test-results/demo/C4/`); dev app = `tools/dev-app <ios|android>`. Device commands and `flutter` run outside the sandbox; npm inside it needs `npm_config_cache=$TMPDIR/npm-cache`. Open candidates for finish review: a `FutureBuilder` error (e.g. a missing `ENDPOINT_URL` define) still shows "endpoint: loading"; an iOS Patrol run with a failing test takes about 10 min to exit (xcodebuild); Patrol applies KGP, which Flutter warns future versions will reject.
+All five slices closed and committed; implement gate closed (demo pack accepted, decisions noted). Next: /finish-feature. PIPELINE commands to record at finish: fast = `cd app && flutter test` + `cd endpoint && npm test`; feature-scoped slow = `cd endpoint && npm run test:integration` + `node --test tools/sweep/`; feature-scoped E2E = `tools/e2e <ios|android> [group…]`; full sweep = `tools/full-sweep`; results dir = `test-results/` (sweep writes `test-results/sweep/`, TDD logs `test-results/tdd/C4/`, demo `test-results/demo/C4/`); dev app = `tools/dev-app <ios|android>`. Device commands and `flutter` run outside the sandbox; npm inside it needs `npm_config_cache=$TMPDIR/npm-cache`. Open candidates for finish review: a `FutureBuilder` error (e.g. a missing `ENDPOINT_URL` define) still shows "endpoint: loading"; an iOS Patrol run with a failing test takes about 10 min to exit (xcodebuild); Patrol applies KGP, which Flutter warns future versions will reject.
