@@ -7,6 +7,7 @@ source "$TOOLS_DIR/lib/endpoint.sh"
 
 platform="${1:-}"
 require_platform "$platform"
+[[ "$platform" == android ]] && use_android_jdk
 
 dev_state="$ENDPOINT_DIR/.wrangler/dev-state"
 ensure_port_free

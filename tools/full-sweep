@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
-# Full sweep: tools/full-sweep — fast, slow and E2E (iOS + Android) layers; red names the culprit.
+# Full sweep: tools/full-sweep [--layers <id,…>] — fast, slow and E2E (iOS + Android) layers, or the
+# chosen subset (ids in tools/sweep/layers.ts); red names the culprit.
 source "$(dirname "$0")/lib/common.sh"
-exec node "$TOOLS_DIR/sweep/main.ts"
+exec node "$TOOLS_DIR/sweep/main.ts" "$@"

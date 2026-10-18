@@ -11,12 +11,15 @@ PATROL="${PATROL:-$HOME/.pub-cache/bin/patrol}"
 # shellcheck source=../dev.env
 source "$TOOLS_DIR/dev.env"
 
-JAVA_HOME="$(/usr/libexec/java_home -v "$ANDROID_JDK_VERSION")"
-export JAVA_HOME
-
 fail() {
   echo "error: $*" >&2
   exit 1
+}
+
+# Android builds use the dev config's JDK, not whatever JAVA_HOME the shell happens to hold.
+use_android_jdk() {
+  JAVA_HOME="$(/usr/libexec/java_home -v "$ANDROID_JDK_VERSION")"
+  export JAVA_HOME
 }
 
 require_platform() {

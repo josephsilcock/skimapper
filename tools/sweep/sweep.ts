@@ -3,8 +3,8 @@ import { closeSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } f
 import { join } from "node:path";
 
 export type Layer = {
-  name: string;
-  platform?: string;
+  id: string;
+  label: string;
   command: string[];
   cwd: string;
   countTests: (output: string) => number;
@@ -32,9 +32,9 @@ export function summarise(result: SweepResult): string {
 }
 
 async function sweepLayer(layer: Layer, sweepDir: string): Promise<Culprit | undefined> {
-  const run = await runLayer(layer, join(sweepDir, `${layerLabel(layer)}.log`));
+  const run = await runLayer(layer, join(sweepDir, `${layer.label}.log`));
   const reason = whyRed(layer, run);
-  return reason ? { layer: layerLabel(layer), reason } : undefined;
+  return reason ? { layer: layer.label, reason } : undefined;
 }
 
 function freshSweepDir(resultsDir: string): string {
@@ -53,8 +53,6 @@ function whyRed(layer: Layer, run: LayerRun): string | undefined {
 // The tools/ scripts report why they stopped on a line starting "error:" (tools/lib/common.sh fail).
 const lastErrorLine = (output: string): string | undefined =>
   output.split("\n").findLast((line) => line.startsWith("error:"));
-
-const layerLabel = (layer: Layer): string => (layer.platform ? `${layer.name} (${layer.platform})` : layer.name);
 
 type LayerRun = { exitCode: number; output: string };
 

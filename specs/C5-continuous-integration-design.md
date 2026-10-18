@@ -256,3 +256,13 @@ No area doc changes: this is developer tooling, and `docs/definitions/` holds pr
    KVM job beside the fast layers in the five-layer table. iOS shows red, "no result", until the
    next slice.
 4. The developer starts the full sweep manually and sees the iOS E2E verdict from the macOS job.
+
+## Slices
+
+- [~] 1. The developer pushes a branch and sees a green check from a Linux job that ran `tools/full-sweep --layers self-test`, with its log attached
+- [ ] 2. The developer pushes a change that breaks the endpoint tests and sees a red check whose run summary names `endpoint`, with `endpoint.log` attached
+- [ ] 3. The developer starts the full sweep manually on a branch and sees the Android E2E verdict from the KVM job beside the fast layers in the five-layer table; iOS shows red "no result"
+- [ ] 4. The developer starts the full sweep manually and sees the iOS E2E verdict from the macOS job
+
+## Decisions taken during implement
+
