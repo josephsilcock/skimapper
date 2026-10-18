@@ -6,6 +6,16 @@ on:
   schedule:
     - cron: "0 2 * * *"
   workflow_dispatch:
+    inputs:
+      withhold_job:
+        description: Withhold one job, to see its layers reported red (a check of the report itself)
+        type: choice
+        options: [none, linux, android, ios]
+        default: none
+      ios_simulator:
+        description: Run iOS E2E on this simulator instead of tools/dev.env IOS_SIMULATOR
+        type: string
+        default: ""
   # TEMPORARY (C5 implement): workflow_dispatch only works once the workflow is on main, so trial
   # branches trigger it by push until then. Removed before /finish-feature.
   push:
@@ -50,6 +60,7 @@ jobs:
 
   linux:
     needs: gate
+    if: ${{ inputs.withhold_job != 'linux' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -67,6 +78,7 @@ jobs:
 
   android:
     needs: gate
+    if: ${{ inputs.withhold_job != 'android' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     env:
@@ -130,8 +142,12 @@ jobs:
 
   ios:
     needs: gate
+    if: ${{ inputs.withhold_job != 'ios' }}
     runs-on: xcode-27
     timeout-minutes: 90
+    env:
+      # Empty unless the manual run overrides it; tools/dev.env treats empty as its default.
+      IOS_SIMULATOR: ${{ inputs.ios_simulator }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/toolchains

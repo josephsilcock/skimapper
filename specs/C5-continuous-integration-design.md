@@ -264,7 +264,7 @@ No area doc changes: this is developer tooling, and `docs/definitions/` holds pr
 - [x] 3. The developer starts the full sweep manually on a branch and sees the Android E2E verdict from the KVM job beside the fast layers in the five-layer table; iOS shows red "no result"
 - [x] 4. The developer starts the full sweep manually and sees the iOS E2E verdict from the macOS job
 - [x] 5. The nightly schedule sweeps an unswept trunk head and leaves a marker; a later night on the same head cancels its own run (grey) naming the run that swept it — skip predicate + marker proven by the self-test, real schedule only after merge
-- [ ] 6. The developer starts the manual sweep with `withhold_job` (or an `ios_simulator` override naming a missing device) and sees that job's layers red / the device named
+- [x] 6. The developer starts the manual sweep with `withhold_job` (or an `ios_simulator` override naming a missing device) and sees that job's layers red / the device named
 - [ ] 7. Nightly and manual runs save dependency caches, pushes restore them, and `cold` bypasses them — the developer sees a warm run's restore lines and a cold run's misses
 - [ ] 8. The self-test rejects a test command written into a workflow, and PIPELINE.md has the CI row
 
@@ -287,12 +287,12 @@ No area doc changes: this is developer tooling, and `docs/definitions/` holds pr
 
 ## Resume
 
-- Closed: slices 1 (20e4e5f), 2 (4f5458f + b835717), 3 (4ceb9b6), 4 (9cde0c9), 5 (this commit). TDD logs in `test-results/tdd/C5/`.
+- Closed: slices 1 (20e4e5f), 2 (4f5458f + b835717), 3 (4ceb9b6), 4 (9cde0c9), 5 (2b5db7d), 6 (this commit). TDD logs in `test-results/tdd/C5/`.
 - User ruling on the Android red: captured as **B1** on main (b17f3e3, local merge); Android stays honestly red in C5.
-- Next: slice 6 — *The developer starts the manual sweep with `withhold_job` (or an `ios_simulator` override naming a missing device) and sees that job's layers red / the device named.* `workflow_dispatch` inputs: `withhold_job` (choice: none/linux/android/ios → that job's `if` false) and `ios_simulator` (→ `IOS_SIMULATOR` env on the ios job when set). Trial on `c5-trial/s6` with the push trigger (inputs are empty on push — trial commit can hard-code them).
-- Then slice 7 (dependency caching + `cold` input; pushes restore only) and slice 8 (workflow-command ratchet in the self-test + PIPELINE.md CI row + CONVENTIONS dev.env note; README layer ids).
+- Next: slice 7 — *Nightly and manual runs save dependency caches, pushes restore them, and `cold` bypasses them.* Keys per decision 5: pub (`app/pubspec.lock`), Gradle caches + wrapper (`gradle-wrapper.properties` + Gradle build files), npm (`endpoint/package-lock.json`), Flutter SDK (pinned version — subosito `cache:`), Android system image (`ANDROID_AVD_API`), iOS SPM checkouts (`Package.resolved`). `actions/cache/restore` everywhere (skipped when `inputs.cold`), `actions/cache/save` only on main schedule/dispatch. Never DerivedData / build outputs.
+- Then slice 8 (workflow-command ratchet in the self-test + PIPELINE.md CI row + CONVENTIONS dev.env note; README layer ids).
 - **After merge, at finish:** remove the TEMPORARY `c5-trial/**` push trigger; prove manual dispatch on a branch; a real nightly (marker written), the next nightly on the same head self-cancelling (grey, naming the sweeper), a cancelled nightly followed by one that sweeps; measured cold and warm billed minutes for DECISIONS.md.
 - Seams as built: `Layer = { id, label, command, cwd, countTests }`; `selectLayers(layers, ids?)` + `listSwitch(args, name)` in `layers.ts`; `LayerVerdict` + `runVerdict(expected, verdicts)` in `verdict.ts`; `runSweep` writes `sweep/results.json`; `node tools/sweep/report.ts [--expect ids] <results-root>` → stdout + `$GITHUB_STEP_SUMMARY` + `reached_verdict=` in `$GITHUB_OUTPUT`, exit 1 unless green; `nightlySweep({headSha,currentRunId,runs,markers})` in `skip.ts`; `node tools/sweep/gate.ts --sha --run <runs.json> <markers.json>` → `swept=`. `use_android_jdk` (common.sh) on Android paths only. dev.env gained `ANDROID_AVD_API`, `ANDROID_AVD_DEVICE`, `ANDROID_EMULATOR_FLAGS`, `PATROL_CLI_VERSION`.
 - `.github/workflows/sweep.yml`: schedule + dispatch (+ TEMPORARY trial push); gate → linux / android / ios (`xcode-27`) → report (+ nightly-verdict marker on schedule).
-- `gh` and `git push` work only outside the sandbox. Force-push is refused — never amend a pushed commit. Throwaway remote branches to delete at finish (OK still not given): `c5-demo/endpoint-red`, `c5-demo/endpoint-red-2`, `c5-trial/s3`, `c5-trial/s4`, `c5-trial/s5`.
+- `gh` and `git push` work only outside the sandbox. Force-push is refused — never amend a pushed commit. Throwaway remote branches to delete at finish (OK still not given): `c5-demo/endpoint-red`, `c5-demo/endpoint-red-2`, `c5-trial/s3`, `c5-trial/s4`, `c5-trial/s5`, `c5-trial/s6`.
 - Measured so far (all cold): push job ~2 min; sweep linux ~2 min; android ~18.5 min (once killed at ~19 min, exit 143 — watch memory); iOS ~10.7 min wall ≈ 110 billed. A cold five-layer nightly ≈ 2 + 19 + 107 + report ≈ 130 billed minutes.
