@@ -1,0 +1,19 @@
+{
+  "name": "skimapper-endpoint",
+  "scripts": {
+    "dev": "wrangler dev",
+    "test:unit": "vitest run --dir test/unit --passWithNoTests=false",
+    "test:integration": "vitest run --dir test/integration --passWithNoTests=false",
+    "typecheck": "tsc --noEmit"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.4",
+    "@cloudflare/workers-types": "^5.20261018.1",
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.151.1"
+  },
+  "private": true
+}

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'endpoint/dev_endpoint.dart';
+import 'endpoint/skeleton_message_line.dart';
 import 'map/fixture_map.dart';
 
 class PlaceholderScreen extends StatefulWidget {
@@ -10,6 +12,7 @@ class PlaceholderScreen extends StatefulWidget {
 }
 
 class _PlaceholderScreenState extends State<PlaceholderScreen> {
+  final _endpoint = devEndpointClient();
   String _mapLine = 'map: loading';
 
   void _showFixtureChecked(bool found) => setState(
@@ -30,6 +33,8 @@ class _PlaceholderScreenState extends State<PlaceholderScreen> {
               'SkiMapper',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
+            const SizedBox(height: 8),
+            SkeletonMessageLine(client: _endpoint),
             const SizedBox(height: 16),
             SizedBox(
               height: 240,
