@@ -2,6 +2,19 @@
 
 ## 1. Reviewer summary
 
+> **Amendment (implement, 2026-10-18).** The repo is now public, so minutes are free. A PR is now
+> required to merge into `main`. User rulings:
+> - **Triggers:** no schedule. Fast checks run on branch pushes and on `pull_request` to main. The
+>   full sweep runs on push to main and on manual dispatch.
+> - **Removed:** the skip rule (old decision 4) and caching (old decision 5).
+> - **Required check:** `fast` becomes required on PRs. The user applies the ruleset change after
+>   C5 merges.
+> - **Docs-only PRs** run the real fast checks rather than short-circuiting green.
+> - **Kept:** `workflow_dispatch` and its inputs.
+>
+> Decisions 2, 4 and 5 are amended in place below. Slice 5's gate, marker and skip code is removed,
+> and slice 7 (caching) is dropped.
+
 **Basis.** CI is a set of thin GitHub workflows on top of the **existing sweep**. The sweep gains one
 degree of freedom (run a chosen subset of its layers) and one output (a per-layer verdict file). A
 small **report** step in `tools/sweep/` combines verdict files from several jobs against the layers
@@ -10,7 +23,7 @@ conclusions are the verdicts. It would restate the layer list and the green rule
 see a layer that ran zero tests, and only real runs could test it.
 
 **Runner facts (confirmed).**
-- Standard private-repo Linux runners (2 vCPU, 8 GB) support KVM-accelerated emulators.
+- Standard Linux runners support KVM-accelerated emulators.
 - arm64 macOS runners cannot nest virtualisation, so Android runs on Linux and iOS on macOS, as the
   spec defaults.
 
@@ -21,42 +34,31 @@ see a layer that ran zero tests, and only real runs could test it.
      it, so local output is unchanged.
    - No switch = all five, in today's order.
    - *Rejected:* named presets, a second vocabulary.
-2. **Sweep topology:** a `gate` job, then three parallel jobs (`linux`: app, endpoint, self-test;
-   `android`: Linux KVM; `ios`: macOS), then a `report` job. *Rejected:* fast layers and Android on
-   one 8 GB runner. That saves little at ×1 billing and squeezes Gradle and the emulator together.
+2. **Sweep topology:** three parallel jobs (`linux`: app, endpoint, self-test; `android`: Linux KVM;
+   `ios`: macOS), then a `report` job. *Rejected:* fast layers and Android on one runner. Gradle and
+   the emulator compete for memory.
 3. **Verdicts cross jobs as files.**
    - Each sweep also writes `test-results/sweep/results.json`, uploaded with the logs.
    - `report` combines them against the expected ids and writes the per-layer table to the run
      summary. It fails the run unless every expected layer is green. A missing layer is red, with
-     "no result (job did not run)" as its reason.
+     "no result" as its reason.
    - `report` and `runSweep` share **one run-verdict predicate**.
    - *Rejected:* job conclusions, which can't name the layers of a job that never started.
-4. **Skip rule.**
-   - **Writing the marker:** `report` runs only when the run is **not cancelled** and `gate` decided
-     to sweep. It uploads a `nightly-verdict` marker (90-day retention) only for a `schedule` run
-     where at least one layer has a **real** verdict from a `results.json`. Red rows filled in for
-     missing jobs don't count. The marker is uploaded *before* `report` exits red.
-   - **Checking it:** `gate` looks for the marker on earlier `schedule` runs for the head SHA.
-     - If it finds one, `gate` **cancels its own run** (grey). The summary names the run that swept
-       the commit.
-     - If it finds none, the summary says "no marker among N earlier scheduled runs on <sha>", so a
-       broken marker path is visible before it burns minutes.
-   - The predicate is a pure function in `tools/sweep/`. `gate` gets `actions: write` plus
-     `contents: read`; every other job gets `contents: read` only.
+4. **Triggers (amended).**
+   - `push.yml` (the `fast` job) runs on `push` to every branch except `main`, with the docs-only
+     `paths-ignore`, and on `pull_request` to `main` with **no** path filter. A required check must
+     always report, so docs-only PRs run the real fast checks.
+   - `sweep.yml` runs on `push` to `main` (with the same docs-only `paths-ignore`) and on
+     `workflow_dispatch` (inputs `withhold_job` and `ios_simulator`).
+   - Every job gets `contents: read` only.
    - *Rejected:*
-     - a green "skipped" run, which breaks the AC;
-     - a cache-key marker, which is evicted after 7 idle days, so the sweep re-runs weekly.
-5. **Dependency caching, keyed on dependency inputs, never on build outputs.**
-   - **Cached, with their keys:** pub (`pubspec.lock`); Gradle caches and wrapper
-     (`gradle-wrapper.properties` and the Gradle build files); npm (`package-lock.json`); the Flutter
-     SDK (the pinned version); the Android system image (`ANDROID_AVD_API`); iOS SPM package
-     checkouts (`Package.resolved`).
-   - **Not cached:** DerivedData, Gradle build outputs and `app/build`. A restored build would mean
-     the night proved an incremental build rather than a clean one.
-   - Only trunk nightly and manual runs save caches. Pushes only restore them.
-   - The manual sweep's `cold` input bypasses every restore. The first nightly is naturally cold.
-   - Stage 2's acceptance records billed minutes for one cold and one warm nightly.
-   - *Rejected:* caching DerivedData (most ×10 minutes saved, but loses the clean-build proof).
+     - a nightly schedule plus skip rule: that was budget-driven, and a merge-commit sweep proves
+       the same thing sooner;
+     - short-circuiting `fast` green on docs-only PRs: a green that ran nothing;
+     - a full sweep on PRs: E2E stays on demand before merge.
+5. **No dependency caching (amended).** Minutes are free. The trial showed a warm Linux job saves
+   about 30 s. A cold run also proves a clean build every time. *Rejected:* the per-cache composite
+   action from the slice-7 trial.
 6. **Flutter is pinned to an exact version** in `app/pubspec.yaml` `environment.flutter`, which CI's
    Flutter setup reads.
 7. **Linux portability with no CI-only branches in `tools/`.**
@@ -70,8 +72,8 @@ see a layer that ran zero tests, and only real runs could test it.
 
 **Guiding principles**
 - Workflows contain only `tools/full-sweep --layers …`, `node tools/sweep/report.ts`, and runner
-  preparation (toolchains, caches, device creation). They never contain a test command or a green
-  rule. A self-test ratchet rejects literal `flutter test`, `vitest` and `patrol` invocations in
+  preparation (toolchains, device creation). They never contain a test command or a green rule. A
+  self-test ratchet rejects literal `flutter test`, `vitest` and `patrol` invocations in
   `.github/workflows/`.
 - Device prep sources `tools/dev.env` and **creates** the devices it names, but never boots them.
   Booting, and boot failure, stay in the sweep (G4).
@@ -80,35 +82,37 @@ see a layer that ran zero tests, and only real runs could test it.
 - CI overrides dev.env values only through the environment.
 - "Green" is decided only by `whyRed` (per layer) and the shared run-verdict predicate (per run).
 - The local sweep's output and exit rule are unchanged. New outputs are additional files.
-- Third-party actions are pinned by SHA.
+- Third-party actions are pinned by SHA. PRs use `pull_request`, never `pull_request_target`.
 - **Concurrency.**
-  - Push: one group per branch, `cancel-in-progress`.
-  - Sweep: one group per branch, no cancel. GitHub keeps one pending run per group, so a newer
-    queued sweep replaces a pending one. That's accepted. Pushes never cancel a sweep.
+  - Fast checks: one group per ref, `cancel-in-progress`.
+  - Sweep: one group per ref, no cancel. GitHub keeps one pending run per group, so a newer `main`
+    push replaces a pending sweep. That's accepted. A running sweep is never cancelled.
 
 **Risks / blast radius.**
 - The `tools/lib` changes reach local `e2e` and `dev-app`. The unchanged-local-sweep AC and the
   local full sweep guard them.
-- The Android job is tight on 8 GB RAM and ~14 GB disk.
+- The Android job is tight on memory and disk. The app's 8 GB Gradle heap sits beside a 4 GB
+  emulator, which is why the Gradle heap fix exists.
+- Android E2E is red on every `main` sweep until B1 is fixed (user ruling).
 
 **Unknowns,** each surfaced in the slice that builds its platform:
 - whether AVD creation for `Pixel_9_Pro_XL_-_Android_15` works with headless emulator flags;
-- whether the `macos-26`/`xcode-27` image has an "iPhone 17" device type and runtime;
-- the real cold and warm minutes.
+- whether the `macos-26`/`xcode-27` image has an "iPhone 17" device type and runtime.
 
-**Disproportionate complexity.** The skip rule (marker, API query, self-cancelling `gate`) exists only
-because of the private-repo budget. Going public, already the spec's fallback, removes it. There is no
-new lever.
+**Not changing:** the E2E tests; the local sweep summary and exit rule; pipeline skills (the user
+changed the PR route outside C5); deployment (none).
 
-**Not changing:** the E2E tests; the local sweep summary and exit rule; pipeline skills; branch
-protection (none); deployment (none).
+**Ruleset (user-applied, after C5 merges).** The user adds `fast` as a required status check to the
+`main` ruleset (id 25351486). The PUT must carry every existing rule and parameter through unchanged,
+including `require_extra_approval_for_unattributed_changes`. Until then, PIPELINE's "wait for the
+required `fast` check" step has nothing to wait for.
 
 **Gate rulings**
 
 Grilling round 1:
-- self-cancel, with `actions: write` on `gate` only;
+- self-cancel, with `actions: write` on `gate` only (superseded by the amendment);
 - `--layers` ids;
-- dependency caching in scope;
+- dependency caching in scope (superseded by the amendment);
 - Flutter pinned in the pubspec.
 
 Design gate:
@@ -122,29 +126,37 @@ Design gate:
 - minors folded in;
 - a queued manual run replacing a pending nightly accepted.
 
+Implement amendment (2026-10-18), user rulings:
+- no nightly;
+- fast on branch pushes and PRs;
+- full sweep on push to main;
+- `fast` required (user applies);
+- docs-only PRs run the fast checks;
+- keep dispatch and its inputs;
+- drop caching;
+- keep the Gradle heap fix as its own change.
+
 ## 2. Basis and decomposition
 
 **Candidate A (chosen): extend the sweep.** The concepts:
 - **Layer** (existing; gains an id).
 - **Selection** (ids to run; default all).
 - **Verdict file** (per layer: id, label, verdict, reason).
-- **Report** (expected ids + verdict files → summary table, run verdict, marker).
-- **Skip predicate** (earlier scheduled runs → swept or not).
+- **Report** (expected ids + verdict files → summary table, run verdict).
 
 How each AC falls out:
-- Push = one Linux job with `--layers $FAST_LAYERS`, followed by `report --expect $FAST_LAYERS`.
+- Branch push or PR = one Linux job with `--layers $FAST_LAYERS`, followed by
+  `report --expect $FAST_LAYERS`.
 - Failing layer named = the report table plus the attached logs.
 - Job never started = an expected id with no verdict is red.
 - Device failure = the sweep's existing `fail` line becomes the verdict's reason.
-- Docs-only = `paths-ignore`.
+- Docs-only = `paths-ignore` on both push triggers. None on `pull_request`.
 - Supersede and sweep independence = separate per-workflow concurrency groups.
-- Cancelled, never-started or verdict-less nightlies leave no marker, so the next night sweeps.
-- Manual runs never write the marker.
+- Main push and dispatch = the sweep workflow's triggers.
 
 *What it makes hard:* `tools/sweep/` learns a little about GitHub (the step-summary markdown, kept
-inside `report.ts`). Its weakest ACs are the cancel and never-started semantics, which rest on the
-`report` condition and the marker rule in decision 4. "Job never starts is red" also depends on
-`report` itself starting. If it doesn't, only GitHub's own run error shows.
+inside `report.ts`). "Job never starts is red" depends on `report` itself starting. If it doesn't,
+only GitHub's own run error shows.
 
 **Candidate B: workflow-native.**
 - One job per layer, with job conclusions combined in YAML.
@@ -154,17 +166,16 @@ inside `report.ts`). Its weakest ACs are the cancel and never-started semantics,
 
 ```mermaid
 flowchart LR
-  gate -->|not swept| linux & android & ios
-  gate -->|already swept| cancel[cancel own run]
+  push_main[push to main / dispatch] --> linux & android & ios
   linux & android & ios -->|results.json + logs| report
-  report --> summary[run summary table] & marker[nightly-verdict, schedule only] & exit[run red/green]
+  report --> summary[run summary table] & exit[run red/green]
+  branch[branch push / PR] --> fast --> fastreport[report --expect FAST_LAYERS]
 ```
 
 **Seams:**
 - `sweepLayers`: the only list of layers.
 - `results.json`: the only verdict format.
 - The run-verdict predicate: the only run-level green rule, shared by `runSweep` and `report`.
-- The skip predicate: pure, fed by a thin `gh api` call in `gate`.
 - `tools/dev.env`: the only device, JDK and CLI-version values.
 
 UI sketch: none. There is no app change, and the surfaces are GitHub's own.
@@ -173,74 +184,65 @@ UI sketch: none. There is no app change, and the surfaces are GitHub's own.
 
 | Business rule | Single home | Paths that consume it |
 |---|---|---|
-| The sweep's layers, ids, labels, order | `sweepLayers` (`tools/sweep/layers.ts`) | local `tools/full-sweep`; `--layers` parsing; push job; `linux`/`android`/`ios` jobs; `report`'s default expected set; `sweep.test.ts`; PIPELINE.md full-sweep row; README.md layer list |
+| The sweep's layers, ids, labels, order | `sweepLayers` (`tools/sweep/layers.ts`) | local `tools/full-sweep`; `--layers` parsing; `fast` job; `linux`/`android`/`ios` jobs; `report`'s default expected set; `sweep.test.ts`; PIPELINE.md full-sweep row; README.md layer list |
 | A layer is red if it exits non-zero or runs zero tests | `whyRed` (`tools/sweep/sweep.ts`) | every sweep, local and CI |
-| A run is green only if every expected layer is green; missing = red | run-verdict predicate (`tools/sweep/`) | `runSweep` (local `ok`); `report` in the push job and the sweep's `report` job |
-| A scheduled run reached a verdict → write marker | `report` | sweep `report` job; read by the skip predicate |
-| Nightly skip: an earlier `schedule` run on this SHA left a marker | skip predicate (`tools/sweep/`) | `gate` job only |
-| Fast checks = `app,endpoint,self-test` | `FAST_LAYERS` env in the push workflow | push job's `--layers` and `report --expect`; PIPELINE.md CI row points to it |
-| Device names, AVD API level and device profile, emulator flags | `tools/dev.env` (`IOS_SIMULATOR`, `ANDROID_AVD`, `ANDROID_AVD_API`, `ANDROID_AVD_DEVICE`, `ANDROID_EMULATOR_FLAGS`) | `tools/lib/devices.sh` (via `tools/e2e`, `tools/dev-app`); CI device prep (sources it); system-image cache key; CI env overrides; CONVENTIONS.md dev.env convention |
+| A run is green only if every expected layer is green; missing = red | run-verdict predicate (`tools/sweep/verdict.ts`) | `runSweep` (local `ok`); `report` in the `fast` job and the sweep's `report` job |
+| Fast checks = `app,endpoint,self-test` | `FAST_LAYERS` env in `push.yml` | `fast` job's `--layers` and `report --expect`; PIPELINE.md CI row points to it |
+| Docs-only push | `paths-ignore` in `push.yml` **and** `sweep.yml`. YAML can't share it, so the self-test asserts the two lists are identical. | both push triggers (never `pull_request`) |
+| Device names, AVD API level and device profile, emulator flags | `tools/dev.env` (`IOS_SIMULATOR`, `ANDROID_AVD`, `ANDROID_AVD_API`, `ANDROID_AVD_DEVICE`, `ANDROID_EMULATOR_FLAGS`) | `tools/lib/devices.sh` (via `tools/e2e`, `tools/dev-app`); CI device prep (sources it); CI env overrides; CONVENTIONS.md dev.env convention |
 | JDK version and resolution | `ANDROID_JDK_VERSION` in dev.env; resolution in `tools/lib/common.sh` (Android paths) | `tools/e2e android`; `tools/dev-app android`; CI JDK setup |
 | Endpoint values reaching the app | dev.env → `endpoint_dart_defines` | `tools/e2e`; `tools/dev-app`; `app/lib/endpoint/dev_endpoint.dart` (unchanged) |
-| Flutter version | `app/pubspec.yaml` `environment.flutter` (exact) | Flutter setup in every CI job; Flutter SDK cache key; local `pub get` |
+| Flutter version | `app/pubspec.yaml` `environment.flutter` (exact) | Flutter setup in every CI job; local `pub get` |
 | Node version | root `.nvmrc` | setup-node in every CI job |
 | Patrol CLI version | `PATROL_CLI_VERSION` in dev.env | CI Patrol install (`ios`, `android` jobs) |
 | Xcode image | `ios` job's `runs-on` label | `ios` job only (CI-only fact) |
-| Docs-only push | push workflow `paths-ignore` | push workflow only |
 
 ## 4. Data shape
 
 No database.
 - `results.json`: one entry per layer that ran (id, label, verdict, reason).
-- Artifacts:
-  - `sweep-<job>` (logs and results, 14-day retention, inside the 500 MB private-repo storage);
-  - `nightly-verdict` (bytes, 90 days). A trunk unchanged for longer is re-swept once, which is
-    accepted.
-- Caches: within the 10 GB repo limit. Caches unused for 7 days are evicted, so the next nightly runs
-  cold, which is accepted. The warm measurement is taken on a night that follows a cached night.
+- Artifacts: `sweep-<job>` (logs and results, 14-day retention).
+- No caches and no marker.
 
 ## 5. Test strategy
 
 - **Outer tests are real GitHub runs** (the surface is GitHub; Patrol doesn't apply). Each slice's
-  demo is a real push or dispatch, with run links captured in the demo pack.
+  demo is a real push, PR or dispatch, with run links captured in the demo pack.
 - **The sweep self-test is the integration layer** (real processes, real files). It covers:
   - `--layers` selection and the unchanged default;
   - `results.json`;
-  - `report` combining results, including a missing job, a zero-test layer and the marker rule
-    (cancelled, manual, and verdict-less runs);
-  - the skip predicate;
+  - `report` combining results, including a missing job and a zero-test layer;
   - JDK fail-fast;
-  - the workflow-command ratchet.
+  - the workflow-command ratchet;
+  - the two docs-only lists being identical.
 
   Running it on Linux in CI is itself the portability proof.
 - **Real negative cases**, each a demo once:
   - The manual sweep's `withhold_job` input (a false `if` on one job) must show that job's layers
     red.
   - An `ios_simulator` override set to a missing name must name the device.
-  - A cancelled nightly must be followed by a nightly that sweeps.
   - A docs-only push must start no run.
+  - A docs-only PR must still report `fast`.
   - A newer push must cancel the older push run.
-  - A push during a sweep must leave the sweep running.
 - **The local-unchanged AC:** the self-test asserts the default selection and labels. The local full
   sweep must stay green.
 
 ## 5a. Failure posture
 
-The nightly is a background job, so the default doesn't apply. `report` fails the run, and **GitHub's
-failure email** raises it to a human.
-- If `gate`'s API query fails, `gate` goes red and emails rather than guessing.
-- A marker that never matches is visible in `gate`'s summary line.
-- A cache miss just runs cold.
-- If minutes run out or a runner never starts, GitHub's own run error is the visible signal (per the
-  spec).
+The `main` sweep is a background job, so the default doesn't apply. `report` fails the run, and
+**GitHub's failure email** raises it to a human.
+- If a runner never starts, GitHub's own run error is the visible signal (per the spec).
 - No retries.
 
 ## 6. Definition delta
 
 No area doc changes: this is developer tooling, and `docs/definitions/` holds product behaviour.
-- `docs/PIPELINE.md` gains a CI row, and its full-sweep row lists the layer ids.
+- `docs/PIPELINE.md` gains a CI row, and its full-sweep row lists the layer ids. The CI row notes
+  that `fast` becomes required only once the user updates the ruleset.
 - `docs/DECISIONS.md`:
-  - gains a C5 entry: the runner facts, decisions 2–5 and the measured cold and warm minutes;
+  - gains a C5 entry: the runner facts, decisions 2–5 and the triggers;
+  - supersedes G3 (the repo is public);
+  - drops D1's "minutes shared with C5" note;
   - updates the build-time JDK entry (decision 7).
 - `docs/CONVENTIONS.md`'s dev.env note gains the new values.
 - The C5 BACKLOG line is removed at finish.
@@ -263,9 +265,11 @@ No area doc changes: this is developer tooling, and `docs/definitions/` holds pr
 - [x] 2. The developer pushes a change that breaks the endpoint tests and sees a red check whose run summary names `endpoint`, with `endpoint.log` attached
 - [x] 3. The developer starts the full sweep manually on a branch and sees the Android E2E verdict from the KVM job beside the fast layers in the five-layer table; iOS shows red "no result"
 - [x] 4. The developer starts the full sweep manually and sees the iOS E2E verdict from the macOS job
-- [x] 5. The nightly schedule sweeps an unswept trunk head and leaves a marker; a later night on the same head cancels its own run (grey) naming the run that swept it — skip predicate + marker proven by the self-test, real schedule only after merge
+- [x] 5. ~~The nightly schedule sweeps an unswept trunk head and leaves a marker; a later night self-cancels~~ (superseded by the amendment; its code is removed in slice 7)
 - [x] 6. The developer starts the manual sweep with `withhold_job` (or an `ios_simulator` override naming a missing device) and sees that job's layers red / the device named
-- [ ] 7. Nightly and manual runs save dependency caches, pushes restore them, and `cold` bypasses them — the developer sees a warm run's restore lines and a cold run's misses
+- [ ] 7. A code push to main runs the five-layer sweep with no gate job, and the self-test no longer has a skip predicate: the sweep is triggered by `push: main` + dispatch (schedule, gate, marker, `skip.ts`/`gate.ts` and their tests removed)
+- [ ] 7b. The developer opens a docs-only PR to main and sees the `fast` check report on it (fast workflow gains `pull_request` with no path filter, branch pushes exclude main; the self-test asserts both docs-only lists are identical)
+- [ ] 7c. The Android job sizes Gradle's heap to fit beside the emulator, and the sweep's Android layer reaches a verdict rather than being killed
 - [ ] 8. The self-test rejects a test command written into a workflow, and PIPELINE.md has the CI row
 
 ## Decisions taken during implement
@@ -278,21 +282,20 @@ No area doc changes: this is developer tooling, and `docs/definitions/` holds pr
 - **A `toolchains` composite action** (`.github/actions/toolchains`) is the one place jobs set up Node, Flutter and the endpoint's packages from their pinned versions.
 - **iOS runs on `runs-on: xcode-27`** (macOS 27, Xcode 27.0 default, nearest to the local Xcode 27.1); its image ships "iPhone 17", so device prep is create-if-missing.
 - **A missing layer's reason reads "no result (its job did not run or did not finish)"**: the first real case was an Android job killed mid-sweep (exit 143), not one that never started.
-- **The skip check uses two API calls**: the workflow's `schedule` runs filtered by `head_sha`, and the repo's artifacts filtered by `name=nightly-verdict` (each carries its `workflow_run.id`) — no per-run artifact listing.
-- **`gate` checks on every event but cancels only on `schedule`**, so a manual or trial run's summary still says whether a nightly swept the commit, and the real API path was provable before merge.
-- **The marker is uploaded by a step after `Report`** (guarded by `!cancelled()`), driven by `report.ts`'s `reached_verdict` output — the same effect as "before report exits red": a red nightly still leaves its marker.
-- **TEMPORARY `push: c5-trial/**` trigger on `sweep.yml`**: `workflow_dispatch` works only once the workflow is on main, so pre-merge trials run by pushing throwaway `c5-trial/*` branches. Removed before `/finish-feature`; the real manual dispatch is proven after merge.
+- ~~**The skip check uses two API calls**~~, ~~**`gate` checks on every event**~~, ~~**the marker is uploaded by a step after `Report`**~~: slice-5 choices, superseded by the amendment (no schedule).
+- **TEMPORARY `push: c5-trial/**` trigger on `sweep.yml`**: `workflow_dispatch` works only once the workflow is on main, so pre-merge trials run by pushing throwaway `c5-trial/*` branches. It stays through slices 7–8 (a `push: main` trigger can't be trialled before merge either), and is removed before `/finish-feature`. C5's own merge commit is the first real `main` sweep.
 - **`.nvmrc` pins Node 26.8.1** (the local version; the sweep relies on Node's native TypeScript stripping).
+- **Amendment, 2026-10-18** (user rulings, see § 1): the repo went public and `main` became PR-only. The nightly, skip rule and caching are dropped; the full sweep runs on push to main; fast runs on branch pushes and PRs; `fast` becomes required (the user applies the ruleset). *Rejected:* short-circuiting `fast` green on docs-only PRs (a green that ran nothing, and a third copy of the docs-only list).
+- **The Gradle heap fix is its own change, not caching.** The slice-7 trial's Android job was killed at about 14 min until `~/.gradle/gradle.properties` capped Gradle at 2 GB beside the 4 GB emulator. After that it reached a real verdict (red: B1).
 
 
 ## Resume
 
-- Closed: slices 1 (20e4e5f), 2 (4f5458f + b835717), 3 (4ceb9b6), 4 (9cde0c9), 5 (2b5db7d), 6 (this commit). TDD logs in `test-results/tdd/C5/`.
-- User ruling on the Android red: captured as **B1** on main (b17f3e3, local merge); Android stays honestly red in C5.
-- Next: slice 7 — *Nightly and manual runs save dependency caches, pushes restore them, and `cold` bypasses them.* Keys per decision 5: pub (`app/pubspec.lock`), Gradle caches + wrapper (`gradle-wrapper.properties` + Gradle build files), npm (`endpoint/package-lock.json`), Flutter SDK (pinned version — subosito `cache:`), Android system image (`ANDROID_AVD_API`), iOS SPM checkouts (`Package.resolved`). `actions/cache/restore` everywhere (skipped when `inputs.cold`), `actions/cache/save` only on main schedule/dispatch. Never DerivedData / build outputs.
-- Then slice 8 (workflow-command ratchet in the self-test + PIPELINE.md CI row + CONVENTIONS dev.env note; README layer ids).
-- **After merge, at finish:** remove the TEMPORARY `c5-trial/**` push trigger; prove manual dispatch on a branch; a real nightly (marker written), the next nightly on the same head self-cancelling (grey, naming the sweeper), a cancelled nightly followed by one that sweeps; measured cold and warm billed minutes for DECISIONS.md.
-- Seams as built: `Layer = { id, label, command, cwd, countTests }`; `selectLayers(layers, ids?)` + `listSwitch(args, name)` in `layers.ts`; `LayerVerdict` + `runVerdict(expected, verdicts)` in `verdict.ts`; `runSweep` writes `sweep/results.json`; `node tools/sweep/report.ts [--expect ids] <results-root>` → stdout + `$GITHUB_STEP_SUMMARY` + `reached_verdict=` in `$GITHUB_OUTPUT`, exit 1 unless green; `nightlySweep({headSha,currentRunId,runs,markers})` in `skip.ts`; `node tools/sweep/gate.ts --sha --run <runs.json> <markers.json>` → `swept=`. `use_android_jdk` (common.sh) on Android paths only. dev.env gained `ANDROID_AVD_API`, `ANDROID_AVD_DEVICE`, `ANDROID_EMULATOR_FLAGS`, `PATROL_CLI_VERSION`.
-- `.github/workflows/sweep.yml`: schedule + dispatch (+ TEMPORARY trial push); gate → linux / android / ios (`xcode-27`) → report (+ nightly-verdict marker on schedule).
-- `gh` and `git push` work only outside the sandbox. Force-push is refused — never amend a pushed commit. Throwaway remote branches to delete at finish (OK still not given): `c5-demo/endpoint-red`, `c5-demo/endpoint-red-2`, `c5-trial/s3`, `c5-trial/s4`, `c5-trial/s5`, `c5-trial/s6`.
-- Measured so far (all cold): push job ~2 min; sweep linux ~2 min; android ~18.5 min (once killed at ~19 min, exit 143 — watch memory); iOS ~10.7 min wall ≈ 110 billed. A cold five-layer nightly ≈ 2 + 19 + 107 + report ≈ 130 billed minutes.
+- Closed: slices 1 (20e4e5f), 2 (4f5458f + b835717), 3 (4ceb9b6), 4 (9cde0c9), 5 (2b5db7d, superseded), 6 (55b30f0). TDD logs in `test-results/tdd/C5/`. Slice 7 (caching) was dropped after its trial on `c5-trial/s7`. That log stays as a record of the trial.
+- origin/main (with B1 and the user's PR-flow edits) is merged into the feature branch (7c411d1). The amendment is the commit after it.
+- Next: slice 7 — *a code push to main runs the five-layer sweep with no gate job*. Remove `schedule`, `gate`, the marker steps, `tools/sweep/skip.ts`, `gate.ts`, `skip.test.ts`, `gate.test.ts`, and `report.ts`'s `reached_verdict` output (check whether anything else consumes it). `report` keeps `!cancelled()`. Add `push: branches: [main]` with the docs-only `paths-ignore`. Keep dispatch and its inputs, and keep the TEMPORARY trial trigger.
+- Then 7b (fast workflow `pull_request`, branches-ignore main, docs-only lists equal in the self-test), 7c (Gradle heap, from 1fe15c9), 8 (ratchet, PIPELINE CI row noting that `fast` is required only after the user's ruleset change, CONVENTIONS dev.env note, README layer ids).
+- **After merge, at finish:** remove the TEMPORARY trigger. Prove manual dispatch. C5's merge commit must produce a real `main` sweep (red on Android: B1). The user then adds `fast` as a required check (ruleset 25351486; carry the existing params through unchanged). Throwaway remote branches to delete (OK still not given): `c5-demo/endpoint-red`, `c5-demo/endpoint-red-2`, `c5-trial/s3`–`s7`. Mention auto-merge (`gh pr merge --auto` plus the repo setting) as an optional follow-up.
+- Seams as built: `Layer = { id, label, command, cwd, countTests }`; `selectLayers(layers, ids?)` + `listSwitch(args, name)` in `layers.ts`; `LayerVerdict` + `runVerdict(expected, verdicts)` in `verdict.ts`; `runSweep` writes `sweep/results.json`; `node tools/sweep/report.ts [--expect ids] <results-root>` → stdout + `$GITHUB_STEP_SUMMARY`, exit 1 unless green. `use_android_jdk` (common.sh) on Android paths only. dev.env gained `ANDROID_AVD_API`, `ANDROID_AVD_DEVICE`, `ANDROID_EMULATOR_FLAGS`, `PATROL_CLI_VERSION`.
+- `gh` and `git push` work only outside the sandbox (TLS fails inside), and so does writing `.claude/skills/` (a merge touching skills needs the sandbox off). Force-push is refused — never amend a pushed commit.
+- Measured (cold): push job ~2 min; sweep linux ~2 min; android ~21 min with the heap fix; iOS ~10.7 min wall.

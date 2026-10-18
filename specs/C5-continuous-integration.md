@@ -1,18 +1,28 @@
 # C5 Continuous integration
 
+> **Amended during implement (2026-10-18).** Two facts this spec rested on changed. The repo is now
+> **public**, so Actions minutes are free. Merging into `main` now **requires a pull request**
+> (repository ruleset). Rulings: no nightly schedule, so the skip rule is gone. Fast checks run on
+> branch pushes and on PRs to main. The full sweep runs on every push to main and on demand. `fast`
+> becomes a required check on PRs to main. Caching is dropped. The budget sections are removed.
+
 ## Intent
 
 Today every test layer runs only on the developer's Mac. A change that passes only because of local
 state (a cached build, a hand-configured simulator, a particular JDK) goes unnoticed, and nothing
 checks the trunk between features. C5 runs the project's own test commands on GitHub, where the repo
-is hosted. The cheap layers run on every push, so a break shows on the commit within minutes. The
-whole sweep, E2E on both platforms included, runs nightly on the trunk, so it is proven on a clean
-machine. CI **reports**; it never blocks a merge. The developer reads the result on GitHub and in
-GitHub's failure email, and raises a bug when the trunk goes red.
+is hosted.
+- The cheap layers run on every branch push and every pull request to `main`, so a break shows
+  within minutes.
+- The whole sweep, E2E on both platforms included, runs on every push to `main`, which means on
+  each PR's merge commit. It also runs on demand on any branch. The trunk is proven on a clean
+  machine after every merge.
+- The fast checks gate the merge. They are a required status check on PRs to `main`. The full
+  sweep only reports.
+- The developer reads the results on GitHub and in GitHub's failure email, and raises a bug when
+  the trunk goes red.
 
-The constraint that shapes everything is that the repo stays private (DECISIONS.md G3). That gives a
-budget of 2,000 Actions minutes a month, with macOS minutes counted ten-fold. If the nightly sweep
-doesn't fit, the recorded fallback is to make the repo public.
+The repo is public (DECISIONS.md G3 is superseded), so Actions minutes are not a constraint.
 
 ## Rules
 
@@ -32,27 +42,31 @@ doesn't fit, the recorded fallback is to make the repo public.
   device that cannot boot, is red and named. A job that never started shows its layers as red.
 - **Where each layer runs.** The app, endpoint and sweep self-test layers run on Linux. Android E2E
   runs on a Linux runner with a hardware-accelerated emulator. iOS E2E runs on a macOS runner. The
-  `tools/` scripts must therefore work on Linux as well as macOS. *(`/design-feature` confirms the
-  runner facts first. If a macOS runner can boot the AVD after all, the design may take that simpler
-  path for Android.)*
-- **Full sweeps are never cancelled by pushes.** Push runs and full-sweep runs (nightly or manual)
-  are cancelled independently of each other.
+  `tools/` scripts must therefore work on Linux as well as macOS.
+- **A running full sweep is never cancelled.** Fast-check runs and full-sweep runs are cancelled
+  independently of each other. A queued full sweep on `main` may be replaced by the sweep for a
+  newer `main` commit. Only the newest queued commit is swept.
 
-## Stage 1: fast checks on every push
+## Stage 1: fast checks on every branch push and pull request
 
-> The developer pushes a branch, and sees a green or red check on that commit on GitHub, with the
-> failing layer named and its log attached.
+> The developer pushes a branch or opens a PR, and sees a green or red `fast` check on GitHub, with
+> the failing layer named and its log attached. A PR to `main` can't merge until `fast` is green.
 
 Stage 1 includes making `tools/full-sweep` start and run its non-E2E layers on Linux. Today the
 shared tool setup assumes macOS (for example, it resolves `JAVA_HOME` with `/usr/libexec/java_home`
 unconditionally).
 
 ```gherkin
-Scenario: a code push runs the fast checks
-  Given a push to any branch (trunk included) that changes code
+Scenario: a code push to a branch runs the fast checks
+  Given a push to any branch other than main that changes code
   When CI runs
   Then the app tests, the endpoint tests and the sweep self-test run on a Linux runner
   And the commit shows a green check only if every one of them passed with at least one test
+
+Scenario: a pull request to main runs the fast checks
+  Given a pull request into main, including one that changes only documentation
+  When CI runs
+  Then the fast checks run on the PR's merge result and report the `fast` check on the PR
 
 Scenario: a failing layer is named
   Given a push whose change breaks one layer
@@ -60,13 +74,13 @@ Scenario: a failing layer is named
   Then the check is red, the run names that layer, and the layer's log is attached to the run
 
 Scenario: documentation-only pushes are skipped
-  Given a push that changes only docs/, specs/, *.md files or .claude/
-  Then no CI run starts
+  Given a push (to a branch or to main) that changes only docs/, specs/, *.md files or .claude/
+  Then no CI run starts for that push
 
 Scenario: a newer push supersedes an older one
-  Given a push run in progress for a branch
+  Given a fast-check run in progress for a branch
   When a newer commit is pushed to the same branch
-  Then the older push run is cancelled and only the newest commit gets a verdict
+  Then the older run is cancelled and only the newest commit gets a verdict
 
 Scenario: the local sweep is unchanged
   Given the tools/ scripts after this change
@@ -76,87 +90,69 @@ Scenario: the local sweep is unchanged
 ```
 
 A docs-only push after a red code commit leaves the branch head with no check of its own. The red
-stays visible on the earlier commit. This is accepted.
+stays visible on the earlier commit. This is accepted. A docs-only *PR* still runs the fast checks,
+so the required `fast` check always reports.
 
-## Stage 2: nightly full sweep, and on demand
+**Required check.** After C5's PR merges, the user adds `fast` as a required status check in the
+`main` ruleset. Until then, no branch cut from `main` produces the check.
 
-> Each morning the developer opens GitHub and sees the night's full-sweep result for the trunk,
+## Stage 2: full sweep on every push to main, and on demand
+
+> After a PR merges, the developer opens GitHub and sees the full-sweep result for that merge commit,
 > layer by layer, with the red layer's log attached, plus a failure email if it was red.
 
 ```gherkin
-Scenario: the trunk is swept nightly
-  Given the trunk's head is a commit that no nightly sweep has carried to a per-layer verdict
-  When the nightly schedule fires
+Scenario: every code push to main is swept
+  Given a push to main that changes code (normally a PR's merge commit)
+  When CI runs
   Then all five sweep layers run (app, endpoint, sweep self-test, E2E iOS, E2E Android)
   And the run's summary lists all five layers with their results, with the sweep's logs attached
 
-Scenario: unchanged nights are skipped, and the skip does not look like a pass
-  Given a previous nightly carried the trunk's head commit to a per-layer verdict
-  When the nightly schedule fires
-  Then no sweep layer runs
-  And that night shows no green sweep result
-
-Scenario: a nightly that gave no verdict does not count as swept
-  Given the previous nightly on the trunk's head was cancelled, never started,
-    or failed before any layer reached a verdict
-  When the nightly schedule fires
-  Then the full sweep runs on that commit
-
 Scenario: a job that never starts is red
-  Given one of the nightly's jobs (for example the iOS or Android runner) does not start or finish
+  Given one of the sweep's jobs (for example the iOS or Android runner) does not start or finish
   When the run reports
   Then that job's layers are shown red and the run is red
 
 Scenario: an E2E device that cannot start is red
   Given the runner cannot boot the simulator or emulator named in the run's config
-  When the nightly sweep runs
+  When the sweep runs
   Then that E2E layer is red and the run names the device that failed
 
 Scenario: the full sweep can be run on demand
   Given any branch
   When the developer starts the full sweep on it manually from GitHub
   Then the same five-layer sweep runs on that branch's latest commit
-  And a manual run does not count as a nightly for the skip rule
 ```
 
-**Skip rule.** A night is skipped when the trunk's head is a commit that a previous nightly carried
-to a per-layer verdict, whether that verdict was green or red. A red commit that hasn't changed is
-re-run only from the manual button.
-
-**Acceptance of Stage 2** requires one real nightly to have run. The spec, and from `/finish-feature`
-on DECISIONS.md, records the measured billed minutes per nightly against the budget. If that
-measurement shows the nightly cannot fit, the going-public fallback is taken rather than the
-schedule being silently thinned.
+**Acceptance of Stage 2** requires a real full sweep from a push to `main` (C5's own merge commit).
 
 ## Non-goals
 
-- **No blocking or gating.** No required checks, branch protection or rulesets. Merges stay local.
-- **No pipeline-skill changes.** `/finish-feature` neither pushes the feature branch nor waits for
-  CI, and `/new-feature` does not check CI. The developer raises a red trunk as a bug.
-- **No full sweep on push.** Every push, trunk included, gets the fast checks only. E2E runs nightly
-  or on demand.
+- **The full sweep gates nothing.** Only `fast` is required. Android E2E is red until B1 is fixed,
+  and a required sweep would block every merge.
+- **No pipeline-skill changes in C5.** The PR merge route was changed by the user outside C5
+  (CLAUDE.md, PIPELINE.md "merge into trunk", and the skills). `/finish-feature` doesn't wait for
+  the full sweep on `main`.
+- **No full sweep on branches or PRs** unless it is started manually. E2E runs on `main` pushes or
+  on demand.
+- **No schedule** (no nightly run), and no dependency caching.
 - **No deployment.** No Worker deploy and no secrets for Cloudflare or the app stores. CI needs no
   secrets.
 - **Not the daily data refresh** (F20's cron) and not service monitoring (C3).
-- **Going public is not part of C5**; it is only the fallback.
 - **No retries or flake handling**, no test dashboards, and no notifications beyond GitHub's own.
 - **No iOS anywhere but macOS**, and no change to the E2E tests themselves.
 
 ## NFR trigger
 
-**Budget (cost).** Runners start clean, and `tools/e2e` builds once per test group, so a realistic
-iOS E2E job is 20–40 minutes, which bills at 200–400 minutes. Add the Linux Android job and the
-push runs, and that leaves roughly 4–8 code-changing nights a month inside 2,000 minutes. This
-estimate is unmeasured, which is why Stage 2's acceptance requires a measured nightly (see above).
-When minutes run out, GitHub refuses to start runs and says so on the run. That counts as visible.
+**Cost.** None: the repo is public, so standard runners are free. The Android-on-Linux and
+iOS-on-macOS split is a capability fact, not a budget choice. arm64 macOS runners can't run an AVD.
 
-**Shared minutes, accepted risk.** F20's future daily refresh cron will draw on the same allowance
-(DECISIONS.md D1). If CI uses up the month's minutes, that refresh would stop until the month resets.
-This is accepted while F20 is unbuilt. F20's spec must either reserve minutes or trigger the
-going-public fallback.
-
-**Security.** Workflows get read-only repository permissions and use no secrets. Third-party
-actions are pinned.
+**Security.**
+- The repo is public, so CI logs and artifacts are public too. CI uses no secrets.
+- Workflows get read-only repository permissions.
+- Third-party actions are pinned.
+- PRs use the `pull_request` event, never `pull_request_target`, so a fork's PR gets a read-only
+  token.
 
 ## Simplification levers
 
@@ -166,12 +162,11 @@ actions are pinned.
   keep Android E2E local-only and give the sweep an explicit "android: not run on CI" outcome. That
   saves only the Android-specific part. Android is then never proven on a clean machine, and the
   lever bends the "nothing that could not run counts as green" rule.
-- **Going public** removes the budget constraint and the skip rule; it is the recorded fallback. If
-  it is taken, note G3's rule that GitHub disables a public repo's scheduled workflows after 60 days
-  without activity.
 
 ## UX note
 
-No app change. The developer sees the results on GitHub: the check on each commit, the Actions run
-page (the per-layer summary and attached logs), the "Run workflow" button for the manual sweep, and
-GitHub's failure email.
+No app change. The developer sees the results on GitHub:
+- the `fast` check on each branch commit and PR;
+- the Actions run page for each `main` merge (the per-layer summary and attached logs);
+- the "Run workflow" button for the manual sweep;
+- GitHub's failure email.
