@@ -9,7 +9,7 @@ platform="${1:-}"
 require_platform "$platform"
 shift
 groups=("$@")
-[[ ${#groups[@]} -gt 0 ]] || groups=(endpoint_serving)
+[[ ${#groups[@]} -gt 0 ]] || groups=(endpoint_serving endpoint_stopped endpoint_malformed)
 
 device="$(boot_device "$platform")"
 forward_endpoint_port "$platform" "$device"
@@ -22,6 +22,11 @@ prepare_endpoint() {
     endpoint_serving)
       seeded_message="Seeded by E2E at $(date +%H:%M:%S)"
       seed_endpoint_message "$work_dir/$group" "$seeded_message"
+      start_endpoint "$work_dir/$group" "$work_dir/$group-endpoint.log"
+      ;;
+    endpoint_stopped) ;;
+    endpoint_malformed)
+      seed_endpoint_malformed "$work_dir/$group"
       start_endpoint "$work_dir/$group" "$work_dir/$group-endpoint.log"
       ;;
     *) fail "unknown E2E group '$group'" ;;

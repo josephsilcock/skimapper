@@ -11,6 +11,12 @@ seed_endpoint_message() {
     || fail "could not seed the local endpoint"
 }
 
+seed_endpoint_malformed() {
+  local persist_to="$1"
+  (cd "$ENDPOINT_DIR" && node scripts/seed-local.ts --persist-to "$persist_to" --malformed) \
+    || fail "could not seed the local endpoint"
+}
+
 start_endpoint() {
   local persist_to="$1" log="$2"
   mkdir -p "$(dirname "$log")"

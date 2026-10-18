@@ -7,8 +7,7 @@ void main() {
   patrolTest('shows the message the endpoint serves', ($) async {
     await $.pumpWidget(const SkimapperApp());
 
-    await $(_seededMessage).waitUntilVisible(
-      timeout: const Duration(seconds: 10),
-    );
+    await $(_seededMessage)
+        .waitUntilVisible(timeout: const Duration(seconds: 10));
   });
 }

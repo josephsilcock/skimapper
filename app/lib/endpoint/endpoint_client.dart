@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http_package;
@@ -18,6 +19,10 @@ class Unreachable extends EndpointOutcome {
   const Unreachable();
 }
 
+class NotUnderstood extends EndpointOutcome {
+  const NotUnderstood();
+}
+
 class EndpointClient {
   EndpointClient({
     required this.baseUrl,
@@ -33,9 +38,32 @@ class EndpointClient {
     String path, {
     required String kind,
   }) async {
-    final response = await httpClient
-        .get(baseUrl.resolve(path))
-        .timeout(timeout);
-    return Reached(openEnvelope(jsonDecode(response.body), kind: kind));
+    final response = await _get(path);
+    return response == null
+        ? const Unreachable()
+        : _understand(response, kind: kind);
+  }
+
+  /// Null when nothing answered: the connection failed or the timeout passed.
+  Future<http_package.Response?> _get(String path) async {
+    try {
+      return await httpClient.get(baseUrl.resolve(path)).timeout(timeout);
+    } on http_package.ClientException {
+      return null;
+    } on TimeoutException {
+      return null;
+    }
+  }
+
+  EndpointOutcome _understand(
+    http_package.Response response, {
+    required String kind,
+  }) {
+    if (response.statusCode ~/ 100 != 2) return const NotUnderstood();
+    try {
+      return Reached(openEnvelope(jsonDecode(response.body), kind: kind));
+    } on FormatException {
+      return const NotUnderstood();
+    }
   }
 }

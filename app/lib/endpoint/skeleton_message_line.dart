@@ -23,7 +23,9 @@ class _SkeletonMessageLineState extends State<SkeletonMessageLine> {
     future: _outcome,
     builder: (context, snapshot) => Text(switch (snapshot.data) {
       Reached(:final data) => '${data['message']}',
-      _ => 'endpoint: loading',
+      Unreachable() => 'service could not be reached',
+      NotUnderstood() => 'service response not understood',
+      null => 'endpoint: loading',
     }),
   );
 }
