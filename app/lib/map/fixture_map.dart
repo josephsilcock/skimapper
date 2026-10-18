@@ -58,6 +58,8 @@ class _FixtureMapState extends State<FixtureMap> {
   }
 
   Future<bool> _fixtureRendered() async {
+    // The rect sits at the map's top-left corner: at the camera's zoom the fixture polygon
+    // (tools/fixtures/make_fixture_pmtiles.py) covers it, in both Android pixels and iOS points.
     final rendered = await _controller!.queryRenderedFeaturesInRect(
       const Rect.fromLTWH(0, 0, 20, 20),
       [fixtureLayerId],
