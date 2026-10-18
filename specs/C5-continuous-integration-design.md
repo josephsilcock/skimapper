@@ -259,10 +259,27 @@ No area doc changes: this is developer tooling, and `docs/definitions/` holds pr
 
 ## Slices
 
-- [~] 1. The developer pushes a branch and sees a green check from a Linux job that ran `tools/full-sweep --layers self-test`, with its log attached
-- [ ] 2. The developer pushes a change that breaks the endpoint tests and sees a red check whose run summary names `endpoint`, with `endpoint.log` attached
+- [x] 1. The developer pushes a branch and sees a green check from a Linux job that ran `tools/full-sweep --layers self-test`, with its log attached
+- [x] 2. The developer pushes a change that breaks the endpoint tests and sees a red check whose run summary names `endpoint`, with `endpoint.log` attached
 - [ ] 3. The developer starts the full sweep manually on a branch and sees the Android E2E verdict from the KVM job beside the fast layers in the five-layer table; iOS shows red "no result"
 - [ ] 4. The developer starts the full sweep manually and sees the iOS E2E verdict from the macOS job
+- [ ] 5. The nightly schedule sweeps an unswept trunk head and leaves a marker; a later night on the same head cancels its own run (grey) naming the run that swept it — skip predicate + marker proven by the self-test, real schedule only after merge
+- [ ] 6. The developer starts the manual sweep with `withhold_job` (or an `ios_simulator` override naming a missing device) and sees that job's layers red / the device named
+- [ ] 7. Nightly and manual runs save dependency caches, pushes restore them, and `cold` bypasses them — the developer sees a warm run's restore lines and a cold run's misses
+- [ ] 8. The self-test rejects a test command written into a workflow, and PIPELINE.md has the CI row
 
 ## Decisions taken during implement
 
+- **Labels are set beside ids in `sweepLayers`** (`e2eLayer` builds both from the platform) rather than computed from the id by a lookup — one place, no second mapping.
+- **The app layer pins `flutter test --reporter expanded`.** Under `GITHUB_ACTIONS` Flutter picks its GitHub reporter, whose summary (`🎉 14 tests passed.`) the counter doesn't read; fixing the reporter keeps one count regex for local and CI. *Rejected:* counting both formats.
+- **`report.ts` takes one results root and reads every `results.json` under it**, and prints the table to stdout as well as the step summary (the summary isn't readable through the API, and the log should name the red layer too).
+- **`.nvmrc` pins Node 26.8.1** (the local version; the sweep relies on Node's native TypeScript stripping).
+
+
+## Resume
+
+- Closed: slices 1 (20e4e5f) and 2 (4f5458f + b835717). TDD logs in `test-results/tdd/C5/`.
+- Next: slice 3 — *The developer starts the full sweep manually on a branch and sees the Android E2E verdict from the KVM job beside the fast layers in the five-layer table; iOS shows red "no result".* Needs `.github/workflows/sweep.yml` (workflow_dispatch; jobs linux/android/report, ios absent → red), dev.env `ANDROID_AVD_API`, `ANDROID_AVD_DEVICE`, `ANDROID_EMULATOR_FLAGS`, `PATROL_CLI_VERSION`; `use_android_jdk` non-macOS branch (trust `JAVA_HOME`, fail fast on major ≠ `ANDROID_JDK_VERSION`).
+- Seams as built: `Layer = { id, label, command, cwd, countTests }`; `selectLayers(layers, ids?)` + `listSwitch(args, name)` in `layers.ts`; `LayerVerdict` + `runVerdict(expected, verdicts)` in `verdict.ts`; `runSweep` writes `sweep/results.json`; `node tools/sweep/report.ts [--expect ids] <results-root>` → stdout + `$GITHUB_STEP_SUMMARY`, exit 1 unless green.
+- `gh` and `git push` work only outside the sandbox. Force-push is refused by the permission classifier — never amend a pushed commit. Throwaway remote branches `c5-demo/endpoint-red` and `c5-demo/endpoint-red-2` exist (to delete at finish, with the user's OK).
+- A real `schedule` run can only happen on the default branch, i.e. after merge.
