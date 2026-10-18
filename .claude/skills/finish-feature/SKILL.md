@@ -54,7 +54,7 @@ The pack was captured and visually accepted at the end of `/implement`; this ste
 
 - Commit only once the sweep is green, with a descriptive message and the Claude co-author trailer. The slices are already committed, so this is the sign-off commit — review fixes, tidy-ups and docs. Don't rewrite or squash the slice commits; their sequence is the record that the feature was built test-first.
 - In your message to the user, explicitly note the FEATURES.md and definitions updates.
-- Merge the branch into the trunk. Push.
+- Merge the branch into the trunk by the PIPELINE.md **merge into trunk** route (a PR, merged with a merge commit so the slice commits are preserved). Put the PR URL in the completion report. The merge triggers the full sweep on `main`, which you don't wait for.
 
 ## 7. End of an epic
 

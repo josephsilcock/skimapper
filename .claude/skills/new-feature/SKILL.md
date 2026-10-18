@@ -9,7 +9,7 @@ Procedure for starting implementation of a chosen backlog item. Work through in 
 ## 1. Preflight
 
 - Check `git status`. Anything must be tidied (committed or discussed) before starting.
-- On a branch or worktree, check it isn't behind the **local** trunk (worktrees go stale); merge/rebase first. Spec-only edits are exempt.
+- On a branch or worktree, check it isn't behind origin/main (fetch first; merges happen on GitHub, so the local trunk can be stale); merge/rebase first. Spec-only edits are exempt.
 - Check `../../../docs/PIPELINE.md`. Any role still `TBD` that this feature will need (fast tests, feature-scoped slow tests and E2E, full sweep, results dir, dev app) gets agreed with the user and filled in now, so `/implement` and `/finish-feature` never start without the commands they run.
 
 ## 2. The backlog item
