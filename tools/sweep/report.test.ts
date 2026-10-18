@@ -20,13 +20,22 @@ function jobResults(jobs: Record<string, LayerVerdict[]>): string {
 }
 
 function report(args: string[]) {
-  const summaryFile = join(mkdtempSync(join(tmpdir(), "summary-")), "summary.md");
+  const dir = mkdtempSync(join(tmpdir(), "summary-"));
+  const summaryFile = join(dir, "summary.md");
+  const outputFile = join(dir, "output");
   writeFileSync(summaryFile, "");
+  writeFileSync(outputFile, "");
   const run = spawnSync(process.execPath, [reportScript, ...args], {
     encoding: "utf8",
-    env: { ...process.env, GITHUB_STEP_SUMMARY: summaryFile },
+    env: { ...process.env, GITHUB_STEP_SUMMARY: summaryFile, GITHUB_OUTPUT: outputFile },
   });
-  return { exitCode: run.status, summary: readFileSync(summaryFile, "utf8"), stdout: run.stdout, stderr: run.stderr };
+  return {
+    exitCode: run.status,
+    summary: readFileSync(summaryFile, "utf8"),
+    output: readFileSync(outputFile, "utf8"),
+    stdout: run.stdout,
+    stderr: run.stderr,
+  };
 }
 
 test("a red layer turns the report red, and the summary names the layer and why", () => {
@@ -59,4 +68,28 @@ test("the per-layer table is also printed, so the job log names the red layer", 
   const { stdout } = report(["--expect", "endpoint", results]);
 
   assert.match(stdout, /\| endpoint \| 🔴 red \| exited with code 1 \|/);
+});
+
+test("a run where some layer reached a real verdict says so, even when it is red, so a nightly can leave its marker", () => {
+  const results = jobResults({ "sweep-linux": [{ id: "app", label: "app", verdict: "red", reason: "exited with code 1" }] });
+
+  const { output } = report(["--expect", "app,e2e-ios", results]);
+
+  assert.match(output, /^reached_verdict=true$/m);
+});
+
+test("rows filled in for missing jobs are not real verdicts", () => {
+  const results = jobResults({});
+
+  const { output } = report(["--expect", "app,e2e-ios", results]);
+
+  assert.match(output, /^reached_verdict=false$/m);
+});
+
+test("when no job left any results the report still runs and shows every layer red", () => {
+  const { exitCode, summary, output, stderr } = report(["--expect", "app", join(tmpdir(), "no-such-results-dir")]);
+
+  assert.equal(exitCode, 1, stderr);
+  assert.match(summary, /\| app \| 🔴 red \| no result/);
+  assert.match(output, /^reached_verdict=false$/m);
 });
