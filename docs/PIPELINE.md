@@ -4,7 +4,7 @@ Commands for the pipeline to run. Device commands (simulator, emulator, `flutter
 
 | Role                      | Command |
 |---------------------------|---------|
-| fast tests                | `cd app && flutter test` and `cd endpoint && npm test` |
+| fast tests                | `cd app && flutter test` and `cd endpoint && npm test` (the Worker has no separate unit layer yet, so `npm test` runs its Miniflare integration tests too — DECISIONS.md D7) |
 | feature-scoped slow tests | `cd endpoint && npm run test:integration` and `node --test tools/sweep/` |
 | feature-scoped E2E        | `tools/e2e <ios\|android> [group…]` (groups are the folders under `app/patrol_test/`) |
 | full sweep                | `tools/full-sweep` (layers: app, endpoint, sweep self-test, e2e ios, e2e android; clears and writes `test-results/sweep/`) |
