@@ -1,7 +1,6 @@
 // CI report: node tools/sweep/report.ts [--expect <id,…>] <results-dir> — combines the results.json each
 // job's sweep wrote under <results-dir> against the expected layers (default all) into the run summary;
-// red unless every expected layer is green. Writes reached_verdict=true|false to $GITHUB_OUTPUT: whether
-// any layer has a real verdict (rows filled in for missing jobs don't count) — a nightly's marker rule.
+// red unless every expected layer is green.
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
@@ -17,7 +16,6 @@ const run = runVerdict(expected, verdicts);
 const table = summaryTable(run.rows);
 process.stdout.write(table);
 appendFileSync(process.env.GITHUB_STEP_SUMMARY!, table);
-appendFileSync(process.env.GITHUB_OUTPUT!, `reached_verdict=${verdicts.length > 0}\n`);
 process.exitCode = run.ok ? 0 : 1;
 
 function readResults(root: string): LayerVerdict[] {

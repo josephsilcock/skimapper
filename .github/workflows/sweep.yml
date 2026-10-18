@@ -1,10 +1,18 @@
-# Full sweep nightly and on demand (C5). Each job runs tools/full-sweep on its share of the layers; report
+# Full sweep on every code push to main and on demand (C5). Each job runs tools/full-sweep on its share of the layers; report
 # combines their results.json against every layer, so a job that never ran shows its layers red.
 name: sweep
 
 on:
-  schedule:
-    - cron: "0 2 * * *"
+  push:
+    # TEMPORARY (C5 implement): c5-trial/** lets throwaway branches trial this workflow before it is on
+    # main. Removed before /finish-feature.
+    branches: [main, "c5-trial/**"]
+    # Keep identical to push.yml's list (the sweep self-test checks).
+    paths-ignore:
+      - "docs/**"
+      - "specs/**"
+      - "**.md"
+      - ".claude/**"
   workflow_dispatch:
     inputs:
       withhold_job:
@@ -16,10 +24,6 @@ on:
         description: Run iOS E2E on this simulator instead of tools/dev.env IOS_SIMULATOR
         type: string
         default: ""
-  # TEMPORARY (C5 implement): workflow_dispatch only works once the workflow is on main, so trial
-  # branches trigger it by push until then. Removed before /finish-feature.
-  push:
-    branches: ["c5-trial/**"]
 
 permissions:
   contents: read
@@ -29,37 +33,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # A nightly whose head an earlier nightly already carried to a verdict cancels itself (grey, not green).
-  gate:
-    runs-on: ubuntu-24.04
-    permissions:
-      actions: write
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-      - name: Look for an earlier nightly's marker
-        id: gate
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/sweep.yml/runs?event=schedule&head_sha=$GITHUB_SHA&per_page=100" > "$RUNNER_TEMP/runs.json"
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=nightly-verdict&per_page=100" > "$RUNNER_TEMP/markers.json"
-          node tools/sweep/gate.ts --sha "$GITHUB_SHA" --run "$GITHUB_RUN_ID" "$RUNNER_TEMP/runs.json" "$RUNNER_TEMP/markers.json"
-      - name: Skip an already-swept night
-        if: ${{ github.event_name == 'schedule' && steps.gate.outputs.swept == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh run cancel "$GITHUB_RUN_ID"
-          sleep 300
-          echo "error: the run did not cancel itself"
-          exit 1
-
   linux:
-    needs: gate
     if: ${{ inputs.withhold_job != 'linux' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -77,7 +51,6 @@ jobs:
           retention-days: 14
 
   android:
-    needs: gate
     if: ${{ inputs.withhold_job != 'android' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 75
@@ -141,7 +114,6 @@ jobs:
           retention-days: 14
 
   ios:
-    needs: gate
     if: ${{ inputs.withhold_job != 'ios' }}
     runs-on: xcode-27
     timeout-minutes: 90
@@ -184,8 +156,8 @@ jobs:
           retention-days: 14
 
   report:
-    needs: [gate, linux, android, ios]
-    if: ${{ !cancelled() && needs.gate.result == 'success' }}
+    needs: [linux, android, ios]
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -197,15 +169,4 @@ jobs:
           pattern: sweep-*
           path: sweep-results
       - name: Report
-        id: report
         run: node tools/sweep/report.ts sweep-results
-      # Only a scheduled run that reached a verdict, green or red, counts as having swept this head.
-      - name: Write the nightly-verdict marker
-        if: ${{ !cancelled() && github.event_name == 'schedule' && steps.report.outputs.reached_verdict == 'true' }}
-        run: echo "$GITHUB_SHA" > nightly-verdict.txt
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: ${{ !cancelled() && github.event_name == 'schedule' && steps.report.outputs.reached_verdict == 'true' }}
-        with:
-          name: nightly-verdict
-          path: nightly-verdict.txt
-          retention-days: 90
