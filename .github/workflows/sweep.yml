@@ -4,9 +4,7 @@ name: sweep
 
 on:
   push:
-    # TEMPORARY (C5 implement): c5-trial/** lets throwaway branches trial this workflow before it is on
-    # main. Removed before /finish-feature.
-    branches: [main, "c5-trial/**"]
+    branches: [main]
     # Keep identical to push.yml's list (the sweep self-test checks).
     paths-ignore:
       - "docs/**"
