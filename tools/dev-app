@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Dev app: tools/dev-app <ios|android> — starts the local endpoint, boots the dev config's
+# device and runs the app on it. The endpoint keeps its data in endpoint/.wrangler/dev-state.
+source "$(dirname "$0")/lib/common.sh"
+source "$TOOLS_DIR/lib/devices.sh"
+source "$TOOLS_DIR/lib/endpoint.sh"
+
+platform="${1:-}"
+require_platform "$platform"
+
+dev_state="$ENDPOINT_DIR/.wrangler/dev-state"
+ensure_port_free
+seed_endpoint_message "$dev_state" "Hello from the local SkiMapper endpoint"
+start_endpoint "$dev_state" "$dev_state/endpoint.log"
+trap stop_endpoint EXIT
+
+device="$(boot_device "$platform")"
+forward_endpoint_port "$platform" "$device"
+[[ "$platform" == ios ]] && show_simulator_window
+cd "$APP_DIR"
+# shellcheck disable=SC2046
+flutter run --device-id "$device" $(endpoint_dart_defines)

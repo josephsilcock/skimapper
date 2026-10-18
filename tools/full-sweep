@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Full sweep: tools/full-sweep — fast, slow and E2E (iOS + Android) layers; red names the culprit.
+source "$(dirname "$0")/lib/common.sh"
+exec node "$TOOLS_DIR/sweep/main.ts"

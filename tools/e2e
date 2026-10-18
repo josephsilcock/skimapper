@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Feature-scoped E2E: tools/e2e <ios|android> [group...]
+# Each group is a directory under app/patrol_test/ named for the endpoint state its tests need.
+source "$(dirname "$0")/lib/common.sh"
+source "$TOOLS_DIR/lib/devices.sh"
+source "$TOOLS_DIR/lib/endpoint.sh"
+
+platform="${1:-}"
+require_platform "$platform"
+shift
+groups=("$@")
+[[ ${#groups[@]} -gt 0 ]] || groups=(endpoint_serving endpoint_stopped endpoint_malformed)
+
+device="$(boot_device "$platform")"
+forward_endpoint_port "$platform" "$device"
+work_dir="$(mktemp -d)"
+trap 'stop_endpoint; rm -rf "$work_dir"' EXIT
+
+prepare_endpoint() {
+  local group="$1"
+  case "$group" in
+    endpoint_serving)
+      seeded_message="Seeded by E2E at $(date +%H:%M:%S)"
+      seed_endpoint_message "$work_dir/$group" "$seeded_message"
+      start_endpoint "$work_dir/$group" "$work_dir/$group-endpoint.log"
+      ;;
+    endpoint_stopped) ;;
+    endpoint_malformed)
+      seed_endpoint_malformed "$work_dir/$group"
+      start_endpoint "$work_dir/$group" "$work_dir/$group-endpoint.log"
+      ;;
+    *) fail "unknown E2E group '$group'" ;;
+  esac
+}
+
+run_group() {
+  local group="$1" targets=() test_file
+  for test_file in "$APP_DIR/patrol_test/$group"/*_test.dart; do
+    targets+=(--target "${test_file#"$APP_DIR"/}")
+  done
+  ensure_port_free
+  prepare_endpoint "$group"
+  (cd "$APP_DIR" && "$PATROL" test --device "$device" "${targets[@]}" \
+    $(endpoint_dart_defines) \
+    --dart-define "E2E_SEEDED_MESSAGE=${seeded_message:-}")
+  stop_endpoint
+}
+
+for group in "${groups[@]}"; do
+  run_group "$group"
+done

@@ -1,0 +1,14 @@
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Test and sweep output (docs/PIPELINE.md results dir)
+/test-results/
+
+# Python tooling
+.venv/
+__pycache__/
+
+# macOS
+.DS_Store

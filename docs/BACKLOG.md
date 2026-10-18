@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F22`, `B1`, `C6`.
+**Next free IDs**: `F22`, `B1`, `C7`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -19,12 +19,11 @@ The agreed order for roughly the next five items — a queue, where the rest of 
 Re-ranked whenever an item lands (`/finish-feature` pops the head and tops the list back up); an item
 below that gets picked up out of turn should say why in its spec.
 
-1. **C4** Initial technical decisions
-2. **F1** Resort list
-3. **F5** Resort map
-4. **F8** Choose route start and end
-5. **F11** Quickest route
-6. **F16** Resort data available offline
+1. **F1** Resort list
+2. **F5** Resort map
+3. **F8** Choose route start and end
+4. **F11** Quickest route
+5. **F16** Resort data available offline
 
 ---
 
@@ -63,5 +62,5 @@ below that gets picked up out of turn should say why in its spec.
 - **C1** The service behind the app is protected from abuse: heavy or automated use is limited, AI scrapers are refused, and resort data can only be reached through the service.
 - **C2** The service can tell requests from genuine installs of the app apart from others, so it can refuse anything that isn't the real app.
 - **C3** Failures in the service and its daily refresh are noticed and reported, with enough detail to find and fix the cause quickly. Depends on F20.
-- **C4** Make the initial technical decisions for the app: tech stack for the mobile app and the service behind it, overall architecture, and hosting. Every feature needs these first, as do the test and sweep commands in `docs/PIPELINE.md` and the E2E approach, which are still TBD. Record the choices and rejected alternatives in `docs/DECISIONS.md` and `docs/ARCHITECTURE.md`.
+- **C6** Skeleton hardening: the skeleton message line shows the text "null" when a valid envelope has no `message` field, and a missing `ENDPOINT_URL`/`ENDPOINT_TIMEOUT_MS` define (or a `FutureBuilder` error) shows "endpoint: loading" or a misleading "could not be reached" instead of a clear failure. Also extract a shared TypeScript envelope builder (currently duplicated in `endpoint/scripts/seed-local.ts` and `endpoint/test/integration/artefacts.test.ts`) when the second document kind lands.
 - **C5** Continuous integration: run the full test sweep from `docs/PIPELINE.md` automatically on GitHub (the repo's remote) for every push and pull request, so a red sweep is caught before merging into the trunk. Depends on C4, which chooses the stack and the sweep command.

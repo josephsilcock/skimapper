@@ -1,0 +1,33 @@
+name: skimapper
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.6.0
+  maplibre_gl: ^0.27.1
+  path_provider: ^2.1.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  patrol: ^4.10.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/map/
+
+patrol:
+  app_name: skimapper
+  test_directory: patrol_test
+  android:
+    package_name: com.skimapper.skimapper
+  ios:
+    bundle_id: com.skimapper.skimapper
