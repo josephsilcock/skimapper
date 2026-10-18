@@ -4,18 +4,23 @@ A ski resort map app for iOS and Android.
 
 ## Repository layout
 
-| Path       | What                                                                                 |
-|------------|--------------------------------------------------------------------------------------|
-| `docs/`    | All project documentation (see map below)                                            |
-| `specs/`   | In-flight feature specs only — transient; merged into the docs and deleted at finish |
+| Path        | What                                                                                  |
+|-------------|---------------------------------------------------------------------------------------|
+| `app/`      | Flutter app (iOS + Android); unit tests in `app/test/`, Patrol E2E in `app/patrol_test/` |
+| `endpoint/` | Cloudflare Worker serving stored artefacts from R2, with its tests                    |
+| `tools/`    | Dev config (`dev.env`), dev-app, E2E runner, full sweep and fixture generator         |
+| `docs/`     | All project documentation (see map below)                                             |
+| `specs/`    | In-flight feature specs only — transient; merged into the docs and deleted at finish  |
 
 ## Running locally
 
-TBD — the dev-app command will live in [docs/PIPELINE.md](docs/PIPELINE.md) once the stack is chosen.
+`tools/dev-app <ios|android>` starts the local endpoint, boots the device and runs the app. Prerequisites and
+every other command are in [docs/PIPELINE.md](docs/PIPELINE.md).
 
 ## Tests
 
-TBD — the command for each test layer will live in [docs/PIPELINE.md](docs/PIPELINE.md).
+`tools/full-sweep` runs every layer (app, endpoint, sweep self-test, E2E on iOS and Android). The command for
+each individual layer is in [docs/PIPELINE.md](docs/PIPELINE.md).
 
 ## Documentation map
 

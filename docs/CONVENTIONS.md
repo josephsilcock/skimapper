@@ -29,8 +29,13 @@ Readability is a first-class goal, and the most common way we lose it is methods
 
 - **One altitude per method.** When you start diving into mechanics mid-method, extract them behind an intention-revealing name and keep the top-level flow visible.
 - **Isolate irreducible complexity; don't inline it.** Genuinely intricate logic (e.g. an allocation algorithm) is fine — put it behind one well-named call so the caller stays legible. A reader should follow *what* happens without reading *how*, descending only where they care.
-- **Smells that mean "extract now":** a method that needs section-comment headers to navigate; threading three-plus loose collections between phases (bundle them in a record); a `Handle` that doesn't fit on a screen; the same intermediate shape rebuilt at multiple call sites.
+- **Smells that mean "extract now":** a method that needs section-comment headers to navigate; threading three-plus loose collections between phases (bundle them in a record); a widget `build` or request handler that doesn't fit on a screen; the same intermediate shape rebuilt at multiple call sites.
 - Prefer a clearer name or a small record/extraction over a comment that compensates for an opaque block.
+
+### Per stack
+- **Dart (`app/`)**: `snake_case.dart` files grouped by concern under `lib/<area>/` (e.g. `lib/endpoint/`, `lib/map/`); unit tests mirror the path as `test/<area>/<file>_test.dart`; `flutter_lints` rules apply. Patrol E2E tests live in `patrol_test/<endpoint-state group>/` (DECISIONS.md D7).
+- **TypeScript (`endpoint/`, `tools/sweep/`)**: `kebab-case.ts` files in the Worker (`endpoint/src/`), ES modules. Worker tests run in Miniflare under `endpoint/test/integration/`; the sweep's self-test uses Node's built-in runner so `tools/` needs no package install.
+- **Shell (`tools/`)**: extensionless executables that `source tools/lib/common.sh`; shared helpers live in `tools/lib/`. Every port, URL, device name and timeout comes from `tools/dev.env`, never a literal.
 
 ---
 

@@ -1,6 +1,6 @@
 This is the root of the Skimapper application. The user facing part of the project is a mobile application to plot routes when skiing.
 
-- `docs/` — project documentation
+- `app/` — Flutter app · `endpoint/` — Cloudflare Worker · `tools/` — dev config, dev-app, E2E runner, full sweep · `docs/` — project documentation · `specs/` — in-flight specs only
 
 ## Key rules
 

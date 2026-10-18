@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the architecture, patterns, and conventions for the project.
+The system's shape, where each part runs, its seams and principles. Why each choice was made is in [DECISIONS.md](DECISIONS.md); naming and style are in [CONVENTIONS.md](CONVENTIONS.md).
 
 ---
 
