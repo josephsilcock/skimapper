@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F22`, `B2`, `C7`.
+**Next free IDs**: `F22`, `B3`, `C8`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -55,7 +55,8 @@ below that gets picked up out of turn should say why in its spec.
 
 ## Bugs
 
-- **B1** Removing the map before it has finished starting throws: `MapLibreMethodChannel.dispose` hits `LateInitializationError` (`late MethodChannel _channel` is set only once the platform view is created, in `maplibre_gl_platform_interface`, 0.27.1 = latest). Seen on CI's slow software-GPU Android emulator, where `patrol_test/endpoint_serving/endpoint_message_test.dart` passes its assertion and then fails in teardown, so the nightly Android E2E is red (found by C5, run 39144214776); passes locally. Fix in the app or plugin, not by changing the E2E test.
+- **B1** Removing the map before it has finished starting throws: `MapLibreMethodChannel.dispose` hits `LateInitializationError` (`late MethodChannel _channel` is set only once the platform view is created, in `maplibre_gl_platform_interface`, 0.27.1 = latest). Seen on CI's slow software-GPU Android emulator, where `patrol_test/endpoint_serving/endpoint_message_test.dart` passes its assertion and then fails in teardown, so the Android E2E is red on every main sweep (found by C5, run 39144214776); passes locally. The same error hits iOS: `endpoint_stopped/endpoint_unreachable_test` fails in teardown on CI's iOS simulator, so the iOS E2E is red there too. Fix in the app or plugin, not by changing the E2E test.
+- **B2** On CI's iOS simulator, `patrol_test/endpoint_malformed/endpoint_not_understood_test.dart` fails with a 6 s `WaitUntilVisibleTimeoutException` (the "service response not understood" line never appears in time); passes locally and was green in C5's slice 4. Found by C5 (run 39160525305); with B1 it keeps the iOS E2E red on CI. Check whether it is slow-simulator timing or a real fault; don't just lengthen the timeout without knowing which.
 
 ---
 
@@ -66,3 +67,4 @@ below that gets picked up out of turn should say why in its spec.
 - **C3** Failures in the service and its daily refresh are noticed and reported, with enough detail to find and fix the cause quickly. Depends on F20.
 - **C5** Continuous integration: run the full test sweep (`tools/full-sweep`, see `docs/PIPELINE.md`) automatically on GitHub (the repo's remote) for every push and pull request, so a red sweep is caught before merging into the trunk. The E2E layers need macOS runners, whose minutes count ten-fold against the private-repo allowance (DECISIONS.md G3).
 - **C6** Skeleton hardening: the skeleton message line shows the text "null" when a valid envelope has no `message` field, and a missing `ENDPOINT_URL`/`ENDPOINT_TIMEOUT_MS` define (or a `FutureBuilder` error) shows "endpoint: loading" or a misleading "could not be reached" instead of a clear failure. Also extract a shared TypeScript envelope builder (currently duplicated in `endpoint/scripts/seed-local.ts` and `endpoint/test/integration/artefacts.test.ts`) when the second document kind lands.
+- **C7** CI tooling nits from C5's review: `listSwitch` (`tools/sweep/layers.ts`) throws a bare TypeError when `--layers` is last; `report.ts` relies on `GITHUB_STEP_SUMMARY!`, so a local run throws after printing the table; `toolchain.test.ts` covers only the failing cases of `require_given_jdk` (add a passing case); nothing checks that the `linux`/`android`/`ios` jobs' `--layers` together cover `sweepLayers`.
