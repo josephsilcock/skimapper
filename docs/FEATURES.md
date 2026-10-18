@@ -11,3 +11,4 @@ area docs at [definitions/](definitions/README.md)** (linked per section below).
 ## Code
 
 - **C4** Initial technical decisions and walking skeleton — `done`
+- **C5** Continuous integration: fast checks on every push, nightly full sweep on the trunk — `in progress`

@@ -48,7 +48,7 @@ below that gets picked up out of turn should say why in its spec.
 - **F17** The background map and terrain shading for each opened resort are also saved for use without a signal, with progress shown while they save and a message if saving fails. Depends on F16.
 - **F18** Skiers can see which resorts are saved on their device and how much space each one uses, and remove any they no longer need. Depends on F16 and F17.
 - **F19** The app keeps resort information up to date without slowing skiers down: it checks for changes at most twice a day, and when a resort's map or routes change, it updates the copies saved on the device. Depends on F16 and F20.
-- **F20** Resort maps, routes and live status stay current without the app needing an update: resort information is refreshed every day, new resorts can be added and sources fixed behind the scenes, and a problem with one resort's information doesn't stop the others refreshing.
+- **F20** Resort maps, routes and live status stay current without the app needing an update: resort information is refreshed every day, new resorts can be added and sources fixed behind the scenes, and a problem with one resort's information doesn't stop the others refreshing. Its refresh cron shares the Actions minutes with C5's CI, so its spec must reserve minutes or take the go-public fallback (DECISIONS.md G3).
 - **F21** The app follows the device's light or dark setting, with a consistent look throughout and text that meets accessibility contrast standards.
 
 ---
