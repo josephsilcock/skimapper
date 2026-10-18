@@ -1,13 +1,20 @@
-# Fast checks on every code push (C5). Test commands live in tools/full-sweep, never here.
+# Fast checks on every code push to a branch and every PR to main (C5); `fast` is the PR's required
+# check. Test commands live in tools/full-sweep, never here.
 name: push
 
 on:
   push:
+    # main is swept in full by sweep.yml.
+    branches-ignore: [main]
+    # Keep identical to sweep.yml's list (the sweep self-test checks).
     paths-ignore:
       - "docs/**"
       - "specs/**"
       - "**.md"
       - ".claude/**"
+  # No path filter: a required check must report on docs-only PRs too.
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
