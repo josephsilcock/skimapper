@@ -101,6 +101,15 @@ jobs:
           "$sdkmanager" --install emulator "$IMAGE" > /dev/null
           echo no | "$avdmanager" create avd -n "$AVD" -k "$IMAGE" -d "$DEVICE" \
             || { echo "device profiles available:"; "$avdmanager" list device -c; exit 1; }
+      # The app's gradle.properties asks for an 8 GB heap, which leaves no room for the emulator's 4 GB
+      # beside it. Gradle's user-home properties take precedence over the project's.
+      - name: Fit Gradle beside the emulator
+        run: |
+          mkdir -p ~/.gradle
+          {
+            echo "org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=1g"
+            echo "kotlin.daemon.jvmargs=-Xmx1g"
+          } >> ~/.gradle/gradle.properties
       - name: Install Patrol CLI
         run: dart pub global activate patrol_cli "${{ steps.config.outputs.patrol }}"
       - name: Sweep
