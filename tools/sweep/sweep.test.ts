@@ -4,14 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { sweepLayers } from "./layers.ts";
+import { listSwitch, selectLayers, sweepLayers } from "./layers.ts";
 import { runSweep, type Layer } from "./sweep.ts";
 
 const resultsDir = () => mkdtempSync(join(tmpdir(), "sweep-"));
 
-const stubLayer = (name: string, script: string, platform?: string): Layer => ({
-  name,
-  platform,
+const stubLayer = (label: string, script: string): Layer => ({
+  id: label,
+  label,
   command: [process.execPath, "-e", script],
   cwd: tmpdir(),
   countTests: (output) => Number(/tests: (\d+)/.exec(output)?.[1] ?? 0),
@@ -22,7 +22,7 @@ test("a failing test in a layer turns the sweep red and names the layer and plat
     resultsDir: resultsDir(),
     layers: [
       stubLayer("app", "console.log('tests: 3')"),
-      stubLayer("e2e", "console.log('tests: 2'); process.exit(1)", "android"),
+      stubLayer("e2e (android)", "console.log('tests: 2'); process.exit(1)"),
     ],
   });
 
@@ -44,7 +44,7 @@ test("an unavailable device turns the sweep red and says which device", async ()
   const missingDevice = "error: iOS simulator 'iPhone 99' (tools/dev.env IOS_SIMULATOR) is not available";
   const result = await runSweep({
     resultsDir: resultsDir(),
-    layers: [stubLayer("e2e", `console.error(${JSON.stringify(missingDevice)}); process.exit(1)`, "ios")],
+    layers: [stubLayer("e2e (ios)", `console.error(${JSON.stringify(missingDevice)}); process.exit(1)`)],
   });
 
   assert.equal(result.ok, false);
@@ -69,7 +69,7 @@ test("each layer's output and a summary naming the culprits are written to the r
     resultsDir: dir,
     layers: [
       stubLayer("app", "console.log('tests: 5')"),
-      stubLayer("e2e", "console.log('tests: 1'); process.exit(1)", "android"),
+      stubLayer("e2e (android)", "console.log('tests: 1'); process.exit(1)"),
     ],
   });
 
@@ -78,8 +78,22 @@ test("each layer's output and a summary naming the culprits are written to the r
   assert.match(readFileSync(join(dir, "sweep", "summary.txt"), "utf8"), /RED[\s\S]*e2e \(android\): exited with code 1/);
 });
 
+test("each layer's verdict is written to results.json by id and label", async () => {
+  const dir = resultsDir();
+
+  await runSweep({
+    resultsDir: dir,
+    layers: [stubLayer("app", "console.log('tests: 5')"), stubLayer("endpoint", "console.log('tests: 0')")],
+  });
+
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, "sweep", "results.json"), "utf8")), [
+    { id: "app", label: "app", verdict: "green" },
+    { id: "endpoint", label: "endpoint", verdict: "red", reason: "ran no tests" },
+  ]);
+});
+
 test("each real layer counts the tests its runner reports", () => {
-  const counts = Object.fromEntries(sweepLayers("/repo").map((layer) => [layerKey(layer), layer.countTests]));
+  const counts = Object.fromEntries(sweepLayers("/repo").map((layer) => [layer.label, layer.countTests]));
 
   assert.deepEqual(Object.keys(counts), ["app", "endpoint", "sweep self-test", "e2e (ios)", "e2e (android)"]);
   assert.equal(counts["app"]("00:02 +13: All tests passed!\n"), 13);
@@ -91,7 +105,34 @@ test("each real layer counts the tests its runner reports", () => {
   assert.equal(counts["e2e (android)"](patrol), 4);
 });
 
-const layerKey = (layer: Layer) => (layer.platform ? `${layer.name} (${layer.platform})` : layer.name);
+test("the app layer fixes flutter test's reporter, so its count does not change under GitHub Actions", () => {
+  const app = sweepLayers("/repo").find((layer) => layer.id === "app")!;
+
+  assert.deepEqual(app.command, ["flutter", "test", "--reporter", "expanded"]);
+});
+
+test("the layers are identified, in order, by the ids the --layers switch takes", () => {
+  assert.deepEqual(
+    sweepLayers("/repo").map((layer) => layer.id),
+    ["app", "endpoint", "self-test", "e2e-ios", "e2e-android"],
+  );
+});
+
+test("--layers runs only the named layers, in sweep order", () => {
+  const selected = selectLayers(sweepLayers("/repo"), listSwitch(["--layers", "self-test,endpoint"], "--layers"));
+
+  assert.deepEqual(selected.map((layer) => layer.id), ["endpoint", "self-test"]);
+});
+
+test("with no --layers switch every layer runs, in the local sweep's order", () => {
+  const selected = selectLayers(sweepLayers("/repo"), listSwitch([], "--layers"));
+
+  assert.deepEqual(selected.map((layer) => layer.label), ["app", "endpoint", "sweep self-test", "e2e (ios)", "e2e (android)"]);
+});
+
+test("--layers with an unknown id stops the sweep and names the id", () => {
+  assert.throws(() => selectLayers(sweepLayers("/repo"), listSwitch(["--layers", "app,e2e-windows"], "--layers")), /unknown layer 'e2e-windows'/);
+});
 
 test("a layer that leaves a background process holding its output still finishes", { timeout: 5000 }, async () => {
   const leavesDaemon = `

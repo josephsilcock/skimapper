@@ -2,9 +2,11 @@ import { spawn } from "node:child_process";
 import { closeSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { runVerdict, type LayerVerdict } from "./verdict.ts";
+
 export type Layer = {
-  name: string;
-  platform?: string;
+  id: string;
+  label: string;
   command: string[];
   cwd: string;
   countTests: (output: string) => number;
@@ -16,13 +18,14 @@ export type SweepResult = { ok: boolean; culprits: Culprit[] };
 
 export async function runSweep(options: { resultsDir: string; layers: Layer[] }): Promise<SweepResult> {
   const sweepDir = freshSweepDir(options.resultsDir);
-  const culprits: Culprit[] = [];
+  const verdicts: LayerVerdict[] = [];
   for (const layer of options.layers) {
-    const culprit = await sweepLayer(layer, sweepDir);
-    if (culprit) culprits.push(culprit);
+    verdicts.push(await sweepLayer(layer, sweepDir));
   }
-  const result = { ok: culprits.length === 0, culprits };
+  const run = runVerdict(options.layers, verdicts);
+  const result = { ok: run.ok, culprits: culpritsAmong(run.rows) };
   writeFileSync(join(sweepDir, "summary.txt"), summarise(result));
+  writeFileSync(join(sweepDir, "results.json"), JSON.stringify(verdicts, null, 2) + "\n");
   return result;
 }
 
@@ -31,10 +34,15 @@ export function summarise(result: SweepResult): string {
   return ["RED", ...result.culprits.map(({ layer, reason }) => `${layer}: ${reason}`)].join("\n") + "\n";
 }
 
-async function sweepLayer(layer: Layer, sweepDir: string): Promise<Culprit | undefined> {
-  const run = await runLayer(layer, join(sweepDir, `${layerLabel(layer)}.log`));
+const culpritsAmong = (verdicts: LayerVerdict[]): Culprit[] =>
+  verdicts.filter((verdict) => verdict.verdict === "red").map((verdict) => ({ layer: verdict.label, reason: verdict.reason ?? "" }));
+
+async function sweepLayer(layer: Layer, sweepDir: string): Promise<LayerVerdict> {
+  const run = await runLayer(layer, join(sweepDir, `${layer.label}.log`));
   const reason = whyRed(layer, run);
-  return reason ? { layer: layerLabel(layer), reason } : undefined;
+  return reason
+    ? { id: layer.id, label: layer.label, verdict: "red", reason }
+    : { id: layer.id, label: layer.label, verdict: "green" };
 }
 
 function freshSweepDir(resultsDir: string): string {
@@ -53,8 +61,6 @@ function whyRed(layer: Layer, run: LayerRun): string | undefined {
 // The tools/ scripts report why they stopped on a line starting "error:" (tools/lib/common.sh fail).
 const lastErrorLine = (output: string): string | undefined =>
   output.split("\n").findLast((line) => line.startsWith("error:"));
-
-const layerLabel = (layer: Layer): string => (layer.platform ? `${layer.name} (${layer.platform})` : layer.name);
 
 type LayerRun = { exitCode: number; output: string };
 

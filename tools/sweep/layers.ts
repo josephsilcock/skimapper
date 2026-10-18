@@ -6,19 +6,22 @@ import type { Layer } from "./sweep.ts";
 export function sweepLayers(repoDir: string): Layer[] {
   return [
     {
-      name: "app",
-      command: ["flutter", "test"],
+      id: "app",
+      label: "app",
+      command: ["flutter", "test", "--reporter", "expanded"],
       cwd: join(repoDir, "app"),
       countTests: (output) => sumOf(output, /\+(\d+)(?: ~\d+)?(?: -(\d+))?: (?:All tests passed|Some tests failed)/g),
     },
     {
-      name: "endpoint",
+      id: "endpoint",
+      label: "endpoint",
       command: ["npx", "vitest", "run"],
       cwd: join(repoDir, "endpoint"),
       countTests: (output) => sumOf(output, /Tests\s+.*?\((\d+)\)/g),
     },
     {
-      name: "sweep self-test",
+      id: "self-test",
+      label: "sweep self-test",
       command: [process.execPath, "--test", "tools/sweep/"],
       cwd: repoDir,
       countTests: (output) => sumOf(output, /ℹ tests (\d+)/g),
@@ -28,10 +31,23 @@ export function sweepLayers(repoDir: string): Layer[] {
   ];
 }
 
+export function selectLayers(layers: Layer[], ids: string[] | undefined): Layer[] {
+  if (!ids) return layers;
+  const unknown = ids.find((id) => !layers.some((layer) => layer.id === id));
+  if (unknown) throw new Error(`unknown layer '${unknown}' (ids: ${layers.map((layer) => layer.id).join(", ")})`);
+  return layers.filter((layer) => ids.includes(layer.id));
+}
+
+// The comma-separated value after a switch such as --layers, or undefined when the switch is absent.
+export const listSwitch = (args: string[], name: string): string[] | undefined => {
+  const switchAt = args.indexOf(name);
+  return switchAt === -1 ? undefined : args[switchAt + 1].split(",");
+};
+
 function e2eLayer(repoDir: string, platform: string): Layer {
   return {
-    name: "e2e",
-    platform,
+    id: `e2e-${platform}`,
+    label: `e2e (${platform})`,
     command: [join(repoDir, "tools", "e2e"), platform],
     cwd: repoDir,
     countTests: (output) => sumOf(stripAnsi(output), /(?:Successful|Failed): (\d+)/g),

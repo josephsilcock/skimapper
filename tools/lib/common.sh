@@ -11,12 +11,28 @@ PATROL="${PATROL:-$HOME/.pub-cache/bin/patrol}"
 # shellcheck source=../dev.env
 source "$TOOLS_DIR/dev.env"
 
-JAVA_HOME="$(/usr/libexec/java_home -v "$ANDROID_JDK_VERSION")"
-export JAVA_HOME
-
 fail() {
   echo "error: $*" >&2
   exit 1
+}
+
+# Android builds use the dev config's JDK. macOS finds it by version, not whatever JAVA_HOME the shell
+# happens to hold; elsewhere (a CI runner) JAVA_HOME is trusted but must be that version.
+use_android_jdk() {
+  if [[ "$(uname -s)" == Darwin ]]; then select_macos_jdk; else require_given_jdk; fi
+}
+
+select_macos_jdk() {
+  JAVA_HOME="$(/usr/libexec/java_home -v "$ANDROID_JDK_VERSION")"
+  export JAVA_HOME
+}
+
+require_given_jdk() {
+  [[ -n "${JAVA_HOME:-}" ]] || fail "JAVA_HOME is not set; Android builds need JDK $ANDROID_JDK_VERSION (tools/dev.env ANDROID_JDK_VERSION)"
+  local major
+  major="$("$JAVA_HOME/bin/java" -version 2>&1 | sed -nE '1s/.*version "([0-9]+).*/\1/p')"
+  [[ "$major" == "$ANDROID_JDK_VERSION" ]] \
+    || fail "JAVA_HOME ($JAVA_HOME) is JDK $major; tools/dev.env ANDROID_JDK_VERSION is $ANDROID_JDK_VERSION"
 }
 
 require_platform() {

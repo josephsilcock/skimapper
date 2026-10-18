@@ -1,0 +1,48 @@
+# Fast checks on every code push to a branch and every PR to main (C5); `fast` is the PR's required
+# check. Test commands live in tools/full-sweep, never here.
+name: push
+
+on:
+  push:
+    # main is swept in full by sweep.yml.
+    branches-ignore: [main]
+    # Keep identical to sweep.yml's list (the sweep self-test checks).
+    paths-ignore:
+      - "docs/**"
+      - "specs/**"
+      - "**.md"
+      - ".claude/**"
+  # No path filter: a required check must report on docs-only PRs too.
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: push-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FAST_LAYERS: app,endpoint,self-test
+
+jobs:
+  fast:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/toolchains
+      # Runner preparation failing must not hide the sweep: its own red names the layer.
+      - name: Sweep
+        if: ${{ !cancelled() }}
+        run: tools/full-sweep --layers "$FAST_LAYERS"
+      - name: Report
+        if: ${{ !cancelled() }}
+        run: node tools/sweep/report.ts --expect "$FAST_LAYERS" test-results/sweep
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: sweep-fast
+          path: test-results/sweep/
+          retention-days: 14

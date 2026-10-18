@@ -34,7 +34,8 @@ boot_android_emulator() {
   local serial
   serial="$(running_emulator_serial)"
   if [[ -z "$serial" ]]; then
-    nohup "$ANDROID_SDK/emulator/emulator" -avd "$ANDROID_AVD" -no-snapshot-save -no-boot-anim \
+    # shellcheck disable=SC2086 # the flags are a list
+    nohup "$ANDROID_SDK/emulator/emulator" -avd "$ANDROID_AVD" -no-snapshot-save -no-boot-anim $ANDROID_EMULATOR_FLAGS \
       >"${TMPDIR:-/tmp}/skimapper-emulator.log" 2>&1 &
     for _ in $(seq 1 120); do
       serial="$(running_emulator_serial)"
