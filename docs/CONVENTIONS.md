@@ -35,7 +35,7 @@ Readability is a first-class goal, and the most common way we lose it is methods
 ### Per stack
 - **Dart (`app/`)**: `snake_case.dart` files grouped by concern under `lib/<area>/` (e.g. `lib/endpoint/`, `lib/map/`); unit tests mirror the path as `test/<area>/<file>_test.dart`; `flutter_lints` rules apply. Patrol E2E tests live in `patrol_test/<endpoint-state group>/` (DECISIONS.md D7).
 - **TypeScript (`endpoint/`, `tools/sweep/`)**: `kebab-case.ts` files in the Worker (`endpoint/src/`), ES modules. Worker tests run in Miniflare under `endpoint/test/integration/`; the sweep's self-test uses Node's built-in runner so `tools/` needs no package install.
-- **Shell (`tools/`)**: extensionless executables that `source tools/lib/common.sh`; shared helpers live in `tools/lib/`. Every port, URL, device name and timeout comes from `tools/dev.env`, never a literal.
+- **Shell (`tools/`)**: extensionless executables that `source tools/lib/common.sh`; shared helpers live in `tools/lib/`. Every port, URL, device name and timeout comes from `tools/dev.env`, never a literal. CI reads the same file and overrides values only through the environment (e.g. `ANDROID_EMULATOR_FLAGS` for a headless emulator). CI-only device facts live there too: `ANDROID_AVD_API` and `ANDROID_AVD_DEVICE`, which CI uses to create the AVD, and `PATROL_CLI_VERSION`.
 
 ---
 

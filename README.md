@@ -19,7 +19,8 @@ every other command are in [docs/PIPELINE.md](docs/PIPELINE.md).
 
 ## Tests
 
-`tools/full-sweep` runs every layer (app, endpoint, sweep self-test, E2E on iOS and Android). The command for
+`tools/full-sweep` runs every layer (app, endpoint, sweep self-test, E2E on iOS and Android); `--layers <id,…>`
+runs a subset (ids `app`, `endpoint`, `self-test`, `e2e-ios`, `e2e-android`). CI runs it on GitHub. The command for
 each individual layer is in [docs/PIPELINE.md](docs/PIPELINE.md).
 
 ## Documentation map
