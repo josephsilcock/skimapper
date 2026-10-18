@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'attribution/attribution_line.dart';
 import 'endpoint/dev_endpoint.dart';
 import 'endpoint/skeleton_message_line.dart';
 import 'map/fixture_map.dart';
@@ -42,6 +43,8 @@ class _PlaceholderScreenState extends State<PlaceholderScreen> {
             ),
             const SizedBox(height: 8),
             Text(_mapLine),
+            const Spacer(),
+            const AttributionLine(),
           ],
         ),
       ),
