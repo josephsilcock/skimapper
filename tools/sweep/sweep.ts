@@ -2,6 +2,8 @@ import { spawn } from "node:child_process";
 import { closeSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { runVerdict, type LayerVerdict } from "./verdict.ts";
+
 export type Layer = {
   id: string;
   label: string;
@@ -12,17 +14,19 @@ export type Layer = {
 
 export type Culprit = { layer: string; reason: string };
 
+
 export type SweepResult = { ok: boolean; culprits: Culprit[] };
 
 export async function runSweep(options: { resultsDir: string; layers: Layer[] }): Promise<SweepResult> {
   const sweepDir = freshSweepDir(options.resultsDir);
-  const culprits: Culprit[] = [];
+  const verdicts: LayerVerdict[] = [];
   for (const layer of options.layers) {
-    const culprit = await sweepLayer(layer, sweepDir);
-    if (culprit) culprits.push(culprit);
+    verdicts.push(await sweepLayer(layer, sweepDir));
   }
-  const result = { ok: culprits.length === 0, culprits };
+  const run = runVerdict(options.layers, verdicts);
+  const result = { ok: run.ok, culprits: culpritsAmong(run.rows) };
   writeFileSync(join(sweepDir, "summary.txt"), summarise(result));
+  writeFileSync(join(sweepDir, "results.json"), JSON.stringify(verdicts, null, 2) + "\n");
   return result;
 }
 
@@ -31,10 +35,15 @@ export function summarise(result: SweepResult): string {
   return ["RED", ...result.culprits.map(({ layer, reason }) => `${layer}: ${reason}`)].join("\n") + "\n";
 }
 
-async function sweepLayer(layer: Layer, sweepDir: string): Promise<Culprit | undefined> {
+const culpritsAmong = (verdicts: LayerVerdict[]): Culprit[] =>
+  verdicts.filter((verdict) => verdict.verdict === "red").map((verdict) => ({ layer: verdict.label, reason: verdict.reason ?? "" }));
+
+async function sweepLayer(layer: Layer, sweepDir: string): Promise<LayerVerdict> {
   const run = await runLayer(layer, join(sweepDir, `${layer.label}.log`));
   const reason = whyRed(layer, run);
-  return reason ? { layer: layer.label, reason } : undefined;
+  return reason
+    ? { id: layer.id, label: layer.label, verdict: "red", reason }
+    : { id: layer.id, label: layer.label, verdict: "green" };
 }
 
 function freshSweepDir(resultsDir: string): string {

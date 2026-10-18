@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { selectLayers, sweepLayers } from "./layers.ts";
+import { listSwitch, selectLayers, sweepLayers } from "./layers.ts";
 import { runSweep, type Layer } from "./sweep.ts";
 
 const resultsDir = () => mkdtempSync(join(tmpdir(), "sweep-"));
@@ -78,6 +78,20 @@ test("each layer's output and a summary naming the culprits are written to the r
   assert.match(readFileSync(join(dir, "sweep", "summary.txt"), "utf8"), /RED[\s\S]*e2e \(android\): exited with code 1/);
 });
 
+test("each layer's verdict is written to results.json by id and label", async () => {
+  const dir = resultsDir();
+
+  await runSweep({
+    resultsDir: dir,
+    layers: [stubLayer("app", "console.log('tests: 5')"), stubLayer("endpoint", "console.log('tests: 0')")],
+  });
+
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, "sweep", "results.json"), "utf8")), [
+    { id: "app", label: "app", verdict: "green" },
+    { id: "endpoint", label: "endpoint", verdict: "red", reason: "ran no tests" },
+  ]);
+});
+
 test("each real layer counts the tests its runner reports", () => {
   const counts = Object.fromEntries(sweepLayers("/repo").map((layer) => [layer.label, layer.countTests]));
 
@@ -99,19 +113,19 @@ test("the layers are identified, in order, by the ids the --layers switch takes"
 });
 
 test("--layers runs only the named layers, in sweep order", () => {
-  const selected = selectLayers(sweepLayers("/repo"), ["--layers", "self-test,endpoint"]);
+  const selected = selectLayers(sweepLayers("/repo"), listSwitch(["--layers", "self-test,endpoint"], "--layers"));
 
   assert.deepEqual(selected.map((layer) => layer.id), ["endpoint", "self-test"]);
 });
 
 test("with no --layers switch every layer runs, in the local sweep's order", () => {
-  const selected = selectLayers(sweepLayers("/repo"), []);
+  const selected = selectLayers(sweepLayers("/repo"), listSwitch([], "--layers"));
 
   assert.deepEqual(selected.map((layer) => layer.label), ["app", "endpoint", "sweep self-test", "e2e (ios)", "e2e (android)"]);
 });
 
 test("--layers with an unknown id stops the sweep and names the id", () => {
-  assert.throws(() => selectLayers(sweepLayers("/repo"), ["--layers", "app,e2e-windows"]), /unknown layer 'e2e-windows'/);
+  assert.throws(() => selectLayers(sweepLayers("/repo"), listSwitch(["--layers", "app,e2e-windows"], "--layers")), /unknown layer 'e2e-windows'/);
 });
 
 test("a layer that leaves a background process holding its output still finishes", { timeout: 5000 }, async () => {

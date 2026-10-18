@@ -31,16 +31,16 @@ export function sweepLayers(repoDir: string): Layer[] {
   ];
 }
 
-export function selectLayers(layers: Layer[], args: string[]): Layer[] {
-  const ids = layersSwitch(args);
+export function selectLayers(layers: Layer[], ids: string[] | undefined): Layer[] {
   if (!ids) return layers;
   const unknown = ids.find((id) => !layers.some((layer) => layer.id === id));
   if (unknown) throw new Error(`unknown layer '${unknown}' (ids: ${layers.map((layer) => layer.id).join(", ")})`);
   return layers.filter((layer) => ids.includes(layer.id));
 }
 
-const layersSwitch = (args: string[]): string[] | undefined => {
-  const switchAt = args.indexOf("--layers");
+// The comma-separated value after a switch such as --layers, or undefined when the switch is absent.
+export const listSwitch = (args: string[], name: string): string[] | undefined => {
+  const switchAt = args.indexOf(name);
   return switchAt === -1 ? undefined : args[switchAt + 1].split(",");
 };
 
