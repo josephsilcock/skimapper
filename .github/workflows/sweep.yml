@@ -109,7 +109,9 @@ jobs:
             echo "kotlin.daemon.jvmargs=-Xmx1g"
           } >> ~/.gradle/gradle.properties
       - name: Install Patrol CLI
-        run: dart pub global activate patrol_cli "${{ steps.config.outputs.patrol }}"
+        env:
+          PATROL_CLI_VERSION: ${{ steps.config.outputs.patrol }}
+        run: dart pub global activate patrol_cli "$PATROL_CLI_VERSION"
       - name: Sweep
         if: ${{ !cancelled() }}
         run: tools/full-sweep --layers e2e-android
@@ -151,7 +153,9 @@ jobs:
           runtime="$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; print([r["identifier"] for r in json.load(sys.stdin)["runtimes"] if r["platform"] == "iOS" and r["isAvailable"]][-1])')"
           xcrun simctl create "$SIMULATOR" "$device_type" "$runtime"
       - name: Install Patrol CLI
-        run: dart pub global activate patrol_cli "${{ steps.config.outputs.patrol }}"
+        env:
+          PATROL_CLI_VERSION: ${{ steps.config.outputs.patrol }}
+        run: dart pub global activate patrol_cli "$PATROL_CLI_VERSION"
       - name: Sweep
         if: ${{ !cancelled() }}
         run: tools/full-sweep --layers e2e-ios

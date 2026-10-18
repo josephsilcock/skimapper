@@ -42,7 +42,7 @@ test("branch pushes and main pushes skip the same docs-only paths", () => {
 });
 
 test("no workflow or action restates a test command: they run tools/full-sweep instead", () => {
-  const testCommand = /\bflutter test\b|\bnpm (?:run )?test\b|\bvitest\b|\bpatrol (?:test|build)\b/;
+  const testCommand = /\bflutter test\b|\bnpm (?:run )?test\b|\bvitest\b|\bpatrol (?:test|build)\b|\bnode --test\b/;
   const offenders = ciFiles().filter(({ text }) => testCommand.test(text)).map(({ path }) => path);
 
   assert.deepEqual(offenders, []);

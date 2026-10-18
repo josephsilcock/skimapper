@@ -73,7 +73,7 @@ see a layer that ran zero tests, and only real runs could test it.
 **Guiding principles**
 - Workflows contain only `tools/full-sweep --layers …`, `node tools/sweep/report.ts`, and runner
   preparation (toolchains, device creation). They never contain a test command or a green rule. A
-  self-test ratchet rejects literal `flutter test`, `vitest` and `patrol` invocations in
+  self-test ratchet rejects literal `flutter test`, `npm test`, `vitest`, `patrol test|build` and `node --test` invocations in
   `.github/workflows/`.
 - Device prep sources `tools/dev.env` and **creates** the devices it names, but never boots them.
   Booting, and boot failure, stay in the sweep (G4).

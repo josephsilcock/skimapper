@@ -14,7 +14,6 @@ export type Layer = {
 
 export type Culprit = { layer: string; reason: string };
 
-
 export type SweepResult = { ok: boolean; culprits: Culprit[] };
 
 export async function runSweep(options: { resultsDir: string; layers: Layer[] }): Promise<SweepResult> {

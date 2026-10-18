@@ -48,7 +48,7 @@ below that gets picked up out of turn should say why in its spec.
 - **F17** The background map and terrain shading for each opened resort are also saved for use without a signal, with progress shown while they save and a message if saving fails. Depends on F16.
 - **F18** Skiers can see which resorts are saved on their device and how much space each one uses, and remove any they no longer need. Depends on F16 and F17.
 - **F19** The app keeps resort information up to date without slowing skiers down: it checks for changes at most twice a day, and when a resort's map or routes change, it updates the copies saved on the device. Depends on F16 and F20.
-- **F20** Resort maps, routes and live status stay current without the app needing an update: resort information is refreshed every day, new resorts can be added and sources fixed behind the scenes, and a problem with one resort's information doesn't stop the others refreshing. Its refresh cron shares the Actions minutes with C5's CI, so its spec must reserve minutes or take the go-public fallback (DECISIONS.md G3).
+- **F20** Resort maps, routes and live status stay current without the app needing an update: resort information is refreshed every day, new resorts can be added and sources fixed behind the scenes, and a problem with one resort's information doesn't stop the others refreshing.
 - **F21** The app follows the device's light or dark setting, with a consistent look throughout and text that meets accessibility contrast standards.
 
 ---
@@ -64,5 +64,4 @@ below that gets picked up out of turn should say why in its spec.
 - **C1** The service behind the app is protected from abuse: heavy or automated use is limited, AI scrapers are refused, and resort data can only be reached through the service.
 - **C2** The service can tell requests from genuine installs of the app apart from others, so it can refuse anything that isn't the real app.
 - **C3** Failures in the service and its daily refresh are noticed and reported, with enough detail to find and fix the cause quickly. Depends on F20.
-- **C5** Continuous integration: run the full test sweep (`tools/full-sweep`, see `docs/PIPELINE.md`) automatically on GitHub (the repo's remote) for every push and pull request, so a red sweep is caught before merging into the trunk. The E2E layers need macOS runners, whose minutes count ten-fold against the private-repo allowance (DECISIONS.md G3).
 - **C6** Skeleton hardening: the skeleton message line shows the text "null" when a valid envelope has no `message` field, and a missing `ENDPOINT_URL`/`ENDPOINT_TIMEOUT_MS` define (or a `FutureBuilder` error) shows "endpoint: loading" or a misleading "could not be reached" instead of a clear failure. Also extract a shared TypeScript envelope builder (currently duplicated in `endpoint/scripts/seed-local.ts` and `endpoint/test/integration/artefacts.test.ts`) when the second document kind lands.
