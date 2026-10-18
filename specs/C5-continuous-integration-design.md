@@ -262,7 +262,7 @@ No area doc changes: this is developer tooling, and `docs/definitions/` holds pr
 - [x] 1. The developer pushes a branch and sees a green check from a Linux job that ran `tools/full-sweep --layers self-test`, with its log attached
 - [x] 2. The developer pushes a change that breaks the endpoint tests and sees a red check whose run summary names `endpoint`, with `endpoint.log` attached
 - [x] 3. The developer starts the full sweep manually on a branch and sees the Android E2E verdict from the KVM job beside the fast layers in the five-layer table; iOS shows red "no result"
-- [ ] 4. The developer starts the full sweep manually and sees the iOS E2E verdict from the macOS job
+- [x] 4. The developer starts the full sweep manually and sees the iOS E2E verdict from the macOS job
 - [ ] 5. The nightly schedule sweeps an unswept trunk head and leaves a marker; a later night on the same head cancels its own run (grey) naming the run that swept it — skip predicate + marker proven by the self-test, real schedule only after merge
 - [ ] 6. The developer starts the manual sweep with `withhold_job` (or an `ios_simulator` override naming a missing device) and sees that job's layers red / the device named
 - [ ] 7. Nightly and manual runs save dependency caches, pushes restore them, and `cold` bypasses them — the developer sees a warm run's restore lines and a cold run's misses
@@ -276,17 +276,19 @@ No area doc changes: this is developer tooling, and `docs/definitions/` holds pr
 - **CI's AVD uses the `pixel_7_pro` profile** (`ANDROID_AVD_DEVICE` in dev.env): the SDK command-line tools define nothing newer, even at `cmdline-tools;latest`; the local AVD is an Android Studio Pixel 9 Pro XL, a near-identical screen. *Rejected:* committing a custom `devices.xml`; a CI-only override (would leave the dev.env value dead).
 - **Runner preparation for Android grew three CI-only facts**, all in the workflow: free ~20 GB of disk (the emulator's userdata partition needs ~7.4 GB and the image leaves ~4.8 GB after the build), pin `ANDROID_AVD_HOME` (the runner's `XDG_CONFIG_HOME` sends avdmanager and the emulator to different homes), and put `platform-tools` on `PATH` for Patrol.
 - **A `toolchains` composite action** (`.github/actions/toolchains`) is the one place jobs set up Node, Flutter and the endpoint's packages from their pinned versions.
+- **iOS runs on `runs-on: xcode-27`** (macOS 27, Xcode 27.0 default, nearest to the local Xcode 27.1); its image ships "iPhone 17", so device prep is create-if-missing.
+- **A missing layer's reason reads "no result (its job did not run or did not finish)"**: the first real case was an Android job killed mid-sweep (exit 143), not one that never started.
 - **TEMPORARY `push: c5-trial/**` trigger on `sweep.yml`**: `workflow_dispatch` works only once the workflow is on main, so pre-merge trials run by pushing throwaway `c5-trial/*` branches. Removed before `/finish-feature`; the real manual dispatch is proven after merge.
 - **`.nvmrc` pins Node 26.8.1** (the local version; the sweep relies on Node's native TypeScript stripping).
 
 
 ## Resume
 
-- Closed: slices 1 (20e4e5f), 2 (4f5458f + b835717), 3 (this commit). TDD logs in `test-results/tdd/C5/`.
-- **Open question to the user (STOP):** the first real Android E2E on CI is red — `endpoint_serving/endpoint_message_test.dart` passes its assertion, then fails in teardown with `LateInitializationError` from `MapLibreMethodChannel.dispose` (the map's platform view isn't created within 3 s on the slow software-GPU emulator). Pre-existing app/plugin behaviour exposed by CI; passes locally.
-- Next: slice 4 — *The developer starts the full sweep manually and sees the iOS E2E verdict from the macOS job.* Use `runs-on: xcode-27` (macOS 27, Xcode 27.0 default; image ships "iPhone 17" on iOS 27.0, so device prep is create-if-missing). Local Xcode is 27.1. Mind the ×10 billing: trial the iOS job alone where possible.
+- Closed: slices 1 (20e4e5f), 2 (4f5458f + b835717), 3 (4ceb9b6), 4 (this commit). TDD logs in `test-results/tdd/C5/`.
+- User ruling on the Android red: captured as **B1** on main (b17f3e3, local merge); Android stays honestly red in C5.
+- Next: slice 5 — *The nightly schedule sweeps an unswept trunk head and leaves a marker; a later night on the same head cancels its own run naming the run that swept it.* Plan: `schedule` trigger + `gate` job (`actions: write`) before linux/android/ios; skip predicate as a pure function in `tools/sweep/` fed by `gh api repos/{repo}/actions/artifacts?name=nightly-verdict` (one call; artifact's `workflow_run.head_sha`); swept → `gh run cancel $GITHUB_RUN_ID` and wait; else summary "no marker among N …". `report` uploads `nightly-verdict` (90 days) only for `schedule` runs with ≥1 real verdict, before exiting red — needs `report.ts` to say whether any verdict was real (e.g. an output/flag). Manual runs never write it; gate skips the check for non-schedule events.
 - Seams as built: `Layer = { id, label, command, cwd, countTests }`; `selectLayers(layers, ids?)` + `listSwitch(args, name)` in `layers.ts`; `LayerVerdict` + `runVerdict(expected, verdicts)` in `verdict.ts`; `runSweep` writes `sweep/results.json`; `node tools/sweep/report.ts [--expect ids] <results-root>` → stdout + `$GITHUB_STEP_SUMMARY`, exit 1 unless green. `use_android_jdk` (common.sh) on Android paths only. dev.env gained `ANDROID_AVD_API`, `ANDROID_AVD_DEVICE`, `ANDROID_EMULATOR_FLAGS`, `PATROL_CLI_VERSION`.
-- `.github/workflows/sweep.yml`: linux / android / report (needs both, `!cancelled()`, downloads `sweep-*`, report with default expected = all five). Trials: push a `c5-trial/*` branch (TEMPORARY trigger). Trial branch for slice 3: `c5-trial/s3`.
-- `gh` and `git push` work only outside the sandbox. Force-push is refused by the permission classifier — never amend a pushed commit. Throwaway remote branches to delete at finish (with the user's OK): `c5-demo/endpoint-red`, `c5-demo/endpoint-red-2`, `c5-trial/s3`.
+- `.github/workflows/sweep.yml`: linux / android / ios (`xcode-27`) / report (needs all three, `!cancelled()`, downloads `sweep-*`, default expected = all five). Trials: push a `c5-trial/*` branch (TEMPORARY trigger).
+- `gh` and `git push` work only outside the sandbox. Force-push is refused — never amend a pushed commit. Throwaway remote branches to delete at finish (OK still not given): `c5-demo/endpoint-red`, `c5-demo/endpoint-red-2`, `c5-trial/s3`, `c5-trial/s4`.
 - A real `schedule` run can only happen on the default branch, i.e. after merge.
-- Measured so far: push job ~2 min (Linux ×1); sweep linux job ~2 min; android job ~18.5 min cold (Linux ×1).
+- Measured so far (all cold): push job ~2 min; sweep linux ~2 min; android ~18.5 min (once killed at ~19 min, exit 143 — watch memory); iOS ~10.7 min wall ≈ 110 billed. A cold five-layer nightly ≈ 2 + 19 + 107 + report ≈ 130 billed minutes.

@@ -14,5 +14,5 @@ const noResult = (layer: ExpectedLayer): LayerVerdict => ({
   id: layer.id,
   label: layer.label,
   verdict: "red",
-  reason: "no result (job did not run)",
+  reason: "no result (its job did not run or did not finish)",
 });

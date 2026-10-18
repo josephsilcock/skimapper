@@ -44,13 +44,13 @@ test("a red layer turns the report red, and the summary names the layer and why"
   assert.match(summary, /\| app \| 🟢 green \|/);
 });
 
-test("an expected layer with no result is red, so a job that never ran cannot pass", () => {
+test("an expected layer with no result is red, so a job that never ran or never finished cannot pass", () => {
   const results = jobResults({ "sweep-linux": [{ id: "app", label: "app", verdict: "green" }] });
 
   const { exitCode, summary, stderr } = report(["--expect", "app,e2e-ios", results]);
 
   assert.equal(exitCode, 1, stderr);
-  assert.match(summary, /\| e2e \(ios\) \| 🔴 red \| no result \(job did not run\) \|/);
+  assert.match(summary, /\| e2e \(ios\) \| 🔴 red \| no result \(its job did not run or did not finish\) \|/);
 });
 
 test("the per-layer table is also printed, so the job log names the red layer", () => {

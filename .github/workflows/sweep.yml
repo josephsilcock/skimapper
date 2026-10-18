@@ -95,8 +95,46 @@ jobs:
           path: test-results/sweep/
           retention-days: 14
 
+  ios:
+    runs-on: xcode-27
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/toolchains
+      - name: Read the dev config
+        id: config
+        run: |
+          source tools/dev.env
+          {
+            echo "simulator=$IOS_SIMULATOR"
+            echo "patrol=$PATROL_CLI_VERSION"
+          } >> "$GITHUB_OUTPUT"
+      # Creates the simulator tools/dev.env names if the image lacks it; booting it is the sweep's job.
+      - name: Create the simulator
+        env:
+          SIMULATOR: ${{ steps.config.outputs.simulator }}
+        run: |
+          if xcrun simctl list devices available | grep -q "^    $SIMULATOR ("; then
+            echo "simulator '$SIMULATOR' already exists"
+            exit 0
+          fi
+          device_type="$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; print(next((t["identifier"] for t in json.load(sys.stdin)["devicetypes"] if t["name"] == sys.argv[1]), ""))' "$SIMULATOR")"
+          runtime="$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; print([r["identifier"] for r in json.load(sys.stdin)["runtimes"] if r["platform"] == "iOS" and r["isAvailable"]][-1])')"
+          xcrun simctl create "$SIMULATOR" "$device_type" "$runtime"
+      - name: Install Patrol CLI
+        run: dart pub global activate patrol_cli "${{ steps.config.outputs.patrol }}"
+      - name: Sweep
+        if: ${{ !cancelled() }}
+        run: tools/full-sweep --layers e2e-ios
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: sweep-ios
+          path: test-results/sweep/
+          retention-days: 14
+
   report:
-    needs: [linux, android]
+    needs: [linux, android, ios]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     steps:
