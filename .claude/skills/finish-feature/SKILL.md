@@ -42,9 +42,13 @@ The pack was captured and visually accepted at the end of `/implement`; this ste
 - **Record noteworthy decisions in `../../../docs/DECISIONS.md`**: any choice between real alternatives with non-obvious rationale (model shape, sync-vs-async, rejected approaches and why). Start from the design doc's Reviewer summary **and its "decisions taken during implement" section** — that section exists because a principle-level design pushes real choices into the build, and this is the step that stops them dying with the design doc. Most features add zero or one entry; don't log routine scoping. Write for a future reader who wants the durable rule and *why*, not the story of this task: capture the decision, its core reasoning, and rejected alternatives — omit the audit/investigation narrative, the specific bug being fixed, and descriptions of existing code that was already fine. If a sentence wouldn't matter to someone reading the rule a year from now, cut it.
 - **Delete the spec, design-doc and UI-sketch files** (`specs/<id>-<slug>.md`, `…-design.md` and `…-ui.html`) — behaviour now lives in the area docs, decisions in DECISIONS.md, history in git. (An epic's parent spec survives until the epic's exit criteria are met, then merges and dies the same way.)
 - Update `../../../docs/FEATURES.md` status to `done` — status + one-liner only; detail belongs in the area doc.
-- Delete any resolved `../../../docs/BACKLOG.md` entries (delete, don't strikethrough). If the backlog has a
-  **Next up** queue, pop the item that just landed and top the queue back up to ~5, proposing the
-  addition at the gate rather than picking silently.
+- Delete any resolved `../../../docs/BACKLOG.md` entries (delete, don't strikethrough). If the backlog has a **Next up** queue, pop the item that just landed and top the queue back up to ~5, proposing the addition at the gate rather than picking silently.
+- **Check the rest of the docs for staleness.** The bullets above cover the docs every feature touches; this one catches the docs a change makes stale without editing them.
+  - Search `../../../README.md`, `../../../app/README.md`, `../../../CLAUDE.md` and `../../../docs/` for `TBD` and for this item's ID, and resolve each hit the change has made out of date.
+  - If the change added or renamed a directory, a command, a dev-config value, a seam or a convention, make `README.md` (repo layout, running locally, tests), `docs/QUICK_START.md`, `docs/ARCHITECTURE.md` and `docs/CONVENTIONS.md` describe it as built. Keep each fact in its one home and point to it from
+    elsewhere; don't copy it.
+  - Rewrite any open BACKLOG item whose text depends on this item ("Depends on <ID>", "once <ID> chooses…"), so it states what <ID> settled instead of waiting on it.
+  - If none applies, say so in the completion report's **Did** line; don't skip silently.
 
 ## 6. Commit
 

@@ -79,6 +79,8 @@ Judge against the project's documented patterns (see *Establish the project's ow
 - `docs/FEATURES.md` and `docs/definitions/<area>.md` reflect the work
 - Applicable `docs/TIDY_UPS.md` items for touched files were folded in
 - Resolved BACKLOG entries deleted
+- No doc outside the diff has been made stale by it: no `TBD` the change has answered in `README.md`, `app/README.md`, `CLAUDE.md` or `docs/`; a new directory, command, dev-config value, seam or convention appears in `README.md` / `docs/QUICK_START.md` / `docs/ARCHITECTURE.md` / `docs/CONVENTIONS.md` as
+  appropriate; no open BACKLOG item still waits on this item ("Depends on <ID>"). Grep for it, because the diff alone won't show it. A stale doc that a reader would act on wrongly (a wrong command, a missing directory) is 🟡 Minor; anything else is 🔵.
 
 ## Output Format
 
