@@ -267,10 +267,10 @@ No area doc changes: this is developer tooling, and `docs/definitions/` holds pr
 - [x] 4. The developer starts the full sweep manually and sees the iOS E2E verdict from the macOS job
 - [x] 5. ~~The nightly schedule sweeps an unswept trunk head and leaves a marker; a later night self-cancels~~ (superseded by the amendment; its code is removed in slice 7)
 - [x] 6. The developer starts the manual sweep with `withhold_job` (or an `ios_simulator` override naming a missing device) and sees that job's layers red / the device named
-- [ ] 7. A code push to main runs the five-layer sweep with no gate job, and the self-test no longer has a skip predicate: the sweep is triggered by `push: main` + dispatch (schedule, gate, marker, `skip.ts`/`gate.ts` and their tests removed)
-- [ ] 7b. The developer opens a docs-only PR to main and sees the `fast` check report on it (fast workflow gains `pull_request` with no path filter, branch pushes exclude main; the self-test asserts both docs-only lists are identical)
-- [ ] 7c. The Android job sizes Gradle's heap to fit beside the emulator, and the sweep's Android layer reaches a verdict rather than being killed
-- [ ] 8. The self-test rejects a test command written into a workflow, and PIPELINE.md has the CI row
+- [x] 7. A code push to main runs the five-layer sweep with no gate job, and the self-test no longer has a skip predicate: the sweep is triggered by `push: main` + dispatch (schedule, gate, marker, `skip.ts`/`gate.ts` and their tests removed)
+- [x] 7b. The developer opens a docs-only PR to main and sees the `fast` check report on it (fast workflow gains `pull_request` with no path filter, branch pushes exclude main; the self-test asserts both docs-only lists are identical)
+- [x] 7c. The Android job sizes Gradle's heap to fit beside the emulator, and the sweep's Android layer reaches a verdict rather than being killed
+- [x] 8. The self-test rejects a test command written into a workflow, and PIPELINE.md has the CI row
 
 ## Decisions taken during implement
 
@@ -286,16 +286,24 @@ No area doc changes: this is developer tooling, and `docs/definitions/` holds pr
 - **TEMPORARY `push: c5-trial/**` trigger on `sweep.yml`**: `workflow_dispatch` works only once the workflow is on main, so pre-merge trials run by pushing throwaway `c5-trial/*` branches. It stays through slices 7–8 (a `push: main` trigger can't be trialled before merge either), and is removed before `/finish-feature`. C5's own merge commit is the first real `main` sweep.
 - **`.nvmrc` pins Node 26.8.1** (the local version; the sweep relies on Node's native TypeScript stripping).
 - **Amendment, 2026-10-18** (user rulings, see § 1): the repo went public and `main` became PR-only. The nightly, skip rule and caching are dropped; the full sweep runs on push to main; fast runs on branch pushes and PRs; `fast` becomes required (the user applies the ruleset). *Rejected:* short-circuiting `fast` green on docs-only PRs (a green that ran nothing, and a third copy of the docs-only list).
-- **The Gradle heap fix is its own change, not caching.** The slice-7 trial's Android job was killed at about 14 min until `~/.gradle/gradle.properties` capped Gradle at 2 GB beside the 4 GB emulator. After that it reached a real verdict (red: B1).
+- **The Gradle heap fix is its own change, not caching.** The slice-7 trial's Android job was killed at about 14 min until `~/.gradle/gradle.properties` capped Gradle at 2 GB beside the 4 GB emulator. After that it reached a real verdict (red: B1). A later trial without the fix also reached a verdict, so the fix is kept as a guard, not as something proven necessary.
+- **CI E2E is red on both platforms (as of 2026-10-18).** Android is red from B1. iOS is red too: B1's `LateInitializationError` in `endpoint_unreachable_test` in one trial, and a 6 s `waitUntilVisible` timeout in `endpoint_not_understood_test` in the other. It was green in slice 4. C5 reports this honestly and doesn't fix it (spec non-goal: no change to the E2E tests).
 
 
 ## Resume
 
-- Closed: slices 1 (20e4e5f), 2 (4f5458f + b835717), 3 (4ceb9b6), 4 (9cde0c9), 5 (2b5db7d, superseded), 6 (55b30f0). TDD logs in `test-results/tdd/C5/`. Slice 7 (caching) was dropped after its trial on `c5-trial/s7`. That log stays as a record of the trial.
-- origin/main (with B1 and the user's PR-flow edits) is merged into the feature branch (7c411d1). The amendment is the commit after it.
-- Next: slice 7 — *a code push to main runs the five-layer sweep with no gate job*. Remove `schedule`, `gate`, the marker steps, `tools/sweep/skip.ts`, `gate.ts`, `skip.test.ts`, `gate.test.ts`, and `report.ts`'s `reached_verdict` output (check whether anything else consumes it). `report` keeps `!cancelled()`. Add `push: branches: [main]` with the docs-only `paths-ignore`. Keep dispatch and its inputs, and keep the TEMPORARY trial trigger.
-- Then 7b (fast workflow `pull_request`, branches-ignore main, docs-only lists equal in the self-test), 7c (Gradle heap, from 1fe15c9), 8 (ratchet, PIPELINE CI row noting that `fast` is required only after the user's ruleset change, CONVENTIONS dev.env note, README layer ids).
-- **After merge, at finish:** remove the TEMPORARY trigger. Prove manual dispatch. C5's merge commit must produce a real `main` sweep (red on Android: B1). The user then adds `fast` as a required check (ruleset 25351486; carry the existing params through unchanged). Throwaway remote branches to delete (OK still not given): `c5-demo/endpoint-red`, `c5-demo/endpoint-red-2`, `c5-trial/s3`–`s7`. Mention auto-merge (`gh pr merge --auto` plus the repo setting) as an optional follow-up.
-- Seams as built: `Layer = { id, label, command, cwd, countTests }`; `selectLayers(layers, ids?)` + `listSwitch(args, name)` in `layers.ts`; `LayerVerdict` + `runVerdict(expected, verdicts)` in `verdict.ts`; `runSweep` writes `sweep/results.json`; `node tools/sweep/report.ts [--expect ids] <results-root>` → stdout + `$GITHUB_STEP_SUMMARY`, exit 1 unless green. `use_android_jdk` (common.sh) on Android paths only. dev.env gained `ANDROID_AVD_API`, `ANDROID_AVD_DEVICE`, `ANDROID_EMULATOR_FLAGS`, `PATROL_CLI_VERSION`.
-- `gh` and `git push` work only outside the sandbox (TLS fails inside), and so does writing `.claude/skills/` (a merge touching skills needs the sandbox off). Force-push is refused — never amend a pushed commit.
+- **All slices closed:** 1 (20e4e5f), 2 (4f5458f + b835717), 3 (4ceb9b6), 4 (9cde0c9), 5 (2b5db7d, superseded), 6 (55b30f0), amendment (f306f24), 7 (20def4a), 7b (e9a04b6), 7c (e9d639c), 8 (b35938e). Slice 7 (caching) was dropped after its trial. TDD logs are in `test-results/tdd/C5/`.
+- origin/main (B1 plus the user's PR-flow edits) is merged in as 7c411d1. Draft PR #1 (feature → main) is open; it proves `fast` reports on `pull_request`.
+- Next: `/finish-feature`.
+- **At finish:**
+  - remove the TEMPORARY `c5-trial/**` from `sweep.yml`'s push branches;
+  - un-draft and merge PR #1 by the PIPELINE route;
+  - C5's merge commit must produce the first real `main` sweep (Android red: B1);
+  - prove manual dispatch, plus a docs-only PR reporting `fast`;
+  - the user then adds `fast` as a required check (ruleset 25351486, existing params carried through unchanged);
+  - DECISIONS.md: a C5 entry, G3 superseded (public), D1's minutes note dropped, the JDK entry updated;
+  - delete the throwaway remote branches once the OK is given: `c5-demo/endpoint-red`, `c5-demo/endpoint-red-2`, `c5-trial/s3`–`s7`, `s7b`, `s8`;
+  - mention auto-merge as an optional follow-up.
+- Seams as built: `Layer = { id, label, command, cwd, countTests }`; `selectLayers(layers, ids?)` + `listSwitch(args, name)` in `layers.ts`; `LayerVerdict` + `runVerdict(expected, verdicts)` in `verdict.ts`; `runSweep` writes `sweep/results.json`; `node tools/sweep/report.ts [--expect ids] <results-root>` → stdout + `$GITHUB_STEP_SUMMARY`, exit 1 unless green; `workflows.test.ts` covers triggers, docs-only parity and the test-command ratchet. `use_android_jdk` (common.sh) on Android paths only. dev.env gained `ANDROID_AVD_API`, `ANDROID_AVD_DEVICE`, `ANDROID_EMULATOR_FLAGS`, `PATROL_CLI_VERSION`.
+- `gh`, `git push`, writes to `.claude/skills/`, and the endpoint's Miniflare tests (a local listen) work only outside the sandbox. A new branch pushed at an already-pushed SHA triggers no workflow, so a trial needs a fresh commit. Force-push is refused.
 - Measured (cold): push job ~2 min; sweep linux ~2 min; android ~21 min with the heap fix; iOS ~10.7 min wall.
