@@ -9,6 +9,7 @@ class StartUpSafeMapPlatform extends MapLibreMethodChannel {
 
   @override
   Future<void> initPlatform(int id) {
+    // Set before super's first await, in the same step in which the plugin assigns its channel.
     _channelOpened = true;
     return super.initPlatform(id);
   }

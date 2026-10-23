@@ -32,8 +32,10 @@ class FakeNativeMap {
 
   final WidgetTester _tester;
   int? _viewId;
-  bool waitForMapRequested = false;
+  bool _waitForMapRequested = false;
   Completer<Object?>? _queryInFlight;
+
+  bool get waitForMapRequested => _waitForMapRequested;
 
   bool get viewCreationRequested => _viewId != null;
 
@@ -78,7 +80,7 @@ class FakeNativeMap {
   Future<Object?> _handleMapCall(MethodCall call) async {
     switch (call.method) {
       case 'map#waitForMap':
-        waitForMapRequested = true;
+        _waitForMapRequested = true;
         return holdWaitForMap ? Completer<Object?>().future : null;
       case 'map#queryRenderedFeatures':
         if (fixtureNeverRenders) return _queryReply(found: false);

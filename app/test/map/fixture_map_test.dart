@@ -52,7 +52,7 @@ void main() {
   );
 
   testWidgets(
-    'removing the map between fixture queries reports nothing, even past the deadline',
+    'removing the map between fixture queries stops the check and reports nothing',
     (tester) async {
       final nativeMap = FakeNativeMap(tester);
       final reports = await _pumpMapWithStyleLoaded(tester, nativeMap);
