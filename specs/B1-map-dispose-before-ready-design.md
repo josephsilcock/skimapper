@@ -272,7 +272,7 @@ At finish:
 - [x] 1. A developer runs `flutter test` and sees a widget test pass that removes the fixture map before its native view exists, for the Android target (fails with `LateInitializationError` against the old code).
 - [x] 2. A developer runs `flutter test` and sees the same removal pass for the iOS target, and sees that a map removed during `map#waitForMap` leaves no inbound handler behind.
 - [x] 3. A developer runs `flutter test` and sees a widget test pass that removes the map while a fixture query is in flight: no error and no map-line report, both when the query returns and after the deadline.
-- [ ] 4. A developer dispatches the branch sweep and sees no map-disposal teardown failure in either E2E layer's results.
+- [x] 4. A developer dispatches the branch sweep and sees no map-disposal teardown failure in either E2E layer's results.
 
 ## Decisions taken during implement
 
@@ -280,12 +280,13 @@ At finish:
 - The fake answers the per-map channel as *not implemented* once the view is disposed (what a device does), not silence: silence made a post-removal query hang, so the between-polls test passed against unfixed code.
 - AC 2's "past the deadline" case is reached through removal, so `clock` is not what makes it pass. A third fixture-check test, "a map whose fixture never renders reports so at the deadline", is what reaches the deadline branch under fake time (decision 6) and also guards the mounted rule against over-guarding.
 - "Only a mounted map reports" lives in `_FixtureMapState._report`; the poll loop also stops while unmounted so no query is sent after removal.
+- AC 3 was accepted on sweep run 40007409887: zero map-disposal teardown failures in either E2E layer. iOS is red only on B2. Android ran 3/5 tests and then aborted on a port-reuse defect in `tools/lib/endpoint.sh`, captured as B3 (PR #4) and outside B1's scope.
+- Environment finding, not a design decision (keep it out of DECISIONS.md): local iOS builds failed until `cd app && flutter clean`, because the gitignored build caches still pointed at the repo's old path `skimapper-new`. The cure after moving the checkout is `flutter clean`.
 - The installer is a plain assignment of `StartUpSafeMapPlatform.new` (a canonical constructor tear-off), so repeat calls are no-ops without a "done" flag.
 
 ## Resume
 
-- Closed: slices 1–3 (one commit each on this branch). Evidence: `test-results/tdd/B1/`.
-- Slice 4 (AC 3) in progress: local `tools/e2e ios` and `tools/e2e android` are green (Android needed one rerun for an endpoint-message cold-start flake). Branch pushed at 206b347; sweep run https://github.com/josephsilcock/skimapper/actions/runs/40007409887 has zero map-disposal failures. iOS red only on B2. Android ran 3/5, then aborted on a port left held by the previous group's endpoint (`tools/lib/endpoint.sh` `stop_endpoint`). Waiting on a ruling about AC 3.
-- After the ruling: tick slice 4. The change is surface-less, so no demo pack; then the completion report.
-- Seams: `lib/map/start_up_safe_map_platform.dart` (`StartUpSafeMapPlatform`, `installStartUpSafeMapPlatform`), installed in `_FixtureMapState.initState`; `FixtureMap(basemapFile:)` optional; `_report` guards reporting; deadline reads `clock.now()`. Fake: `app/test/map/fake_native_map.dart`.
-- `flutter`, devices and `gh` must run outside the sandbox. Local build caches were reset with `flutter clean` (they pointed at the old repo path `skimapper-new`).
+- Closed: slices 1–4. AC 3 was accepted on run 40007409887, and B3 was captured for the Android port-reuse defect. Evidence: `test-results/tdd/B1/`.
+- Surface-less change, so no demo pack. Next: `/finish-feature specs/B1-map-dispose-before-ready-design.md`.
+- Seams: `lib/map/start_up_safe_map_platform.dart` (`StartUpSafeMapPlatform`, `installStartUpSafeMapPlatform`), installed in `_FixtureMapState.initState`; `FixtureMap(basemapFile:)` is optional; `_report` guards reporting; the deadline reads `clock.now()`. Fake: `app/test/map/fake_native_map.dart`.
+- `flutter`, devices and `gh` must run outside the sandbox.
