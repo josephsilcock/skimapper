@@ -265,14 +265,48 @@ No path needs a real database.
    failing run's output record a fetch start with no outcome, which is AC1's "loading" record, and
    the sweep still counts the tests correctly.*
 4. *A developer reads the diagnosis in the TDD log, naming H1, H2, H3 or another cause from up to
-   three CI sweeps, and the work stops for the fix addendum, unless H1 meets its threshold.* (next)
+   three CI sweeps, and the work stops for the fix addendum, unless H1 meets its threshold.*
 
 ## Slices
 
 - [x] 1. *A developer runs `tools/e2e ios endpoint_malformed` locally and sees, in the output, the app's launch line and a fetch start/outcome pair for `/v1/skeleton/message` ("not understood", elapsed ms), all on one timestamp format.*
 - [x] 2. *A developer runs `tools/e2e ios` and reads one timeline in the output: prefixed endpoint lines, milestones and port snapshots per group, interleaved with the app's lines; after each group the port snapshot shows the port free.*
 - [x] 3. *A developer points the app at a listener that never answers (env overrides only) and sees the failing run's output record a fetch start with no outcome (AC1's "loading" record), and the sweep still counts the tests correctly.*
-- [ ] 4. *A developer reads the diagnosis in the TDD log, naming H1, H2, H3 or another cause from up to three CI sweeps; work stops for the fix addendum unless H1 meets its threshold.* (next)
+- [x] 4. *A developer reads the diagnosis in the TDD log, naming H1, H2, H3 or another cause from up to three CI sweeps; work stops for the fix addendum unless H1 meets its threshold.*
+
+## Fix addendum (proposed — awaiting gate)
+
+**Diagnosis** (full record: `test-results/tdd/B2/slice-04-diagnosis.md`; two CI sweeps, both reproduced):
+the first connection of the first app launch in each Patrol invocation stalls ≈ 4–5 s between the
+app's fetch start and the request reaching the host, so the app's 3 s timeout fires and the line reads
+"service could not be reached". It happens with nothing listening too (the stopped group isn't
+refused), so it's upstream of any endpoint. H1 doesn't meet its threshold (route 0.5–1.6 s, request
+arrives after the app gave up); H3 is ruled out (port free throughout); a late fetch start is ruled
+out (136–164 ms after launch). Not yet split: the simulator's network stack on a fresh install
+(environment) versus the app's isolate starved by its own first launch (the 3 s timer fired up to
+1.3 s late — an app fault if so). Separately, the cold route's 0.5–1.6 s first answer would fail
+AC4's "< 1 s endpoint-side" on its own.
+
+**Options for the gate:**
+
+1. **Recommended: spend the last diagnostic sweep splitting the stalled span**, then a targeted fix
+   (plus option 2's probe). Debug-only additions in the existing capture style: the dev
+   `HttpClient`'s `connectionFactory` logs connect start / connected (separates lookup + TCP
+   connect from request/response); a debug-only event-loop lag line during the first seconds
+   after launch (separates "isolate starved" from "network stalled"); and the simulator's own
+   network log for the app's process (`xcrun simctl spawn <device> log stream`, `com.apple.network`
+   / CFNetwork), stamped into the run record per Patrol invocation. Cost: one small slice and one
+   ~20 min sweep. If (b) — app start-up starving the fetch — the fix is in the app, within the
+   endpoint-line behaviour, with a failing test first. If (a) — the environment — the fix is in
+   the harness or the CI simulator choice, which the spec allows once diagnosed.
+2. **Include regardless: a readiness probe on the message route** in `start_endpoint` (any status,
+   any body, only for groups that start an endpoint) — spec-sanctioned, and the only way to get the
+   cold route's first answer under AC4's 1 s. It does not fix the stall on its own.
+3. **Environment experiment, no code:** dispatch with the workflow's `ios_simulator` input set to a
+   different simulator model/runtime. Cheap, but tells us only whether this simulator is special,
+   not the mechanism.
+4. **Not offered as in-bounds:** a per-invocation pre-launch, warm-up request or longer timeout —
+   each is a spec non-goal (they'd hide exactly this cold-start stall).
 
 ## Decisions taken during implement
 
@@ -286,4 +320,4 @@ No path needs a real database.
 
 ## Resume
 
-Slices 1–3 closed (app fetch log + launch line; harness run record; AC1 failure path proven locally — `test-results/tdd/B2/slice-03-induced-failure.md`). Next: slice 4 — push the branch, dispatch up to three `sweep.yml` runs (`gh workflow run sweep.yml --ref bugfix/b2-ios-malformed-e2e-timeout`), read the `sweep-ios` artefact's `e2e (ios).log`, write the diagnosis into `test-results/tdd/B2/slice-04-diagnosis.md`, and GATE with a fix addendum (unless H1 meets its threshold). Correlation aids: Patrol's `POST [200] /runDartTest` line gives test start (host-local) + duration; wrangler's request line gives completion stamp + duration. Local baseline: fetch start → wrangler answer ~200 ms; refused also ~200 ms.
+Slices 1–4 closed: capture built (app fetch log + launch line; harness run record; e2e count anchored), AC1 failure path proven locally, and the diagnosis made from two CI sweeps (40020892190, 40020945261; logs under `test-results/tdd/B2/ci/`). Work is **stopped at the fix-addendum gate** (§ Fix addendum): H1 didn't meet its threshold. One diagnostic sweep remains in the spec's budget. Next depends on the gate ruling — most likely a slice for the finer split of the stalled span (connectionFactory phase lines, event-loop lag line, simulator network log) plus the message-route readiness probe, then the third sweep.
