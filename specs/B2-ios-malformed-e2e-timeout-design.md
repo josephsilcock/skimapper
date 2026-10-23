@@ -263,16 +263,16 @@ No path needs a real database.
    group the port snapshot shows the port free.*
 3. *A developer points the app at a listener that never answers (env overrides only) and sees the
    failing run's output record a fetch start with no outcome, which is AC1's "loading" record, and
-   the sweep still counts the tests correctly.* (next)
+   the sweep still counts the tests correctly.*
 4. *A developer reads the diagnosis in the TDD log, naming H1, H2, H3 or another cause from up to
-   three CI sweeps, and the work stops for the fix addendum, unless H1 meets its threshold.*
+   three CI sweeps, and the work stops for the fix addendum, unless H1 meets its threshold.* (next)
 
 ## Slices
 
 - [x] 1. *A developer runs `tools/e2e ios endpoint_malformed` locally and sees, in the output, the app's launch line and a fetch start/outcome pair for `/v1/skeleton/message` ("not understood", elapsed ms), all on one timestamp format.*
 - [x] 2. *A developer runs `tools/e2e ios` and reads one timeline in the output: prefixed endpoint lines, milestones and port snapshots per group, interleaved with the app's lines; after each group the port snapshot shows the port free.*
-- [ ] 3. *A developer points the app at a listener that never answers (env overrides only) and sees the failing run's output record a fetch start with no outcome (AC1's "loading" record), and the sweep still counts the tests correctly.* (next)
-- [ ] 4. *A developer reads the diagnosis in the TDD log, naming H1, H2, H3 or another cause from up to three CI sweeps; work stops for the fix addendum unless H1 meets its threshold.*
+- [x] 3. *A developer points the app at a listener that never answers (env overrides only) and sees the failing run's output record a fetch start with no outcome (AC1's "loading" record), and the sweep still counts the tests correctly.*
+- [ ] 4. *A developer reads the diagnosis in the TDD log, naming H1, H2, H3 or another cause from up to three CI sweeps; work stops for the fix addendum unless H1 meets its threshold.* (next)
 
 ## Decisions taken during implement
 
@@ -286,4 +286,4 @@ No path needs a real database.
 
 ## Resume
 
-Slices 1–2 closed (app fetch log + launch line; harness run record with stamped endpoint output, milestones, port snapshots; e2e count anchored). Next: slice 3 — local induced failure (a listener on a spare port that accepts and never answers, `ENDPOINT_PORT`/`ENDPOINT_TIMEOUT_MS` env overrides only, no test edits) so the failing run records a fetch start with no outcome by the time the 6 s wait expires, and the sweep counts the failure. Then slice 4 — push the branch, dispatch up to three `sweep.yml` runs (`gh workflow run sweep.yml --ref bugfix/b2-ios-malformed-e2e-timeout`), read `sweep-ios` artefact's `e2e (ios).log`, write the diagnosis, and GATE (unless H1 meets its threshold). Evidence logs: `test-results/tdd/B2/`. Local baseline: fetch start → wrangler answer ~200 ms; refused also ~200 ms.
+Slices 1–3 closed (app fetch log + launch line; harness run record; AC1 failure path proven locally — `test-results/tdd/B2/slice-03-induced-failure.md`). Next: slice 4 — push the branch, dispatch up to three `sweep.yml` runs (`gh workflow run sweep.yml --ref bugfix/b2-ios-malformed-e2e-timeout`), read the `sweep-ios` artefact's `e2e (ios).log`, write the diagnosis into `test-results/tdd/B2/slice-04-diagnosis.md`, and GATE with a fix addendum (unless H1 meets its threshold). Correlation aids: Patrol's `POST [200] /runDartTest` line gives test start (host-local) + duration; wrangler's request line gives completion stamp + duration. Local baseline: fetch start → wrangler answer ~200 ms; refused also ~200 ms.
