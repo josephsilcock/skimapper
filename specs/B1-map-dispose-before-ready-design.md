@@ -271,18 +271,21 @@ At finish:
 
 - [x] 1. A developer runs `flutter test` and sees a widget test pass that removes the fixture map before its native view exists, for the Android target (fails with `LateInitializationError` against the old code).
 - [x] 2. A developer runs `flutter test` and sees the same removal pass for the iOS target, and sees that a map removed during `map#waitForMap` leaves no inbound handler behind.
-- [ ] 3. A developer runs `flutter test` and sees a widget test pass that removes the map while a fixture query is in flight: no error and no map-line report, both when the query returns and after the deadline.
+- [x] 3. A developer runs `flutter test` and sees a widget test pass that removes the map while a fixture query is in flight: no error and no map-line report, both when the query returns and after the deadline.
 - [ ] 4. A developer dispatches the branch sweep and sees no map-disposal teardown failure in either E2E layer's results.
 
 ## Decisions taken during implement
 
 - The `platform_views` fake needed only a held `create` reply for AC 1; decision 4's fallback (a `buildView` override) was not needed.
+- The fake answers the per-map channel as *not implemented* once the view is disposed (what a device does), not silence: silence made a post-removal query hang, so the between-polls test passed against unfixed code.
+- AC 2's "past the deadline" case is reached through removal, so `clock` is not what makes it pass. A third fixture-check test, "a map whose fixture never renders reports so at the deadline", is what reaches the deadline branch under fake time (decision 6) and also guards the mounted rule against over-guarding.
+- "Only a mounted map reports" lives in `_FixtureMapState._report`; the poll loop also stops while unmounted so no query is sent after removal.
 - The installer is a plain assignment of `StartUpSafeMapPlatform.new` (a canonical constructor tear-off), so repeat calls are no-ops without a "done" flag.
 
 ## Resume
 
-- Closed: slices 1–2 (one commit each on this branch). Evidence: `test-results/tdd/B1/`.
-- Next: slice 3 — removal while a fixture query is in flight: no error and no `onFixtureChecked`, both when the held query returns "found" and (second case) after the deadline. Needs `package:clock` as a direct dependency (decision 6), and the fake to answer `map#waitForMap`, accept `map#onStyleLoaded` sent inbound, and hold `map#queryRenderedFeatures`.
-- Seams: `lib/map/start_up_safe_map_platform.dart` (`StartUpSafeMapPlatform`, `installStartUpSafeMapPlatform`), installed in `_FixtureMapState.initState`; `FixtureMap(basemapFile:)` optional; fake in `app/test/map/fake_native_map.dart` (`holdViewCreation`, `waitForMapRequested`, `sendToMap`).
-- Slices 2's tests guard an existing fix, so their RED was taken against the fix removed / the rejected variant, then restored (logged).
+- Closed: slices 1–3 (one commit each on this branch). Evidence: `test-results/tdd/B1/`.
+- Next: slice 4 — AC 3: run feature-scoped E2E locally (`tools/e2e ios`, `tools/e2e android`), push the branch, dispatch `sweep.yml` on it (may need the user: sandbox blocks github.com), judge only map-disposal teardown failures.
+- Seams: `lib/map/start_up_safe_map_platform.dart` (`StartUpSafeMapPlatform`, `installStartUpSafeMapPlatform`), installed in `_FixtureMapState.initState`; `FixtureMap(basemapFile:)` optional; `_report` guards reporting; deadline reads `clock.now()`. Fake `app/test/map/fake_native_map.dart`: `holdViewCreation`, `holdWaitForMap`, `fixtureNeverRenders`, `queryInFlight`/`answerQuery`, `sendToMap`.
+- Slice 2's tests guard an existing fix, so their RED was taken against the fix removed / the rejected variant, then restored (logged).
 - `flutter` must run outside the sandbox (its cache is not writable inside).

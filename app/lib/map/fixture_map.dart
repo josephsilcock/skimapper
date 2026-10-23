@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -66,12 +67,16 @@ class _FixtureMapState extends State<FixtureMap> {
   );
 
   Future<void> _checkFixtureRendered() async {
-    final deadline = DateTime.now().add(_renderDeadline);
-    while (DateTime.now().isBefore(deadline)) {
-      if (await _fixtureRendered()) return widget.onFixtureChecked(true);
+    final deadline = clock.now().add(_renderDeadline);
+    while (mounted && clock.now().isBefore(deadline)) {
+      if (await _fixtureRendered()) return _report(found: true);
       await Future<void>.delayed(_pollInterval);
     }
-    widget.onFixtureChecked(false);
+    _report(found: false);
+  }
+
+  void _report({required bool found}) {
+    if (mounted) widget.onFixtureChecked(found);
   }
 
   Future<bool> _fixtureRendered() async {
