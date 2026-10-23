@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -20,7 +22,7 @@ void main() {
     final client = EndpointClient(
       baseUrl: Uri.parse('http://endpoint.test'),
       timeout: const Duration(seconds: 1),
-      httpClient: server,
+      newHttpClient: () => server,
     );
 
     final outcome = await client.fetchDocument(
@@ -92,6 +94,23 @@ void main() {
     );
 
     expect(outcome, isA<NotUnderstood>());
+  });
+
+  test('an answer that comes in time is classified by it, even if the caller is blocked past the timeout', () async {
+    final port = await _serveFromAnotherIsolate('not an envelope');
+    final client = EndpointClient(
+      baseUrl: Uri.parse('http://127.0.0.1:$port'),
+      timeout: const Duration(milliseconds: 500),
+      newHttpClient: http.Client.new,
+    );
+
+    final outcome = client.fetchDocument(
+      '/v1/skeleton/message',
+      kind: 'skeleton-message',
+    );
+    _blockFor(const Duration(milliseconds: 1500));
+
+    expect(await outcome, isA<NotUnderstood>());
   });
 
   group('fetch log', () {
@@ -177,7 +196,7 @@ Future<List<String>> _fetchLogAgainst(http.Client server) => runRecordDuring(
 EndpointClient _clientFor(http.Client server) => EndpointClient(
   baseUrl: Uri.parse('http://endpoint.test'),
   timeout: const Duration(milliseconds: 100),
-  httpClient: server,
+  newHttpClient: () => server,
 );
 
 const _messageEnvelope = {
@@ -186,3 +205,26 @@ const _messageEnvelope = {
   'dataVersion': '2026-10-18',
   'data': {'message': 'hello'},
 };
+
+/// Serves [body] (200) on a loopback port from another isolate, so it answers
+/// while this one is blocked.
+Future<int> _serveFromAnotherIsolate(String body) async {
+  final ports = ReceivePort();
+  await Isolate.spawn(_serve, (ports.sendPort, body));
+  return await ports.first as int;
+}
+
+Future<void> _serve((SendPort, String) setup) async {
+  final (replyTo, body) = setup;
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  replyTo.send(server.port);
+  await for (final request in server) {
+    request.response.write(body);
+    await request.response.close();
+  }
+}
+
+void _blockFor(Duration duration) {
+  final blocked = Stopwatch()..start();
+  while (blocked.elapsed < duration) {}
+}

@@ -11,5 +11,7 @@ EndpointClient devEndpointClient() => EndpointClient(
   timeout: const Duration(
     milliseconds: int.fromEnvironment('ENDPOINT_TIMEOUT_MS'),
   ),
-  httpClient: kDebugMode ? IOClient(tracedHttpClient()) : http.Client(),
+  newHttpClient: kDebugMode ? _tracedClient : http.Client.new,
 );
+
+http.Client _tracedClient() => IOClient(tracedHttpClient());

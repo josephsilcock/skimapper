@@ -12,7 +12,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(home: SkeletonMessageLine(client: _clientAnswering(_refuse))),
     );
-    await tester.pumpAndSettle();
+    await _pumpUntilFound(tester, find.text('service could not be reached'));
 
     expect(find.text('service could not be reached'), findsOneWidget);
   });
@@ -21,7 +21,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(home: SkeletonMessageLine(client: _clientAnswering(_garble))),
     );
-    await tester.pumpAndSettle();
+    await _pumpUntilFound(tester, find.text('service response not understood'));
 
     expect(find.text('service response not understood'), findsOneWidget);
   });
@@ -33,8 +33,18 @@ Future<http.Response> _refuse(http.Request request) async =>
 EndpointClient _clientAnswering(MockClientHandler handler) => EndpointClient(
   baseUrl: Uri.parse('http://endpoint.test'),
   timeout: const Duration(milliseconds: 100),
-  httpClient: MockClient(handler),
+  newHttpClient: () => MockClient(handler),
 );
 
 Future<http.Response> _garble(http.Request request) async =>
     http.Response('this is not an envelope', 200);
+
+/// The fetch runs in another isolate, which only progresses in real time.
+Future<void> _pumpUntilFound(WidgetTester tester, Finder finder) async {
+  for (var tries = 0; tries < 100 && finder.evaluate().isEmpty; tries++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
+    await tester.pump();
+  }
+}

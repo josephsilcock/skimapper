@@ -277,7 +277,8 @@ No path needs a real database.
 - [x] 6. *A developer runs `tools/e2e ios` and sees each endpoint-starting group's run record show the message route answering before Patrol starts; `endpoint_stopped` still starts nothing.*
 - [x] 7. *A developer reads the split of the stalled span from the third CI sweep in the TDD log, and work stops at the targeted-fix gate.*
 - [x] 8. *A developer profiles a local debug launch and reads, in the TDD log, what freezes the app's UI isolate for ~800 ms after launch, and whether it is start-up work we control.*
-- [ ] 9. *A developer runs `tools/e2e ios endpoint_malformed` and sees the endpoint line report "service response not understood" even when the app's UI isolate is frozen past the 3 s timeout, with the fetch timed in a background isolate.* (next)
+- [x] 9. *A developer runs `tools/e2e ios endpoint_malformed` and sees the endpoint line report "service response not understood" even when the app's UI isolate is frozen past the 3 s timeout, with the fetch timed in a background isolate.*
+- [ ] 10. *A developer dispatches the full sweep twice and sees the `e2e-ios` layer green both times on first attempts, with 5 tests and the first message response under 1 s endpoint-side and app-side.* (next)
 
 ## Fix addendum (gated)
 
@@ -350,6 +351,7 @@ timeout run in a background isolate.
 ## Decisions taken during implement
 
 - **The connection trace does its own address lookup** (`InternetAddress.lookup`, then `Socket.startConnect` to the first address) so lookup and TCP connect are timed separately; Dart's `startConnect(host)` does the same lookup internally. Debug builds only — release keeps `http.Client()`.
+- **The fetch runs in `Isolate.run` with a client factory** (`newHttpClient`), because a client can't cross isolates. The start and outcome lines stay on the calling isolate; the outcome's ms are measured in the fetching isolate, so they report the network rather than UI-isolate jank. The message-line widget tests now pump with short real-time waits, since the other isolate only progresses in real time.
 - **The simulator log is narrowed to the app's networking subsystems**: unfiltered it was ~6k lines a group. The host's `mDNSResponder` log was tried and dropped (needs admin locally; outside the approved capture). This is the one platform branch in `tools/`: the emulator log has no useful counterpart.
 
 - **The e2e layer's count pattern is anchored to the line start** (`/^\W*(?:Successful|Failed): (\d+)/gm`). The design said the prefix alone kept captured lines out of the sweep's parsing; that holds for `error:` (already line-start) but not for the unanchored count, and `--show-flutter-logs` also puts unprefixed app output in the stream. Anchoring is the fix at the parser, rather than making every source of output prefix-safe.
@@ -362,4 +364,4 @@ timeout run in a background isolate.
 
 ## Resume
 
-Slices 1–8 are closed. Slice 8's profile found the freeze is MapLibre's synchronous Metal shader compile on the main thread (merged UI thread), so option 1 is needed. Next is slice 9: `EndpointClient.fetchDocument` runs the request, the timeout and the classification in `Isolate.run`. The client takes a `newHttpClient` factory, because a client can't cross isolates. The start and outcome lines stay on the calling isolate, and the outcome line reports the background-measured ms. The RED test: a local server in another isolate, with the caller blocked longer than the timeout, must still be classified as reached or not understood. Then come the two proving sweeps.
+Slices 1–9 are closed. The fix is in: the endpoint fetch runs off the UI isolate. Next is slice 10, the two proving sweeps (`gh workflow run sweep.yml --ref bugfix/b2-ios-malformed-e2e-timeout`, run twice in a row). Each must be a first attempt with e2e-ios green and 5 tests, and the first message response under 1 s on both the endpoint side (the wrangler line for the app's request) and the app side (the outcome line's ms). Record them in `test-results/tdd/B2/slice-10-proving.md`, then hand off with the demo-pack note (backend-only for screens).
