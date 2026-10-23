@@ -15,4 +15,4 @@ area docs at [definitions/](definitions/README.md)** (linked per section below).
 
 ## Bugs
 
-- **B1** Removing the map before it has finished starting no longer throws — `in progress`
+- **B1** Removing the map before it has finished starting no longer throws — `done`

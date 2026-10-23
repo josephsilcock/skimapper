@@ -59,7 +59,7 @@ Only the skeleton parts are built: the artefact handler, `EndpointClient` + `Con
 - Worker and R2: the key layout, owned by one module (`endpoint/src` artefact layout).
 - Worker and resort sites: one adapter per resort behind the status handler.
 - App and Worker: HTTP plus the envelope.
-- App and map library: a local style pointing at local files.
+- App and map library: a local style pointing at local files, and the platform installed through `createInstance`, owned by the map module (`app/lib/map`).
 - Sweep and layers: reports in the results directory.
 
 ### Principles
