@@ -50,7 +50,7 @@ function e2eLayer(repoDir: string, platform: string): Layer {
     label: `e2e (${platform})`,
     command: [join(repoDir, "tools", "e2e"), platform],
     cwd: repoDir,
-    countTests: (output) => sumOf(stripAnsi(output), /(?:Successful|Failed): (\d+)/g),
+    countTests: (output) => sumOf(stripAnsi(output), /^\W*(?:Successful|Failed): (\d+)/gm),
   };
 }
 

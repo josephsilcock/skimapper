@@ -120,7 +120,8 @@ AC4 stays as written.
 - the endpoint line wording;
 - the 3 s / 6 s budgets;
 - `stop_endpoint`'s kill logic (B3's, unless the diagnosis proves H3 and the addendum says so);
-- the sweep, its results-dir layout and the CI workflow jobs;
+- the sweep, its results-dir layout and the CI workflow jobs (except the e2e count pattern's line
+  anchor, amended in implement — see Seams);
 - the Worker.
 
 **Gate rulings.**
@@ -195,7 +196,9 @@ flowchart LR
 - **Harness → endpoint process:** the prefix wraps the output without changing which process
   `ENDPOINT_PID` names, and without parsing the output.
 - **Layer stdout → sweep:** the sweep parses only the count pattern and the last `error:` line. Every
-  captured line carries a prefix that matches neither.
+  captured line carries a prefix that matches neither. *(Amended in implement: the e2e count pattern
+  was unanchored, so no prefix could hide a lookalike from it; it is now anchored to the line start.
+  That one-line `layers.ts` change is the only sweep change.)*
 
 The fix addendum hangs off these seams. An H1 probe lives inside `start_endpoint`.
 
@@ -260,18 +263,22 @@ No path needs a real database.
    group the port snapshot shows the port free.*
 3. *A developer points the app at a listener that never answers (env overrides only) and sees the
    failing run's output record a fetch start with no outcome, which is AC1's "loading" record, and
-   the sweep still counts the tests correctly.*
+   the sweep still counts the tests correctly.* (next)
 4. *A developer reads the diagnosis in the TDD log, naming H1, H2, H3 or another cause from up to
    three CI sweeps, and the work stops for the fix addendum, unless H1 meets its threshold.*
 
 ## Slices
 
 - [x] 1. *A developer runs `tools/e2e ios endpoint_malformed` locally and sees, in the output, the app's launch line and a fetch start/outcome pair for `/v1/skeleton/message` ("not understood", elapsed ms), all on one timestamp format.*
-- [ ] 2. *A developer runs `tools/e2e ios` and reads one timeline in the output: prefixed endpoint lines, milestones and port snapshots per group, interleaved with the app's lines; after each group the port snapshot shows the port free.* (next)
-- [ ] 3. *A developer points the app at a listener that never answers (env overrides only) and sees the failing run's output record a fetch start with no outcome (AC1's "loading" record), and the sweep still counts the tests correctly.*
+- [x] 2. *A developer runs `tools/e2e ios` and reads one timeline in the output: prefixed endpoint lines, milestones and port snapshots per group, interleaved with the app's lines; after each group the port snapshot shows the port free.*
+- [ ] 3. *A developer points the app at a listener that never answers (env overrides only) and sees the failing run's output record a fetch start with no outcome (AC1's "loading" record), and the sweep still counts the tests correctly.* (next)
 - [ ] 4. *A developer reads the diagnosis in the TDD log, naming H1, H2, H3 or another cause from up to three CI sweeps; work stops for the fix addendum unless H1 meets its threshold.*
 
 ## Decisions taken during implement
+
+- **The e2e layer's count pattern is anchored to the line start** (`/^\W*(?:Successful|Failed): (\d+)/gm`). The design said the prefix alone kept captured lines out of the sweep's parsing; that holds for `error:` (already line-start) but not for the unanchored count, and `--show-flutter-logs` also puts unprefixed app output in the stream. Anchoring is the fix at the parser, rather than making every source of output prefix-safe.
+- **Harness lines are stamped by one long-running `node` filter per stream** (`tools/lib/stamp-lines.ts`), not a `date` call per line: each line is stamped as it arrives, so a burst isn't smeared by process start-up. Milestones and port snapshots go through the same filter.
+- **`start_endpoint` writes to stdout; callers choose the destination.** `tools/e2e` leaves it on the layer's stdout; `tools/dev-app` redirects the call to its old `endpoint.log` (now stamped). Avoids a `/dev/stdout` reopen, which on Linux truncates the sweep's log file.
 
 - **`Unreachable` carries its transport cause** (`connection failed: <message>` or `timeout after <ms> ms`) rather than the client logging from inside its catch blocks: the outcome line then prints one value the classifier produced, so the log can't disagree with the line. The cause is for the log only; nothing branches on it.
 - **The launch line is in `SkimapperApp`'s `initState`** (the widget became stateful) rather than its `build`: logged once per mount, however often the root rebuilds.
@@ -279,4 +286,4 @@ No path needs a real database.
 
 ## Resume
 
-Slice 1 closed (app fetch log + launch line, `--show-flutter-logs`). Next: slice 2 — the harness run record: `tools/lib/stamp-lines.ts` (one home for the bash-side prefix `[<tag> <group> <UTC ms>]`, node as ms source), `start_endpoint` output through it via process substitution (`ENDPOINT_PID` unchanged; `tools/dev-app` redirects it to its file), milestones and `lsof` snapshots in `tools/e2e`, and a sweep self-test proving prefixed lines don't trip the count/`error:` parsing. Evidence logs: `test-results/tdd/B2/`.
+Slices 1–2 closed (app fetch log + launch line; harness run record with stamped endpoint output, milestones, port snapshots; e2e count anchored). Next: slice 3 — local induced failure (a listener on a spare port that accepts and never answers, `ENDPOINT_PORT`/`ENDPOINT_TIMEOUT_MS` env overrides only, no test edits) so the failing run records a fetch start with no outcome by the time the 6 s wait expires, and the sweep counts the failure. Then slice 4 — push the branch, dispatch up to three `sweep.yml` runs (`gh workflow run sweep.yml --ref bugfix/b2-ios-malformed-e2e-timeout`), read `sweep-ios` artefact's `e2e (ios).log`, write the diagnosis, and GATE (unless H1 meets its threshold). Evidence logs: `test-results/tdd/B2/`. Local baseline: fetch start → wrangler answer ~200 ms; refused also ~200 ms.

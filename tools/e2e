@@ -23,28 +23,41 @@ prepare_endpoint() {
     endpoint_serving)
       seeded_message="Seeded by E2E at $(date +%H:%M:%S)"
       seed_endpoint_message "$work_dir/$group" "$seeded_message"
-      start_endpoint "$work_dir/$group" "$work_dir/$group-endpoint.log"
+      start_endpoint "$work_dir/$group"
       ;;
     endpoint_stopped) ;;
     endpoint_malformed)
       seed_endpoint_malformed "$work_dir/$group"
-      start_endpoint "$work_dir/$group" "$work_dir/$group-endpoint.log"
+      start_endpoint "$work_dir/$group"
       ;;
     *) fail "unknown E2E group '$group'" ;;
   esac
 }
 
 run_group() {
-  local group="$1" targets=() test_file
+  local group="$1" status=0
+  RUN_GROUP="$group"
+  record_milestone "group start"
+  record_port_holders
+  ensure_port_free
+  prepare_endpoint "$group"
+  run_patrol "$group" || status=$?
+  stop_endpoint
+  record_port_holders
+  return "$status"
+}
+
+run_patrol() {
+  local group="$1" targets=() test_file status=0
   for test_file in "$APP_DIR/patrol_test/$group"/*_test.dart; do
     targets+=(--target "${test_file#"$APP_DIR"/}")
   done
-  ensure_port_free
-  prepare_endpoint "$group"
+  record_milestone "patrol start"
   (cd "$APP_DIR" && "$PATROL" test --device "$device" --show-flutter-logs "${targets[@]}" \
     $(endpoint_dart_defines) \
-    --dart-define "E2E_SEEDED_MESSAGE=${seeded_message:-}")
-  stop_endpoint
+    --dart-define "E2E_SEEDED_MESSAGE=${seeded_message:-}") || status=$?
+  record_milestone "patrol end (exit $status)"
+  return "$status"
 }
 
 for group in "${groups[@]}"; do
