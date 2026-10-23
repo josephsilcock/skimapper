@@ -275,7 +275,7 @@ No path needs a real database.
 - [x] 4. *A developer reads the diagnosis in the TDD log, naming H1, H2, H3 or another cause from up to three CI sweeps; work stops for the fix addendum unless H1 meets its threshold.*
 - [x] 5. *A developer runs `tools/e2e ios endpoint_malformed` and sees, between the app's fetch start and its outcome, the connect start / connected lines, any event-loop lag lines, and the simulator's own network log for the app, all stamped on one clock.*
 - [x] 6. *A developer runs `tools/e2e ios` and sees each endpoint-starting group's run record show the message route answering before Patrol starts; `endpoint_stopped` still starts nothing.*
-- [ ] 7. *A developer reads the split of the stalled span from the third CI sweep in the TDD log, and work stops at the targeted-fix gate.* (next)
+- [x] 7. *A developer reads the split of the stalled span from the third CI sweep in the TDD log, and work stops at the targeted-fix gate.*
 
 ## Fix addendum (gated)
 
@@ -317,6 +317,19 @@ debug-only event-loop lag line after launch, the simulator's network log stamped
 record), and the message-route readiness probe goes into `start_endpoint`. The targeted fix after the
 split comes back as a gate. The count-pattern anchor amendment was shown; no objection.
 
+### The split (third sweep, 40030218038) and the targeted fix (proposed, awaiting gate)
+
+**The split:** the stalled span is the app's **own UI isolate frozen ≈ 3.6–4.1 s, starting right after
+fetch start, on the first launch after each install** (`event loop late by 3591 / 4125 / 3956 ms`).
+Every pending event (lookup result, timeout timer, refusal) is processed together when the freeze
+ends. The timeout was queued first, so the line reads "could not be reached". The network is fast
+once the isolate runs: about 50 ms from lookup to connected, and the endpoint answers in 0.4 s. The
+simulator's network log is silent until the app's path evaluation at the freeze's end. That makes
+this reading (b), an **app fault** in the spec's terms. Locally the same freeze is about 800 ms per
+launch and lands after the fetch has finished. What freezes the isolate isn't identified yet: likely
+debug-JIT compilation of first-run code on a cold cache, or platform-view creation of `MapLibreMap`.
+Full record: `test-results/tdd/B2/slice-07-third-sweep.md`.
+
 ## Decisions taken during implement
 
 - **The connection trace does its own address lookup** (`InternetAddress.lookup`, then `Socket.startConnect` to the first address) so lookup and TCP connect are timed separately; Dart's `startConnect(host)` does the same lookup internally. Debug builds only — release keeps `http.Client()`.
@@ -332,4 +345,4 @@ split comes back as a gate. The count-pattern anchor amendment was shown; no obj
 
 ## Resume
 
-Slices 1–6 are closed, including the message-route readiness probe (`ENDPOINT_READY_PATH` in `endpoint.sh`). Next is slice 7: dispatch the third and last diagnostic sweep, read the split (lookup, connect, lag, device log) from the iOS layer log into `test-results/tdd/B2/slice-07-third-sweep.md`, then GATE the targeted fix.
+Slices 1–7 are closed and all three diagnostic sweeps are spent. Work is **stopped at the targeted-fix gate**: the stall is the app's UI isolate frozen ≈ 4 s on first launch, so the fix is in the app. The options are in the handback and are to be recorded in § Fix addendum once ruled. After the fix come the proving runs: two consecutive first-attempt sweeps with e2e-ios green (5 tests), and the first message response under 1 s endpoint-side and app-side.
