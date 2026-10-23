@@ -285,7 +285,7 @@ At finish:
 ## Resume
 
 - Closed: slices 1–3 (one commit each on this branch). Evidence: `test-results/tdd/B1/`.
-- Next: slice 4 — AC 3: run feature-scoped E2E locally (`tools/e2e ios`, `tools/e2e android`), push the branch, dispatch `sweep.yml` on it (may need the user: sandbox blocks github.com), judge only map-disposal teardown failures.
-- Seams: `lib/map/start_up_safe_map_platform.dart` (`StartUpSafeMapPlatform`, `installStartUpSafeMapPlatform`), installed in `_FixtureMapState.initState`; `FixtureMap(basemapFile:)` optional; `_report` guards reporting; deadline reads `clock.now()`. Fake `app/test/map/fake_native_map.dart`: `holdViewCreation`, `holdWaitForMap`, `fixtureNeverRenders`, `queryInFlight`/`answerQuery`, `sendToMap`.
-- Slice 2's tests guard an existing fix, so their RED was taken against the fix removed / the rejected variant, then restored (logged).
-- `flutter` must run outside the sandbox (its cache is not writable inside).
+- Slice 4 (AC 3) in progress: local `tools/e2e ios` and `tools/e2e android` are green (Android needed one rerun for an endpoint-message cold-start flake). Branch pushed at 206b347; sweep run https://github.com/josephsilcock/skimapper/actions/runs/40007409887 has zero map-disposal failures. iOS red only on B2. Android ran 3/5, then aborted on a port left held by the previous group's endpoint (`tools/lib/endpoint.sh` `stop_endpoint`). Waiting on a ruling about AC 3.
+- After the ruling: tick slice 4. The change is surface-less, so no demo pack; then the completion report.
+- Seams: `lib/map/start_up_safe_map_platform.dart` (`StartUpSafeMapPlatform`, `installStartUpSafeMapPlatform`), installed in `_FixtureMapState.initState`; `FixtureMap(basemapFile:)` optional; `_report` guards reporting; deadline reads `clock.now()`. Fake: `app/test/map/fake_native_map.dart`.
+- `flutter`, devices and `gh` must run outside the sandbox. Local build caches were reset with `flutter clean` (they pointed at the old repo path `skimapper-new`).
