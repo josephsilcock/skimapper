@@ -15,7 +15,7 @@ groups=("$@")
 device="$(boot_device "$platform")"
 forward_endpoint_port "$platform" "$device"
 work_dir="$(mktemp -d)"
-trap 'stop_endpoint; rm -rf "$work_dir"' EXIT
+trap 'stop_device_log; stop_endpoint; rm -rf "$work_dir"' EXIT
 
 prepare_endpoint() {
   local group="$1"
@@ -53,9 +53,11 @@ run_patrol() {
     targets+=(--target "${test_file#"$APP_DIR"/}")
   done
   record_milestone "patrol start"
+  start_device_log "$platform" "$device"
   (cd "$APP_DIR" && "$PATROL" test --device "$device" --show-flutter-logs "${targets[@]}" \
     $(endpoint_dart_defines) \
     --dart-define "E2E_SEEDED_MESSAGE=${seeded_message:-}") || status=$?
+  stop_device_log
   record_milestone "patrol end (exit $status)"
   return "$status"
 }

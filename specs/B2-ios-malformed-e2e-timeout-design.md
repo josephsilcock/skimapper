@@ -273,8 +273,11 @@ No path needs a real database.
 - [x] 2. *A developer runs `tools/e2e ios` and reads one timeline in the output: prefixed endpoint lines, milestones and port snapshots per group, interleaved with the app's lines; after each group the port snapshot shows the port free.*
 - [x] 3. *A developer points the app at a listener that never answers (env overrides only) and sees the failing run's output record a fetch start with no outcome (AC1's "loading" record), and the sweep still counts the tests correctly.*
 - [x] 4. *A developer reads the diagnosis in the TDD log, naming H1, H2, H3 or another cause from up to three CI sweeps; work stops for the fix addendum unless H1 meets its threshold.*
+- [x] 5. *A developer runs `tools/e2e ios endpoint_malformed` and sees, between the app's fetch start and its outcome, the connect start / connected lines, any event-loop lag lines, and the simulator's own network log for the app, all stamped on one clock.*
+- [ ] 6. *A developer runs `tools/e2e ios` and sees each endpoint-starting group's run record show the message route answering before Patrol starts; `endpoint_stopped` still starts nothing.* (next)
+- [ ] 7. *A developer reads the split of the stalled span from the third CI sweep in the TDD log, and work stops at the targeted-fix gate.*
 
-## Fix addendum (proposed — awaiting gate)
+## Fix addendum (gated)
 
 **Diagnosis** (full record: `test-results/tdd/B2/slice-04-diagnosis.md`; two CI sweeps, both reproduced):
 the first connection of the first app launch in each Patrol invocation stalls ≈ 4–5 s between the
@@ -308,7 +311,16 @@ AC4's "< 1 s endpoint-side" on its own.
 4. **Not offered as in-bounds:** a per-invocation pre-launch, warm-up request or longer timeout —
    each is a spec non-goal (they'd hide exactly this cold-start stall).
 
+**Gate ruling:** options 1 and 2 approved; option 3 declined. The last diagnostic sweep splits the
+stalled span (connect start / connected through the dev `HttpClient`'s `connectionFactory`, a
+debug-only event-loop lag line after launch, the simulator's network log stamped into the run
+record), and the message-route readiness probe goes into `start_endpoint`. The targeted fix after the
+split comes back as a gate. The count-pattern anchor amendment was shown; no objection.
+
 ## Decisions taken during implement
+
+- **The connection trace does its own address lookup** (`InternetAddress.lookup`, then `Socket.startConnect` to the first address) so lookup and TCP connect are timed separately; Dart's `startConnect(host)` does the same lookup internally. Debug builds only — release keeps `http.Client()`.
+- **The simulator log is narrowed to the app's networking subsystems**: unfiltered it was ~6k lines a group. The host's `mDNSResponder` log was tried and dropped (needs admin locally; outside the approved capture). This is the one platform branch in `tools/`: the emulator log has no useful counterpart.
 
 - **The e2e layer's count pattern is anchored to the line start** (`/^\W*(?:Successful|Failed): (\d+)/gm`). The design said the prefix alone kept captured lines out of the sweep's parsing; that holds for `error:` (already line-start) but not for the unanchored count, and `--show-flutter-logs` also puts unprefixed app output in the stream. Anchoring is the fix at the parser, rather than making every source of output prefix-safe.
 - **Harness lines are stamped by one long-running `node` filter per stream** (`tools/lib/stamp-lines.ts`), not a `date` call per line: each line is stamped as it arrives, so a burst isn't smeared by process start-up. Milestones and port snapshots go through the same filter.
@@ -320,4 +332,4 @@ AC4's "< 1 s endpoint-side" on its own.
 
 ## Resume
 
-Slices 1–4 closed: capture built (app fetch log + launch line; harness run record; e2e count anchored), AC1 failure path proven locally, and the diagnosis made from two CI sweeps (40020892190, 40020945261; logs under `test-results/tdd/B2/ci/`). Work is **stopped at the fix-addendum gate** (§ Fix addendum): H1 didn't meet its threshold. One diagnostic sweep remains in the spec's budget. Next depends on the gate ruling — most likely a slice for the finer split of the stalled span (connectionFactory phase lines, event-loop lag line, simulator network log) plus the message-route readiness probe, then the third sweep.
+Slices 1–5 closed. Slice 5 added the connection trace (connect start / looked up / connected or connect failed), the event-loop lag watcher (10 s after launch) and the simulator's network log. Locally the ~200 ms first-connection cost is the address lookup of `127.0.0.1`; the TCP connect is 2–3 ms. Next: slice 6, the readiness probe on `/v1/skeleton/message` in `start_endpoint` (any status, any body). Then slice 7: the third CI sweep, the split written to `test-results/tdd/B2/slice-07-*.md`, and the GATE for the targeted fix.
