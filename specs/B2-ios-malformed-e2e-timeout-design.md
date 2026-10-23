@@ -274,8 +274,8 @@ No path needs a real database.
 - [x] 3. *A developer points the app at a listener that never answers (env overrides only) and sees the failing run's output record a fetch start with no outcome (AC1's "loading" record), and the sweep still counts the tests correctly.*
 - [x] 4. *A developer reads the diagnosis in the TDD log, naming H1, H2, H3 or another cause from up to three CI sweeps; work stops for the fix addendum unless H1 meets its threshold.*
 - [x] 5. *A developer runs `tools/e2e ios endpoint_malformed` and sees, between the app's fetch start and its outcome, the connect start / connected lines, any event-loop lag lines, and the simulator's own network log for the app, all stamped on one clock.*
-- [ ] 6. *A developer runs `tools/e2e ios` and sees each endpoint-starting group's run record show the message route answering before Patrol starts; `endpoint_stopped` still starts nothing.* (next)
-- [ ] 7. *A developer reads the split of the stalled span from the third CI sweep in the TDD log, and work stops at the targeted-fix gate.*
+- [x] 6. *A developer runs `tools/e2e ios` and sees each endpoint-starting group's run record show the message route answering before Patrol starts; `endpoint_stopped` still starts nothing.*
+- [ ] 7. *A developer reads the split of the stalled span from the third CI sweep in the TDD log, and work stops at the targeted-fix gate.* (next)
 
 ## Fix addendum (gated)
 
@@ -332,4 +332,4 @@ split comes back as a gate. The count-pattern anchor amendment was shown; no obj
 
 ## Resume
 
-Slices 1–5 closed. Slice 5 added the connection trace (connect start / looked up / connected or connect failed), the event-loop lag watcher (10 s after launch) and the simulator's network log. Locally the ~200 ms first-connection cost is the address lookup of `127.0.0.1`; the TCP connect is 2–3 ms. Next: slice 6, the readiness probe on `/v1/skeleton/message` in `start_endpoint` (any status, any body). Then slice 7: the third CI sweep, the split written to `test-results/tdd/B2/slice-07-*.md`, and the GATE for the targeted fix.
+Slices 1–6 are closed, including the message-route readiness probe (`ENDPOINT_READY_PATH` in `endpoint.sh`). Next is slice 7: dispatch the third and last diagnostic sweep, read the split (lookup, connect, lag, device log) from the iOS layer log into `test-results/tdd/B2/slice-07-third-sweep.md`, then GATE the targeted fix.

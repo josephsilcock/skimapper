@@ -3,6 +3,9 @@ source "$TOOLS_DIR/lib/run-record.sh"
 
 ENDPOINT_DIR="$REPO_DIR/endpoint"
 ENDPOINT_URL="http://127.0.0.1:$ENDPOINT_PORT"
+# The route the app reads first (the Worker's documentRoutes; the app's SkeletonMessageLine). Start-up
+# waits until it answers, with any status and any body, so its cold first answer isn't the app's.
+ENDPOINT_READY_PATH="/v1/skeleton/message"
 export WRANGLER_SEND_METRICS=false
 ENDPOINT_PID=""
 
@@ -26,7 +29,8 @@ start_endpoint() {
     > >(stamp_lines endpoint) 2>&1 &
   ENDPOINT_PID=$!
   for _ in $(seq 1 60); do
-    curl -s -o /dev/null "$ENDPOINT_URL/" && { record_milestone "endpoint answers on $ENDPOINT_URL/"; return; }
+    curl -s -o /dev/null "$ENDPOINT_URL$ENDPOINT_READY_PATH" \
+      && { record_milestone "endpoint answers on $ENDPOINT_URL$ENDPOINT_READY_PATH"; return; }
     kill -0 "$ENDPOINT_PID" 2>/dev/null || fail "local endpoint exited during start-up (see its output)"
     sleep 0.5
   done
