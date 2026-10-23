@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http_package;
 
 import 'contract_envelope.dart';
+import 'run_record.dart';
 
 sealed class EndpointOutcome {
   const EndpointOutcome();
@@ -16,7 +17,10 @@ class Reached extends EndpointOutcome {
 }
 
 class Unreachable extends EndpointOutcome {
-  const Unreachable();
+  const Unreachable(this.cause);
+
+  /// What the transport reported, for the fetch log.
+  final String cause;
 }
 
 class NotUnderstood extends EndpointOutcome {
@@ -38,22 +42,33 @@ class EndpointClient {
     String path, {
     required String kind,
   }) async {
-    final response = await _get(path);
-    return response == null
-        ? const Unreachable()
-        : _understand(response, kind: kind);
+    final elapsed = Stopwatch()..start();
+    recordRun('fetch start $path');
+    final outcome = await _fetch(path, kind: kind);
+    recordRun(
+      'fetch outcome $path ${_named(outcome)} in ${elapsed.elapsedMilliseconds} ms',
+    );
+    return outcome;
   }
 
-  /// Null when nothing answered: the connection failed or the timeout passed.
-  Future<http_package.Response?> _get(String path) async {
+  Future<EndpointOutcome> _fetch(String path, {required String kind}) async {
     try {
-      return await httpClient.get(baseUrl.resolve(path)).timeout(timeout);
-    } on http_package.ClientException {
-      return null;
+      final response = await httpClient
+          .get(baseUrl.resolve(path))
+          .timeout(timeout);
+      return _understand(response, kind: kind);
+    } on http_package.ClientException catch (failure) {
+      return Unreachable('connection failed: ${failure.message}');
     } on TimeoutException {
-      return null;
+      return Unreachable('timeout after ${timeout.inMilliseconds} ms');
     }
   }
+
+  static String _named(EndpointOutcome outcome) => switch (outcome) {
+    Reached() => 'reached',
+    Unreachable(:final cause) => 'unreachable ($cause)',
+    NotUnderstood() => 'not understood',
+  };
 
   EndpointOutcome _understand(
     http_package.Response response, {

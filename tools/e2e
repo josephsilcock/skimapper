@@ -41,7 +41,7 @@ run_group() {
   done
   ensure_port_free
   prepare_endpoint "$group"
-  (cd "$APP_DIR" && "$PATROL" test --device "$device" "${targets[@]}" \
+  (cd "$APP_DIR" && "$PATROL" test --device "$device" --show-flutter-logs "${targets[@]}" \
     $(endpoint_dart_defines) \
     --dart-define "E2E_SEEDED_MESSAGE=${seeded_message:-}")
   stop_endpoint

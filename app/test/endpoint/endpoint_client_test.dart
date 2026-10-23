@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:skimapper/endpoint/endpoint_client.dart';
 
+import '../support/run_record_capture.dart';
+
 void main() {
   test('a served envelope is reached, with its data', () async {
     final server = MockClient((request) async {
@@ -91,7 +93,86 @@ void main() {
 
     expect(outcome, isA<NotUnderstood>());
   });
+
+  group('fetch log', () {
+    test(
+      'a fetch logs its start, naming the path, stamped in UTC to the ms',
+      () async {
+        final logged = await _fetchLogAgainst(
+          MockClient((request) async => http.Response('not an envelope', 200)),
+        );
+
+        expect(
+          logged.firstOrNull,
+          matches(appRunRecordLine('fetch start /v1/skeleton/message')),
+        );
+      },
+    );
+
+    test(
+      'a fetch logs its outcome after its start, with the elapsed ms',
+      () async {
+        final logged = await _fetchLogAgainst(
+          MockClient((request) async => http.Response('not an envelope', 200)),
+        );
+
+        expect(logged, [
+          anything,
+          matches(
+            appRunRecordLine(
+              r'fetch outcome /v1/skeleton/message not understood in \d+ ms',
+            ),
+          ),
+        ]);
+      },
+    );
+
+    test(
+      'a failed connection is logged as unreachable, naming the failure',
+      () async {
+        final logged = await _fetchLogAgainst(
+          MockClient(
+            (request) async => throw http.ClientException('Connection refused'),
+          ),
+        );
+
+        expect(
+          logged.lastOrNull,
+          matches(
+            appRunRecordLine(
+              r'fetch outcome /v1/skeleton/message unreachable \(connection failed: Connection refused\) in \d+ ms',
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'no answer within the timeout is logged as unreachable by timeout',
+      () async {
+        final logged = await _fetchLogAgainst(
+          MockClient((request) => Completer<http.Response>().future),
+        );
+
+        expect(
+          logged.lastOrNull,
+          matches(
+            appRunRecordLine(
+              r'fetch outcome /v1/skeleton/message unreachable \(timeout after 100 ms\) in \d+ ms',
+            ),
+          ),
+        );
+      },
+    );
+  });
 }
+
+/// The run-record lines one fetch of the message document writes.
+Future<List<String>> _fetchLogAgainst(http.Client server) => runRecordDuring(
+  () =>
+      _clientFor(server)
+          .fetchDocument('/v1/skeleton/message', kind: 'skeleton-message'),
+);
 
 EndpointClient _clientFor(http.Client server) => EndpointClient(
   baseUrl: Uri.parse('http://endpoint.test'),

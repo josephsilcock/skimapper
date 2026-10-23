@@ -263,3 +263,20 @@ No path needs a real database.
    the sweep still counts the tests correctly.*
 4. *A developer reads the diagnosis in the TDD log, naming H1, H2, H3 or another cause from up to
    three CI sweeps, and the work stops for the fix addendum, unless H1 meets its threshold.*
+
+## Slices
+
+- [x] 1. *A developer runs `tools/e2e ios endpoint_malformed` locally and sees, in the output, the app's launch line and a fetch start/outcome pair for `/v1/skeleton/message` ("not understood", elapsed ms), all on one timestamp format.*
+- [ ] 2. *A developer runs `tools/e2e ios` and reads one timeline in the output: prefixed endpoint lines, milestones and port snapshots per group, interleaved with the app's lines; after each group the port snapshot shows the port free.* (next)
+- [ ] 3. *A developer points the app at a listener that never answers (env overrides only) and sees the failing run's output record a fetch start with no outcome (AC1's "loading" record), and the sweep still counts the tests correctly.*
+- [ ] 4. *A developer reads the diagnosis in the TDD log, naming H1, H2, H3 or another cause from up to three CI sweeps; work stops for the fix addendum unless H1 meets its threshold.*
+
+## Decisions taken during implement
+
+- **`Unreachable` carries its transport cause** (`connection failed: <message>` or `timeout after <ms> ms`) rather than the client logging from inside its catch blocks: the outcome line then prints one value the classifier produced, so the log can't disagree with the line. The cause is for the log only; nothing branches on it.
+- **The launch line is in `SkimapperApp`'s `initState`** (the widget became stateful) rather than its `build`: logged once per mount, however often the root rebuilds.
+- **Endpoint-side timing comes from wrangler's own request line** (`[wrangler:info] GET <path> <status> (<n>ms)`, written on completion), stamped by the harness: receipt = stamp − duration. No harness probe added. Whether wrangler logs a request the client abandoned is unverified locally; on CI, an app fetch start with no wrangler line for it by group end is itself recorded evidence.
+
+## Resume
+
+Slice 1 closed (app fetch log + launch line, `--show-flutter-logs`). Next: slice 2 — the harness run record: `tools/lib/stamp-lines.ts` (one home for the bash-side prefix `[<tag> <group> <UTC ms>]`, node as ms source), `start_endpoint` output through it via process substitution (`ENDPOINT_PID` unchanged; `tools/dev-app` redirects it to its file), milestones and `lsof` snapshots in `tools/e2e`, and a sweep self-test proving prefixed lines don't trip the count/`error:` parsing. Evidence logs: `test-results/tdd/B2/`.
