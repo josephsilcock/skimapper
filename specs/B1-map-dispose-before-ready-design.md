@@ -270,7 +270,7 @@ At finish:
 ## Slices
 
 - [x] 1. A developer runs `flutter test` and sees a widget test pass that removes the fixture map before its native view exists, for the Android target (fails with `LateInitializationError` against the old code).
-- [ ] 2. A developer runs `flutter test` and sees the same removal pass for the iOS target, and sees that a map removed during `map#waitForMap` leaves no inbound handler behind.
+- [x] 2. A developer runs `flutter test` and sees the same removal pass for the iOS target, and sees that a map removed during `map#waitForMap` leaves no inbound handler behind.
 - [ ] 3. A developer runs `flutter test` and sees a widget test pass that removes the map while a fixture query is in flight: no error and no map-line report, both when the query returns and after the deadline.
 - [ ] 4. A developer dispatches the branch sweep and sees no map-disposal teardown failure in either E2E layer's results.
 
@@ -281,7 +281,8 @@ At finish:
 
 ## Resume
 
-- Closed: slice 1 (commit on this branch). Evidence: `test-results/tdd/B1/`.
-- Next: slice 2 — iOS variant of the AC 1 test, then the `map#waitForMap` hold test (needs the fake to answer `create` and serve the per-map channel `plugins.flutter.io/maplibre_gl_<id>`).
-- Seams: `lib/map/start_up_safe_map_platform.dart` (`StartUpSafeMapPlatform`, `installStartUpSafeMapPlatform`), installed in `_FixtureMapState.initState`; `FixtureMap(basemapFile:)` optional; fake in `app/test/map/fake_native_map.dart`.
+- Closed: slices 1–2 (one commit each on this branch). Evidence: `test-results/tdd/B1/`.
+- Next: slice 3 — removal while a fixture query is in flight: no error and no `onFixtureChecked`, both when the held query returns "found" and (second case) after the deadline. Needs `package:clock` as a direct dependency (decision 6), and the fake to answer `map#waitForMap`, accept `map#onStyleLoaded` sent inbound, and hold `map#queryRenderedFeatures`.
+- Seams: `lib/map/start_up_safe_map_platform.dart` (`StartUpSafeMapPlatform`, `installStartUpSafeMapPlatform`), installed in `_FixtureMapState.initState`; `FixtureMap(basemapFile:)` optional; fake in `app/test/map/fake_native_map.dart` (`holdViewCreation`, `waitForMapRequested`, `sendToMap`).
+- Slices 2's tests guard an existing fix, so their RED was taken against the fix removed / the rejected variant, then restored (logged).
 - `flutter` must run outside the sandbox (its cache is not writable inside).
