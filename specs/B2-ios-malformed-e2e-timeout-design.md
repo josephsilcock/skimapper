@@ -276,6 +276,8 @@ No path needs a real database.
 - [x] 5. *A developer runs `tools/e2e ios endpoint_malformed` and sees, between the app's fetch start and its outcome, the connect start / connected lines, any event-loop lag lines, and the simulator's own network log for the app, all stamped on one clock.*
 - [x] 6. *A developer runs `tools/e2e ios` and sees each endpoint-starting group's run record show the message route answering before Patrol starts; `endpoint_stopped` still starts nothing.*
 - [x] 7. *A developer reads the split of the stalled span from the third CI sweep in the TDD log, and work stops at the targeted-fix gate.*
+- [x] 8. *A developer profiles a local debug launch and reads, in the TDD log, what freezes the app's UI isolate for ~800 ms after launch, and whether it is start-up work we control.*
+- [ ] 9. *A developer runs `tools/e2e ios endpoint_malformed` and sees the endpoint line report "service response not understood" even when the app's UI isolate is frozen past the 3 s timeout, with the fetch timed in a background isolate.* (next)
 
 ## Fix addendum (gated)
 
@@ -317,7 +319,7 @@ debug-only event-loop lag line after launch, the simulator's network log stamped
 record), and the message-route readiness probe goes into `start_endpoint`. The targeted fix after the
 split comes back as a gate. The count-pattern anchor amendment was shown; no objection.
 
-### The split (third sweep, 40030218038) and the targeted fix (proposed, awaiting gate)
+### The split (third sweep, 40030218038) and the targeted fix (gated)
 
 **The split:** the stalled span is the app's **own UI isolate frozen ≈ 3.6–4.1 s, starting right after
 fetch start, on the first launch after each install** (`event loop late by 3591 / 4125 / 3956 ms`).
@@ -329,6 +331,21 @@ this reading (b), an **app fault** in the spec's terms. Locally the same freeze 
 launch and lands after the fetch has finished. What freezes the isolate isn't identified yet: likely
 debug-JIT compilation of first-run code on a cold cache, or platform-view creation of `MapLibreMap`.
 Full record: `test-results/tdd/B2/slice-07-third-sweep.md`.
+
+**Targeted-fix gate ruling:** profile the local ~800 ms freeze first (a CPU profile of a local
+debug launch). If its source is app or plugin start-up work we control, remove or defer it. Then
+decide whether the endpoint fetch and its timeout still need to move off the UI isolate
+(`Isolate.run`, test-first). If they do, build it without a further gate, unless the profile turns
+up something that changes scope. Classification-only was not chosen. The size alarm (7+ slices) is
+accepted as expected for a diagnose-then-fix item, with no split. Then the two proving sweeps.
+
+**Profile result (slice 8):** the freeze is MapLibre compiling its Metal shaders synchronously on
+the iOS main thread at its first draw. That is cold after every install, which explains why CI's first
+launch per Patrol invocation is the slow one. With Flutter 3.47's merged platform/UI thread, the Dart
+isolate runs on that same thread, so it freezes too. That source isn't ours to remove: the plugin's
+native code can't change, and Flutter no longer allows `FLTEnableMergedPlatformUIThread=false`.
+Deferring the map would reach past the endpoint line. So option 1 proceeds: the endpoint fetch and its
+timeout run in a background isolate.
 
 ## Decisions taken during implement
 
@@ -345,4 +362,4 @@ Full record: `test-results/tdd/B2/slice-07-third-sweep.md`.
 
 ## Resume
 
-Slices 1–7 are closed and all three diagnostic sweeps are spent. Work is **stopped at the targeted-fix gate**: the stall is the app's UI isolate frozen ≈ 4 s on first launch, so the fix is in the app. The options are in the handback and are to be recorded in § Fix addendum once ruled. After the fix come the proving runs: two consecutive first-attempt sweeps with e2e-ios green (5 tests), and the first message response under 1 s endpoint-side and app-side.
+Slices 1–8 are closed. Slice 8's profile found the freeze is MapLibre's synchronous Metal shader compile on the main thread (merged UI thread), so option 1 is needed. Next is slice 9: `EndpointClient.fetchDocument` runs the request, the timeout and the classification in `Isolate.run`. The client takes a `newHttpClient` factory, because a client can't cross isolates. The start and outcome lines stay on the calling isolate, and the outcome line reports the background-measured ms. The RED test: a local server in another isolate, with the caller blocked longer than the timeout, must still be classified as reached or not understood. Then come the two proving sweeps.
