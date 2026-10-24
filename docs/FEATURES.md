@@ -16,4 +16,4 @@ area docs at [definitions/](definitions/README.md)** (linked per section below).
 ## Bugs
 
 - **B1** Removing the map before it has finished starting no longer throws — `done`
-- **B2** The iOS E2E "not understood" test passes reliably on CI, its cause found and fixed — `in progress`
+- **B2** The iOS E2E "not understood" test passes reliably on CI, its cause found and fixed — `done`
