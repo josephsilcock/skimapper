@@ -182,6 +182,13 @@ No area doc covers tooling (`docs/definitions/` has none), so there is no area-d
 - A missing value, an empty value and an empty item share one message (`<switch> needs a comma-separated list of layer ids (ids: …)`); an unknown id gets its own (`<switch>: unknown layer '<id>' (ids: …)`). Rejected: a separate message per empty case, which says nothing more useful.
 - `report.ts` moved onto `layersFromArgs` in slice 1's refactor (not slice 2), so `listSwitch` could be deleted at once rather than living on beside its replacement.
 
+## Implement gate
+
+Closed (coordinator rulings under `/run-pipeline`):
+- (a) Demo output accepted (auto): matches the spec ACs; no UI, so no sketch comparison.
+- (b1) Error wording accepted as written (auto).
+- (b2) `report.ts` onto `layersFromArgs` in slice 1 accepted (auto): internal ordering, no behaviour change.
+
 ## Resume
 
-All five slices closed: 1 (ccda50d), 2 (88007e9), 3 (a0aa222), 4 (65e47ea), 5 (297ca3a). Next: `/finish-feature specs/C7-ci-tooling-nits-design.md`. Seams as built: `layersFromArgs` (layers.ts), `UsageError` + `runCli` (cli.ts, wraps main.ts and report.ts), `addToStepSummary` (report.ts), `fullSweepCalls` (workflows.test.ts). Evidence logs in `test-results/tdd/C7/`. `node --test tools/sweep/` must run outside the sandbox (endpoint-stop binds a port).
+All five slices closed: 1 (ccda50d), 2 (88007e9), 3 (a0aa222), 4 (65e47ea), 5 (297ca3a). Implement gate closed. Next: `/finish-feature specs/C7-ci-tooling-nits-design.md`. Seams as built: `layersFromArgs` (layers.ts), `UsageError` + `runCli` (cli.ts, wraps main.ts and report.ts), `addToStepSummary` (report.ts), `fullSweepCalls` (workflows.test.ts). Evidence logs in `test-results/tdd/C7/`. `node --test tools/sweep/` must run outside the sandbox (endpoint-stop binds a port).
