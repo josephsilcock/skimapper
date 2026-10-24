@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
+import { UsageError } from "./cli.ts";
 import { layersFromArgs, sweepLayers } from "./layers.ts";
 import { runSweep, type Layer } from "./sweep.ts";
 
@@ -132,6 +133,18 @@ test("with no --layers switch every layer runs, in the local sweep's order", () 
 
 test("--layers with an unknown id stops the sweep and names the id", () => {
   assert.throws(() => layersFromArgs(sweepLayers("/repo"), ["--layers", "app,e2e-windows"], "--layers"), /unknown layer 'e2e-windows'/);
+});
+
+test("--layers with an empty value or an empty item is a usage error naming the switch and the ids", () => {
+  for (const value of ["", "app,", ","]) {
+    assert.throws(
+      () => layersFromArgs(sweepLayers("/repo"), ["--layers", value], "--layers"),
+      (error) =>
+        error instanceof UsageError &&
+        error.message === "--layers needs a comma-separated list of layer ids (ids: app, endpoint, self-test, e2e-ios, e2e-android)",
+      `value '${value}'`,
+    );
+  }
 });
 
 test("a layer that leaves a background process holding its output still finishes", { timeout: 5000 }, async () => {

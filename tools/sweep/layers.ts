@@ -33,18 +33,18 @@ export function sweepLayers(repoDir: string): Layer[] {
 }
 
 // The layers a command line selects with the given switch: all when the switch is absent, otherwise the
-// comma-separated ids after it, in sweep order.
+// comma-separated ids after it, in sweep order. A missing, empty or unknown id is a UsageError.
 export function layersFromArgs(layers: Layer[], args: string[], name: string): Layer[] {
   const switchAt = args.indexOf(name);
   if (switchAt === -1) return layers;
-  const value = args[switchAt + 1];
-  if (value === undefined) throw new UsageError(`${name} needs a comma-separated list of layer ids (ids: ${idsOf(layers)})`);
-  return selectLayers(layers, value.split(","));
+  const ids = args[switchAt + 1]?.split(",");
+  if (!ids || ids.includes("")) throw new UsageError(`${name} needs a comma-separated list of layer ids (ids: ${idsOf(layers)})`);
+  return selectLayers(layers, ids, name);
 }
 
-function selectLayers(layers: Layer[], ids: string[]): Layer[] {
+function selectLayers(layers: Layer[], ids: string[], name: string): Layer[] {
   const unknown = ids.find((id) => !layers.some((layer) => layer.id === id));
-  if (unknown) throw new Error(`unknown layer '${unknown}' (ids: ${idsOf(layers)})`);
+  if (unknown) throw new UsageError(`${name}: unknown layer '${unknown}' (ids: ${idsOf(layers)})`);
   return layers.filter((layer) => ids.includes(layer.id));
 }
 
