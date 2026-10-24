@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Feature-scoped E2E: tools/e2e <ios|android> [group...]
-# Each group is a directory under app/patrol_test/ named for the endpoint state its tests need.
+# Each group is a directory under app/patrol_test/ named for the endpoint state its tests need;
+# endpoint_scripted's tests change that state themselves, through requests in their log.
 source "$(dirname "$0")/lib/common.sh"
 source "$TOOLS_DIR/lib/devices.sh"
 source "$TOOLS_DIR/lib/endpoint.sh"
@@ -10,7 +11,7 @@ require_platform "$platform"
 [[ "$platform" == android ]] && use_android_jdk
 shift
 groups=("$@")
-[[ ${#groups[@]} -gt 0 ]] || groups=(endpoint_serving endpoint_stopped endpoint_malformed)
+[[ ${#groups[@]} -gt 0 ]] || groups=(endpoint_serving endpoint_stopped endpoint_malformed endpoint_scripted)
 
 device="$(boot_device "$platform")"
 forward_endpoint_port "$platform" "$device"
@@ -19,6 +20,7 @@ work_dir="$(mktemp -d)"
 # subshell: the work dir is still removed, and the failure is still the exit status.
 cleanup() {
   local stop_status=0
+  [[ -z "${PATROL_PID:-}" ]] || kill "$PATROL_PID" 2>/dev/null || true
   stop_device_log
   (stop_endpoint) || stop_status=$?
   rm -rf "$work_dir"
@@ -37,6 +39,10 @@ prepare_endpoint() {
     endpoint_stopped) ;;
     endpoint_malformed)
       seed_endpoint_malformed "$work_dir/$group"
+      start_endpoint "$work_dir/$group"
+      ;;
+    endpoint_scripted)
+      seed_endpoint_catalogue "$work_dir/$group"
       start_endpoint "$work_dir/$group"
       ;;
     *) fail "unknown E2E group '$group'" ;;
@@ -60,20 +66,65 @@ run_group() {
 # Leaves Patrol's exit status in patrol_status and returns 0, so a failing capture step
 # still fails the group (a `|| status=$?` at the call would switch errexit off inside).
 run_patrol() {
-  local group="$1" targets=() test_file
+  local group="$1" targets=() test_file patrol_output="$work_dir/$group.patrol.log"
   for test_file in "$APP_DIR/patrol_test/$group"/*_test.dart; do
     targets+=(--target "${test_file#"$APP_DIR"/}")
   done
   record_milestone "patrol start"
   start_device_log "$platform" "$device"
   patrol_status=0
-  (cd "$APP_DIR" && "$PATROL" test --device "$device" --show-flutter-logs "${targets[@]}" \
+  : >"$patrol_output"
+  (cd "$APP_DIR" && exec "$PATROL" test --device "$device" --show-flutter-logs "${targets[@]}" \
     $(endpoint_dart_defines) \
-    --dart-define "E2E_SEEDED_MESSAGE=${seeded_message:-}") || patrol_status=$?
+    --dart-define "E2E_SEEDED_MESSAGE=${seeded_message:-}") >"$patrol_output" 2>&1 &
+  PATROL_PID=$!
+  follow_patrol_output "$patrol_output"
+  wait "$PATROL_PID" || patrol_status=$?
+  PATROL_PID=""
   stop_device_log
   record_milestone "patrol end (exit $patrol_status)"
 }
 
+# Copies Patrol's output to stdout as it grows, acting on each request a test logs. It polls a file
+# rather than reading a pipe, so it ends when Patrol exits whatever daemons hold the file (D7), and
+# it runs in the harness shell, so a request's stop or start keeps ENDPOINT_PID here.
+follow_patrol_output() {
+  local output="$1"
+  COPIED_LINES=0
+  while kill -0 "$PATROL_PID" 2>/dev/null; do
+    copy_lines_up_to "$output" "$(( $(wc -l <"$output") ))"
+    sleep 0.2
+  done
+  copy_lines_up_to "$output" '$'
+}
+
+# Reads on fd 5, so nothing a request starts can swallow the lines.
+copy_lines_up_to() {
+  local output="$1" last="$2" line
+  [[ "$last" == '$' ]] || (( last > COPIED_LINES )) || return 0
+  while IFS= read -r line <&5 || [[ -n "$line" ]]; do
+    echo "$line"
+    act_on_request "${line%$'\r'}"
+  done 5< <(sed -n "$((COPIED_LINES + 1)),${last}p" "$output")
+  [[ "$last" == '$' ]] || COPIED_LINES=$last
+}
+
+# What an endpoint_scripted test can ask for, as a "[e2e-request] <request>" line in its log.
+# Each is idempotent, because a log line can arrive twice.
+act_on_request() {
+  [[ "$1" =~ \[e2e-request\]\ (.*)$ ]] || return 0
+  local request="${BASH_REMATCH[1]}"
+  record_milestone "e2e request: $request"
+  case "$request" in
+    stop-endpoint) stop_endpoint ;;
+    *)
+      kill "$PATROL_PID" 2>/dev/null || true
+      fail "unknown E2E request '$request'"
+      ;;
+  esac
+}
+
+PATROL_PID=""
 for group in "${groups[@]}"; do
   run_group "$group"
 done

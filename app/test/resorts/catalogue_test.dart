@@ -26,28 +26,34 @@ void main() {
     expect(() => Catalogue.parse({'resorts': []}), throwsFormatException);
   });
 
-  test('rejects a catalogue with any entry missing its name, countries or centre', () {
-    const complete = {
-      'name': 'Paradiski',
-      'countries': ['France'],
-      'centre': {'lat': 45.55, 'lon': 6.8},
-    };
-    for (final malformed in [
-      {...complete}..remove('name'),
-      {...complete}..remove('countries'),
-      {...complete, 'countries': <String>[]},
-      {...complete}..remove('centre'),
-      {...complete, 'centre': {'lat': 45.55}},
-    ]) {
-      expect(
-        () => Catalogue.parse({
-          'resorts': [complete, malformed],
-        }),
-        throwsFormatException,
-        reason: '$malformed',
-      );
-    }
-  });
+  test(
+    'rejects a catalogue with any entry missing its name, countries or centre',
+    () {
+      const complete = {
+        'name': 'Paradiski',
+        'countries': ['France'],
+        'centre': {'lat': 45.55, 'lon': 6.8},
+      };
+      for (final malformed in [
+        {...complete}..remove('name'),
+        {...complete}..remove('countries'),
+        {...complete, 'countries': <String>[]},
+        {...complete}..remove('centre'),
+        {
+          ...complete,
+          'centre': {'lat': 45.55},
+        },
+      ]) {
+        expect(
+          () => Catalogue.parse({
+            'resorts': [complete, malformed],
+          }),
+          throwsFormatException,
+          reason: '$malformed',
+        );
+      }
+    },
+  );
 
   test('labels a resort with all its countries, in catalogue order', () {
     const resort = Resort(

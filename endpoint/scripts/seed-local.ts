@@ -1,4 +1,5 @@
 // Seeds local (Miniflare) R2 with the curated catalogue and, while it lasts, the skeleton message.
+//   node scripts/seed-local.ts --persist-to <dir>                    (the catalogue only)
 //   node scripts/seed-local.ts --persist-to <dir> --message <text>
 //   node scripts/seed-local.ts --persist-to <dir> --unknown-version  (a message this app can't read)
 import { execFileSync } from "node:child_process";
@@ -22,12 +23,8 @@ const { values } = parseArgs({
 const persistTo = required(values["persist-to"], "--persist-to");
 
 put(catalogueKey, buildEnvelope("catalogue", 1, curatedCatalogue()));
-put(
-  skeletonMessageKey,
-  values["unknown-version"]
-    ? buildEnvelope("skeleton-message", 2, {})
-    : buildEnvelope("skeleton-message", 1, { message: required(values.message, "--message") }),
-);
+if (values["unknown-version"]) put(skeletonMessageKey, buildEnvelope("skeleton-message", 2, {}));
+if (values.message) put(skeletonMessageKey, buildEnvelope("skeleton-message", 1, { message: values.message }));
 
 function curatedCatalogue(): unknown {
   return JSON.parse(readFileSync(join(endpointDir, "catalogue", "curated.json"), "utf8"));
