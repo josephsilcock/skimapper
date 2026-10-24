@@ -76,16 +76,17 @@ process_tree() {
 }
 
 await_endpoint_gone() {
-  local deadline holders
+  local deadline holders running
   deadline=$(( $(now_ms) + ENDPOINT_STOP_TIMEOUT_MS ))
   while true; do
     holders="$(port_holders)"
-    any_running "$@" || [[ -n "$holders" ]] || return 0
+    running="$(running_pids "$@")"
+    [[ -n "$running" || -n "$holders" ]] || return 0
     (( $(now_ms) < deadline )) || break
     sleep 0.1
   done
   record_port_holders
-  fail "the local endpoint did not stop within $ENDPOINT_STOP_TIMEOUT_MS ms; port $ENDPOINT_PORT is held by $(named_holders "$holders")"
+  fail "the local endpoint did not stop within $ENDPOINT_STOP_TIMEOUT_MS ms; still running: ${running:-nothing}; port $ENDPOINT_PORT is held by $(named_holders "$holders")"
 }
 
 # bash 3.2 (macOS) has no millisecond clock of its own.
@@ -100,14 +101,14 @@ named_holders() {
   echo "${named:-nothing}"
 }
 
-# A zombie has exited; it only awaits its parent's wait.
-any_running() {
+# Those of the given PIDs still running, space-separated. A zombie has exited; it only awaits its
+# parent's wait.
+running_pids() {
   local pid stat
   for pid in "$@"; do
     stat="$(ps -o stat= -p "$pid" || true)"
-    [[ -z "$stat" || "$stat" == Z* ]] || return 0
-  done
-  return 1
+    [[ -z "$stat" || "$stat" == Z* ]] || echo "$pid"
+  done | paste -sd' ' -
 }
 
 # The processes listening on the endpoint port; none means the port is free.
