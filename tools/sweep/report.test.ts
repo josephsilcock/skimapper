@@ -35,6 +35,14 @@ function report(args: string[]) {
   };
 }
 
+// A local run: no step summary to write, whether GITHUB_STEP_SUMMARY is unset or empty. Never inherited, as
+// this self-test runs inside CI, where it names the real run's summary.
+function localReport(args: string[], summary: { GITHUB_STEP_SUMMARY?: string }) {
+  const { GITHUB_STEP_SUMMARY: _, ...env } = process.env;
+  const run = spawnSync(process.execPath, [reportScript, ...args], { encoding: "utf8", env: { ...env, ...summary } });
+  return { exitCode: run.status, stdout: run.stdout, stderr: run.stderr };
+}
+
 test("a red layer turns the report red, and the summary names the layer and why", () => {
   const results = jobResults({
     "sweep-fast": [
@@ -90,4 +98,16 @@ test("--expect with an unknown id prints one error line naming the switch, the i
   assert.equal(exitCode, 1);
   assert.equal(stdout, "");
   assert.equal(summary, "");
+});
+
+test("run locally, with no step summary set, the report prints the table and exits with the verdict", () => {
+  const results = jobResults({ "sweep-fast": [{ id: "app", label: "app", verdict: "green" }] });
+
+  for (const summary of [{}, { GITHUB_STEP_SUMMARY: "" }]) {
+    const { exitCode, stdout, stderr } = localReport(["--expect", "app", results], summary);
+
+    assert.equal(stderr, "", JSON.stringify(summary));
+    assert.match(stdout, /\| app \| 🟢 green \|/);
+    assert.equal(exitCode, 0);
+  }
 });
