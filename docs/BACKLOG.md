@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F22`, `B5`, `C8`.
+**Next free IDs**: `F22`, `B5`, `C9`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -66,3 +66,4 @@ below that gets picked up out of turn should say why in its spec.
 - **C3** Failures in the service and its daily refresh are noticed and reported, with enough detail to find and fix the cause quickly. Depends on F20.
 - **C6** Skeleton hardening: the skeleton message line shows the text "null" when a valid envelope has no `message` field, and a missing `ENDPOINT_URL`/`ENDPOINT_TIMEOUT_MS` define (or a `FutureBuilder` error) shows "endpoint: loading" or a misleading "could not be reached" instead of a clear failure. Also extract a shared TypeScript envelope builder (currently duplicated in `endpoint/scripts/seed-local.ts` and `endpoint/test/integration/artefacts.test.ts`) when the second document kind lands.
 - **C7** CI tooling nits from C5's review: `listSwitch` (`tools/sweep/layers.ts`) throws a bare TypeError when `--layers` is last; `report.ts` relies on `GITHUB_STEP_SUMMARY!`, so a local run throws after printing the table; `toolchain.test.ts` covers only the failing cases of `require_given_jdk` (add a passing case); nothing checks that the `linux`/`android`/`ios` jobs' `--layers` together cover `sweepLayers`.
+- **C8** CI test results can be browsed per test, interactively, from a GitHub Actions run: today the run only shows the per-layer summary table `tools/sweep/report.ts` writes to the step summary, with the raw results buried in the uploaded artefacts. Wants every test across all layers (fast and full sweep, all platforms) with pass/fail, duration and failure output, filterable and drillable. Builds on C5's sweep reporting (`.github/workflows/push.yml`, `sweep.yml`); consider alongside C7's `report.ts` nits.
