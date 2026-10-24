@@ -379,3 +379,26 @@ There is no authorisation in this feature.
 4. **A skier opening the app for the first time with no signal sees "couldn't load resorts", and
    retrying loads the list.** This retires the skeleton message, its route and the
    `endpoint_stopped` and `endpoint_malformed` groups in the same slice.
+
+## Slices
+
+- [x] 1. A skier opens the app and sees the three curated ski areas listed by name, each with its countries.
+- [ ] 2. With the endpoint stopped and the app relaunched, the skier still sees the same list.
+- [ ] 3. The skier pulls the list down after the catalogue gains a ski area, and sees it appear in its sorted place.
+- [ ] 4. A skier opening the app for the first time with no signal sees "couldn't load resorts", and retrying loads the list.
+- [ ] 5. A skier looking at a saved list pulls it down while the service is unreachable, erroring or serving an empty catalogue, and sees the list stay with a brief "couldn't refresh" message.
+- [ ] 6. A skier whose app can't read the served catalogue sees "update the app": full-screen with Retry when nothing is saved, a banner over the saved list otherwise.
+
+## Decisions taken during implement
+
+- **`openEnvelope` removed rather than kept beside `openDocument`.** Once `EndpointClient` moved to `openDocument`, nothing else called it, and keeping it would leave two envelope shape-matches. The three `openEnvelope` tests are superseded by `openDocument`'s.
+- **The skeleton message line keeps its two failure texts until slice 4 by mapping the new outcomes**: *failed* → "service could not be reached", *incompatible* → "service response not understood". The `endpoint_malformed` seed therefore serves a skeleton envelope at an unknown schema version (`--unknown-version`) instead of a non-envelope body, which is now *failed*.
+- **The catalogue's route, kind and parse live together in `lib/resorts/catalogue_document.dart`** (`EndpointClient.fetchCatalogue()`), so the notifier, saved-copy reopen and E2E probe consume one home.
+- **`placeholder_screen.dart` became `home_screen.dart` in slice 1**, since the list joins it there; the skeleton line still sits in it until slice 4.
+
+## Resume
+
+- **Closed:** slice 1 (walking skeleton: catalogue route + curated file + envelope builder; `openDocument`; `Catalogue`; `ResortList` notifier; list on the home screen).
+- **Next:** slice 2 — *With the endpoint stopped and the app relaunched, the skier still sees the same list.* Catalogue store (flushed temp file + rename in app support), saved-copy reopen through `openDocument`, the log-marker watcher in `tools/e2e` with the stop request, the `endpoint_scripted` relaunch pair, `clearPackageData` off.
+- **Seams as built:** `openDocument<T>(body, kind:, parse:)` → `Understood(body, value)` / `Incompatible` / `Failed(cause)` in `contract_envelope.dart`; `EndpointClient.fetchDocument<T>(path, kind:, parse:)`; `EndpointClient.fetchCatalogue()` in `lib/resorts/catalogue_document.dart`; providers in `lib/resorts/resort_list_providers.dart`; `ResortListState.shown` is a `Catalogue?`.
+- **E2E runs here use `IOS_SIMULATOR="iPhone Air" ENDPOINT_PORT=8797`** because another worktree session shares `iPhone 17`/8787.

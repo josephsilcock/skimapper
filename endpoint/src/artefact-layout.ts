@@ -3,3 +3,4 @@
 export const latestDocumentKey = (name: string): string => `latest/${name}.json`;
 
 export const skeletonMessageKey = latestDocumentKey("skeleton-message");
+export const catalogueKey = latestDocumentKey("catalogue");

@@ -1,7 +1,8 @@
-import { skeletonMessageKey } from "./artefact-layout.ts";
+import { catalogueKey, skeletonMessageKey } from "./artefact-layout.ts";
 
 const documentRoutes: Record<string, string> = {
   "/v1/skeleton/message": skeletonMessageKey,
+  "/v1/catalogue": catalogueKey,
 };
 
 export default {

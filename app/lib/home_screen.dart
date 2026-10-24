@@ -4,15 +4,17 @@ import 'attribution/attribution_line.dart';
 import 'endpoint/dev_endpoint.dart';
 import 'endpoint/skeleton_message_line.dart';
 import 'map/fixture_map.dart';
+import 'resorts/resort_list_view.dart';
 
-class PlaceholderScreen extends StatefulWidget {
-  const PlaceholderScreen({super.key});
+/// F1's home screen: the resort list, with the fixture map proof pinned below it until F5.
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<PlaceholderScreen> createState() => _PlaceholderScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _PlaceholderScreenState extends State<PlaceholderScreen> {
+class _HomeScreenState extends State<HomeScreen> {
   final _endpoint = devEndpointClient();
   String _mapLine = 'map: loading';
 
@@ -35,6 +37,7 @@ class _PlaceholderScreenState extends State<PlaceholderScreen> {
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 8),
+            const Expanded(child: ResortListView()),
             SkeletonMessageLine(client: _endpoint),
             const SizedBox(height: 16),
             SizedBox(
@@ -43,7 +46,7 @@ class _PlaceholderScreenState extends State<PlaceholderScreen> {
             ),
             const SizedBox(height: 8),
             Text(_mapLine),
-            const Spacer(),
+            const SizedBox(height: 8),
             const AttributionLine(),
           ],
         ),

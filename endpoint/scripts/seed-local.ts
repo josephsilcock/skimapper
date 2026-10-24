@@ -1,41 +1,47 @@
-// Seeds local (Miniflare) R2 with the skeleton message document.
+// Seeds local (Miniflare) R2 with the curated catalogue and, while it lasts, the skeleton message.
 //   node scripts/seed-local.ts --persist-to <dir> --message <text>
-//   node scripts/seed-local.ts --persist-to <dir> --malformed      (a body that is not an envelope)
+//   node scripts/seed-local.ts --persist-to <dir> --unknown-version  (a message this app can't read)
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 
-import { skeletonMessageKey } from "../src/artefact-layout.ts";
+import { catalogueKey, skeletonMessageKey } from "../src/artefact-layout.ts";
+import { buildEnvelope } from "../src/envelope.ts";
+
+const endpointDir = join(import.meta.dirname, "..");
 
 const { values } = parseArgs({
   options: {
     "persist-to": { type: "string" },
     message: { type: "string" },
-    malformed: { type: "boolean" },
+    "unknown-version": { type: "boolean" },
   },
 });
 const persistTo = required(values["persist-to"], "--persist-to");
-const body = values.malformed ? "this is not an envelope" : JSON.stringify(messageDocument());
 
-const file = join(mkdtempSync(join(tmpdir(), "seed-")), "document.json");
-writeFileSync(file, body);
-
-execFileSync(
-  "npx",
-  ["wrangler", "r2", "object", "put", `skimapper-artefacts/${skeletonMessageKey}`,
-    "--local", "--persist-to", persistTo, "--file", file, "--content-type", "application/json"],
-  { stdio: ["ignore", "ignore", "inherit"], cwd: join(import.meta.dirname, "..") },
+put(catalogueKey, buildEnvelope("catalogue", 1, curatedCatalogue()));
+put(
+  skeletonMessageKey,
+  values["unknown-version"]
+    ? buildEnvelope("skeleton-message", 2, {})
+    : buildEnvelope("skeleton-message", 1, { message: required(values.message, "--message") }),
 );
 
-function messageDocument() {
-  return {
-    kind: "skeleton-message",
-    schemaVersion: 1,
-    dataVersion: new Date().toISOString().slice(0, 10),
-    data: { message: required(values.message, "--message") },
-  };
+function curatedCatalogue(): unknown {
+  return JSON.parse(readFileSync(join(endpointDir, "catalogue", "curated.json"), "utf8"));
+}
+
+function put(key: string, document: unknown): void {
+  const file = join(mkdtempSync(join(tmpdir(), "seed-")), "document.json");
+  writeFileSync(file, JSON.stringify(document));
+  execFileSync(
+    "npx",
+    ["wrangler", "r2", "object", "put", `skimapper-artefacts/${key}`,
+      "--local", "--persist-to", persistTo, "--file", file, "--content-type", "application/json"],
+    { stdio: ["ignore", "ignore", "inherit"], cwd: endpointDir },
+  );
 }
 
 function required(value: string | undefined, flag: string): string {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'contract_envelope.dart';
 import 'endpoint_client.dart';
 
 /// The placeholder screen's endpoint line (C4 design D9).
@@ -13,19 +14,23 @@ class SkeletonMessageLine extends StatefulWidget {
 }
 
 class _SkeletonMessageLineState extends State<SkeletonMessageLine> {
-  late final Future<EndpointOutcome> _outcome = widget.client.fetchDocument(
-    '/v1/skeleton/message',
-    kind: 'skeleton-message',
-  );
+  late final Future<DocumentOutcome<String>> _outcome = widget.client
+      .fetchDocument(
+        '/v1/skeleton/message',
+        kind: 'skeleton-message',
+        parse: _message,
+      );
 
   @override
   Widget build(BuildContext context) => FutureBuilder(
     future: _outcome,
     builder: (context, snapshot) => Text(switch (snapshot.data) {
-      Reached(:final data) => '${data['message']}',
-      Unreachable() => 'service could not be reached',
-      NotUnderstood() => 'service response not understood',
+      Understood(:final value) => value,
+      Failed() => 'service could not be reached',
+      Incompatible() => 'service response not understood',
       null => 'endpoint: loading',
     }),
   );
 }
+
+String _message(Map<String, Object?> data) => '${data['message']}';

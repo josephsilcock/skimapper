@@ -5,6 +5,8 @@ import 'package:http/testing.dart';
 import 'package:skimapper/endpoint/endpoint_client.dart';
 import 'package:skimapper/endpoint/skeleton_message_line.dart';
 
+import '../support/pump_until_found.dart';
+
 void main() {
   testWidgets('says the service could not be reached when it is unreachable', (
     tester,
@@ -12,7 +14,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(home: SkeletonMessageLine(client: _clientAnswering(_refuse))),
     );
-    await _pumpUntilFound(tester, find.text('service could not be reached'));
+    await pumpUntilFound(tester, find.text('service could not be reached'));
 
     expect(find.text('service could not be reached'), findsOneWidget);
   });
@@ -21,7 +23,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(home: SkeletonMessageLine(client: _clientAnswering(_garble))),
     );
-    await _pumpUntilFound(tester, find.text('service response not understood'));
+    await pumpUntilFound(tester, find.text('service response not understood'));
 
     expect(find.text('service response not understood'), findsOneWidget);
   });
@@ -36,15 +38,7 @@ EndpointClient _clientAnswering(MockClientHandler handler) => EndpointClient(
   newHttpClient: () => MockClient(handler),
 );
 
-Future<http.Response> _garble(http.Request request) async =>
-    http.Response('this is not an envelope', 200);
-
-/// The fetch runs in another isolate, which only progresses in real time.
-Future<void> _pumpUntilFound(WidgetTester tester, Finder finder) async {
-  for (var tries = 0; tries < 100 && finder.evaluate().isEmpty; tries++) {
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 20)),
-    );
-    await tester.pump();
-  }
-}
+Future<http.Response> _garble(http.Request request) async => http.Response(
+  '{"kind": "skeleton-message", "schemaVersion": 99, "dataVersion": "x", "data": {}}',
+  200,
+);

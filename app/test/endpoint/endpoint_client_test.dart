@@ -6,13 +6,14 @@ import 'dart:isolate';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:skimapper/endpoint/contract_envelope.dart';
 import 'package:skimapper/endpoint/endpoint_client.dart';
 
 import '../support/block_for.dart';
 import '../support/run_record_capture.dart';
 
 void main() {
-  test('a served envelope is reached, with its data', () async {
+  test('a served envelope is understood, with its data', () async {
     final server = MockClient((request) async {
       if (request.url.toString() !=
           'http://endpoint.test/v1/skeleton/message') {
@@ -29,17 +30,20 @@ void main() {
     final outcome = await client.fetchDocument(
       '/v1/skeleton/message',
       kind: 'skeleton-message',
+      parse: _message,
     );
 
     expect(
       outcome,
-      isA<Reached>().having((reached) => reached.data, 'data', {
-        'message': 'hello',
-      }),
+      isA<Understood<String>>().having(
+        (understood) => understood.value,
+        'value',
+        'hello',
+      ),
     );
   });
 
-  test('a refused connection is unreachable', () async {
+  test('a refused connection has failed', () async {
     final client = _clientFor(
       MockClient(
         (request) async => throw http.ClientException('Connection refused'),
@@ -49,12 +53,13 @@ void main() {
     final outcome = await client.fetchDocument(
       '/v1/skeleton/message',
       kind: 'skeleton-message',
+      parse: _message,
     );
 
-    expect(outcome, isA<Unreachable>());
+    expect(outcome, isA<Failed<String>>());
   });
 
-  test('no answer within the timeout is unreachable', () async {
+  test('no answer within the timeout has failed', () async {
     final client = _clientFor(
       MockClient((request) => Completer<http.Response>().future),
     );
@@ -62,12 +67,13 @@ void main() {
     final outcome = await client.fetchDocument(
       '/v1/skeleton/message',
       kind: 'skeleton-message',
+      parse: _message,
     );
 
-    expect(outcome, isA<Unreachable>());
+    expect(outcome, isA<Failed<String>>());
   });
 
-  test('a non-2xx answer is not understood', () async {
+  test('a non-2xx answer has failed, naming its status', () async {
     final client = _clientFor(
       MockClient(
         (request) async => http.Response(jsonEncode(_messageEnvelope), 404),
@@ -77,12 +83,20 @@ void main() {
     final outcome = await client.fetchDocument(
       '/v1/skeleton/message',
       kind: 'skeleton-message',
+      parse: _message,
     );
 
-    expect(outcome, isA<NotUnderstood>());
+    expect(
+      outcome,
+      isA<Failed<String>>().having(
+        (failed) => failed.cause,
+        'cause',
+        'HTTP 404',
+      ),
+    );
   });
 
-  test('a body that is not an envelope is not understood', () async {
+  test('a body that is not an envelope has failed', () async {
     final client = _clientFor(
       MockClient(
         (request) async => http.Response('this is not an envelope', 200),
@@ -92,9 +106,10 @@ void main() {
     final outcome = await client.fetchDocument(
       '/v1/skeleton/message',
       kind: 'skeleton-message',
+      parse: _message,
     );
 
-    expect(outcome, isA<NotUnderstood>());
+    expect(outcome, isA<Failed<String>>());
   });
 
   test('an answer that comes in time is classified by it, even if the caller is blocked past the timeout', () async {
@@ -105,21 +120,26 @@ void main() {
       newHttpClient: http.Client.new,
     );
 
-    late final Future<EndpointOutcome> outcome;
+    late final Future<DocumentOutcome<String>> outcome;
     final logged = await runRecordDuring(() async {
       outcome = client.fetchDocument(
         '/v1/skeleton/message',
         kind: 'skeleton-message',
+        parse: _message,
       );
       blockFor(const Duration(milliseconds: 1500));
       await outcome;
     });
 
-    expect(await outcome, isA<NotUnderstood>());
+    expect(await outcome, isA<Failed<String>>());
     final loggedMs = int.parse(
       RegExp(r'in (\d+) ms').firstMatch(logged.last)!.group(1)!,
     );
-    expect(loggedMs, lessThan(500), reason: 'the figure times the network, not the block');
+    expect(
+      loggedMs,
+      lessThan(500),
+      reason: 'the figure times the network, not the block',
+    );
   });
 
   group('fetch log', () {
@@ -148,7 +168,7 @@ void main() {
           anything,
           matches(
             appRunRecordLine(
-              r'fetch outcome /v1/skeleton/message not understood in \d+ ms',
+              r'fetch outcome /v1/skeleton/message failed \(not an envelope\) in \d+ ms',
             ),
           ),
         ]);
@@ -156,7 +176,7 @@ void main() {
     );
 
     test(
-      'a failed connection is logged as unreachable, naming the failure',
+      'a failed connection is logged as failed, naming the failure',
       () async {
         final logged = await _fetchLogAgainst(
           MockClient(
@@ -168,7 +188,7 @@ void main() {
           logged.lastOrNull,
           matches(
             appRunRecordLine(
-              r'fetch outcome /v1/skeleton/message unreachable \(connection failed: Connection refused\) in \d+ ms',
+              r'fetch outcome /v1/skeleton/message failed \(connection failed: Connection refused\) in \d+ ms',
             ),
           ),
         );
@@ -176,7 +196,7 @@ void main() {
     );
 
     test(
-      'no answer within the timeout is logged as unreachable by timeout',
+      'no answer within the timeout is logged as failed by timeout',
       () async {
         final logged = await _fetchLogAgainst(
           MockClient((request) => Completer<http.Response>().future),
@@ -186,7 +206,7 @@ void main() {
           logged.lastOrNull,
           matches(
             appRunRecordLine(
-              r'fetch outcome /v1/skeleton/message unreachable \(timeout after 100 ms\) in \d+ ms',
+              r'fetch outcome /v1/skeleton/message failed \(timeout after 100 ms\) in \d+ ms',
             ),
           ),
         );
@@ -197,10 +217,14 @@ void main() {
 
 /// The run-record lines one fetch of the message document writes.
 Future<List<String>> _fetchLogAgainst(http.Client server) => runRecordDuring(
-  () =>
-      _clientFor(server)
-          .fetchDocument('/v1/skeleton/message', kind: 'skeleton-message'),
+  () => _clientFor(server).fetchDocument(
+    '/v1/skeleton/message',
+    kind: 'skeleton-message',
+    parse: _message,
+  ),
 );
+
+String _message(Map<String, Object?> data) => '${data['message']}';
 
 EndpointClient _clientFor(http.Client server) => EndpointClient(
   baseUrl: Uri.parse('http://endpoint.test'),
