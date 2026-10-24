@@ -55,7 +55,7 @@ below that gets picked up out of turn should say why in its spec.
 
 ## Bugs
 
-- **B4** `endpoint_stopped` passed on CI by coincidence before B2's fix: its "unreachable" line appeared because the first fetch hit the same first-launch UI freeze, not because a closed port was refused. Its pass is now real, but CI's first launch still has thin headroom (app-side fetch measured 4.4-8.0 s, endpoint-side 0.6-2.4 s, on the first launch after each install); watch for a recurrence.
+- **B4** `endpoint_stopped` passed on CI by coincidence before B2's fix: its "unreachable" line appeared because the first fetch hit the same first-launch UI freeze, not because a closed port was refused. Its pass is now real, but CI's first launch still has thin headroom (app-side fetch measured 4.4-8.0 s, endpoint-side 0.6-2.4 s, on the first launch after each install); watch for a recurrence. **Recurred 2026-10-24** on main's sweep (run 40105890900, iOS): `endpoint_malformed`'s first fetch logged `event loop late by 4889 ms` then `unreachable (timeout after 3000 ms) in 4514 ms` against a ready endpoint, so the app showed "could not be reached" and the "not understood" wait timed out. To be fixed later.
 
 ---
 
