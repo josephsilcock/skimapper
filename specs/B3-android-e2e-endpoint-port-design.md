@@ -203,7 +203,7 @@ There is no area doc for tooling, so `docs/definitions/` is unchanged. At sign-o
 - [x] 1. A developer runs the self-test layer and sees a stand-in endpoint stopped: its grandchild held the port and its middle parent died on SIGTERM, yet the port is free, the sibling process is still alive and the signalled PIDs are recorded.
 - [x] 2. A developer runs the self-test layer and sees a stand-in that won't exit make the stop fail at the limit, with one error naming the holder, while a second stop stays silent.
 - [x] 3. A developer runs `tools/e2e android` locally and sees all three groups run and every group-end snapshot reading "nothing holds port 8787" (no regression); a developer quits `tools/dev-app` and sees the signalled-PIDs line and the port free.
-- [ ] 4. A developer dispatches the full sweep on CI and sees `e2e-android` green with 5 tests and every group-end snapshot reading "nothing holds port 8787".
+- [x] 4. A developer dispatches the full sweep on CI and sees `e2e-android` green with 5 tests and every group-end snapshot reading "nothing holds port 8787".
 
 ## Decisions taken during implement
 
@@ -211,6 +211,8 @@ There is no area doc for tooling, so `docs/definitions/` is unchanged. At sign-o
 - The stamper sits on a fixed fd 3, not a named `{fd}`: macOS ships bash 3.2, which has no named file descriptors.
 - The stop's wait runs to a millisecond deadline read through `node` (`now_ms`). Rejected: `date +%s` (whole seconds, too coarse for a short limit); counting 100 ms poll steps (each poll's `lsof` costs real time, so a 5 s limit drifted towards 12 s); `perl` (a tool the harness doesn't otherwise need).
 
+- Self-test assertions identify a port holder by PID, never by command name: lsof shows node as `node-Main` on Linux (found by the CI sweep).
+
 ## Resume
 
-Slices 1–2 closed. `tools/lib/endpoint.sh`: `start_endpoint` = `launch_endpoint` (stamper on fd 3, outside the tree) + `await_endpoint_answers`; `stop_endpoint` clears `ENDPOINT_PID`, snapshots `process_tree`, SIGTERMs, records the PIDs, `await_endpoint_gone` (ms deadline via `now_ms`; at the limit `record_port_holders` + `fail` naming `named_holders`), reaps. `tools/e2e` trap: `rm -rf` before `stop_endpoint`. Next: slice 3 — local `tools/e2e android` (all three groups, group-end snapshots "nothing holds port 8787") and a manual `tools/dev-app` quit; then slice 4, the one CI sweep. Self-test runs need local port binding (outside the Claude sandbox); device commands run outside it too. Evidence logs in `test-results/tdd/B3/`.
+All four slices closed (18d556b, 5a3c147, 6f7aff8, 864dba0). CI sweep 40087483205: e2e-android green, 5 tests, every group-end snapshot "nothing holds port 8787"; its one red (the Linux self-test's `node` vs `node-Main` regex) was fixed in 864dba0 and is green on the `fast` run 40088965490. Technical unknown (a) is settled: the Linux wrangler tree was attached at stop time. Next: `/finish-feature`. Still open for the user: the manual dev-app Ctrl-C quit, since only dev-app's scripted start/stop was exercised.
