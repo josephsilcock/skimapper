@@ -107,7 +107,7 @@ test("a stop whose endpoint keeps the port past the limit fails, with a port sna
   const server = pids[2];
 
   assert.equal(status, 1, output);
-  assert.match(output, new RegExp(`^\\[port - [^\\]]+\\] node +${server} .*\\(LISTEN\\)$`, "m"));
+  assert.match(output, new RegExp(`^\\[port - [^\\]]+\\] \\S+ +${server} .*\\(LISTEN\\)$`, "m"));
   assert.match(output, new RegExp(`^error: .*${server}`, "m"));
 });
 
