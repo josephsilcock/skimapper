@@ -48,3 +48,19 @@ test("off macOS, an Android build with no JAVA_HOME stops and says so", () => {
   assert.equal(run.status, 1);
   assert.match(run.stderr, /^error: JAVA_HOME is not set; .*JDK 25/m);
 });
+
+test("off macOS, an Android build continues when JAVA_HOME is the dev config's JDK in its GA form", () => {
+  const run = sourceCommon("use_android_jdk && echo continued", { ...linuxHostWithJdk("25"), ANDROID_JDK_VERSION: "25" });
+
+  assert.equal(run.stderr, "");
+  assert.equal(run.stdout, "continued\n");
+  assert.equal(run.status, 0);
+});
+
+test("off macOS, an Android build continues when JAVA_HOME is the dev config's JDK in its update form", () => {
+  const run = sourceCommon("use_android_jdk && echo continued", { ...linuxHostWithJdk("25.0.1"), ANDROID_JDK_VERSION: "25" });
+
+  assert.equal(run.stderr, "");
+  assert.equal(run.stdout, "continued\n");
+  assert.equal(run.status, 0);
+});

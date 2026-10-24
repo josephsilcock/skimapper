@@ -168,3 +168,20 @@ No area doc covers tooling (`docs/definitions/` has none), so there is no area-d
 3. **Local report.** A developer runs `node tools/sweep/report.ts <dir>` with no `GITHUB_STEP_SUMMARY`. They see the per-layer table, with the verdict as the exit code.
 4. **Exactly-once check.** A developer edits `sweep.yml` to drop `endpoint` from the `linux` job, and sees the sweep self-test go red naming `endpoint`.
 5. **JDK ratchet (last).** A developer briefly breaks the JDK check and sees its new passing-case tests go red, one break per version form.
+
+## Slices
+
+- [x] 1. A developer runs `tools/full-sweep --layers` with no value, and sees one `error:` line naming `--layers` and the valid ids; it exits 1 and nothing runs (ccda50d)
+- [x] 2. A developer runs `node tools/sweep/report.ts --expect app, <dir>` (or `--expect` last, or an unknown id), and sees the same single line, with no table and no summary written (88007e9)
+- [x] 3. A developer runs `node tools/sweep/report.ts <dir>` with no `GITHUB_STEP_SUMMARY`, and sees the per-layer table, with the verdict as the exit code (a0aa222)
+- [x] 4. A developer edits `sweep.yml` to drop, duplicate or misspell a layer, and sees the sweep self-test go red naming it (65e47ea)
+- [x] 5. A developer briefly breaks the JDK check, and sees its new passing-case tests go red, one break per version form
+
+## Decisions taken during implement
+
+- A missing value, an empty value and an empty item share one message (`<switch> needs a comma-separated list of layer ids (ids: …)`); an unknown id gets its own (`<switch>: unknown layer '<id>' (ids: …)`). Rejected: a separate message per empty case, which says nothing more useful.
+- `report.ts` moved onto `layersFromArgs` in slice 1's refactor (not slice 2), so `listSwitch` could be deleted at once rather than living on beside its replacement.
+
+## Resume
+
+All five slices closed: 1 (ccda50d), 2 (88007e9), 3 (a0aa222), 4 (65e47ea), 5 (this commit). Next: `/finish-feature specs/C7-ci-tooling-nits-design.md`. Seams as built: `layersFromArgs` (layers.ts), `UsageError` + `runCli` (cli.ts, wraps main.ts and report.ts), `addToStepSummary` (report.ts), `fullSweepCalls` (workflows.test.ts). Evidence logs in `test-results/tdd/C7/`. `node --test tools/sweep/` must run outside the sandbox (endpoint-stop binds a port).
