@@ -202,7 +202,7 @@ There is no area doc for tooling, so `docs/definitions/` is unchanged. At sign-o
 
 - [x] 1. A developer runs the self-test layer and sees a stand-in endpoint stopped: its grandchild held the port and its middle parent died on SIGTERM, yet the port is free, the sibling process is still alive and the signalled PIDs are recorded.
 - [x] 2. A developer runs the self-test layer and sees a stand-in that won't exit make the stop fail at the limit, with one error naming the holder, while a second stop stays silent.
-- [ ] 3. A developer runs `tools/e2e android` locally and sees all three groups run and every group-end snapshot reading "nothing holds port 8787" (no regression); a developer quits `tools/dev-app` and sees the signalled-PIDs line and the port free.
+- [x] 3. A developer runs `tools/e2e android` locally and sees all three groups run and every group-end snapshot reading "nothing holds port 8787" (no regression); a developer quits `tools/dev-app` and sees the signalled-PIDs line and the port free.
 - [ ] 4. A developer dispatches the full sweep on CI and sees `e2e-android` green with 5 tests and every group-end snapshot reading "nothing holds port 8787".
 
 ## Decisions taken during implement
