@@ -201,7 +201,7 @@ There is no area doc for tooling, so `docs/definitions/` is unchanged. At sign-o
 ## Slices
 
 - [x] 1. A developer runs the self-test layer and sees a stand-in endpoint stopped: its grandchild held the port and its middle parent died on SIGTERM, yet the port is free, the sibling process is still alive and the signalled PIDs are recorded.
-- [ ] 2. A developer runs the self-test layer and sees a stand-in that won't exit make the stop fail at the limit, with one error naming the holder, while a second stop stays silent.
+- [x] 2. A developer runs the self-test layer and sees a stand-in that won't exit make the stop fail at the limit, with one error naming the holder, while a second stop stays silent.
 - [ ] 3. A developer runs `tools/e2e android` locally and sees all three groups run and every group-end snapshot reading "nothing holds port 8787" (no regression); a developer quits `tools/dev-app` and sees the signalled-PIDs line and the port free.
 - [ ] 4. A developer dispatches the full sweep on CI and sees `e2e-android` green with 5 tests and every group-end snapshot reading "nothing holds port 8787".
 
@@ -209,8 +209,8 @@ There is no area doc for tooling, so `docs/definitions/` is unchanged. At sign-o
 
 - `start_endpoint` launches the server through `run_endpoint_server`, which the self-test redefines with its stand-in, so the self-test drives the real start (and its stamper plumbing) as well as the real stop. Alternative: the self-test copies the start's plumbing, which would let the two drift.
 - The stamper sits on a fixed fd 3, not a named `{fd}`: macOS ships bash 3.2, which has no named file descriptors.
-- The stop's wait counts 100 ms poll steps up to `ENDPOINT_STOP_TIMEOUT_MS` rather than reading the clock: `date +%s` is whole seconds on macOS, too coarse for a short limit.
+- The stop's wait runs to a millisecond deadline read through `node` (`now_ms`). Rejected: `date +%s` (whole seconds, too coarse for a short limit); counting 100 ms poll steps (each poll's `lsof` costs real time, so a 5 s limit drifted towards 12 s); `perl` (a tool the harness doesn't otherwise need).
 
 ## Resume
 
-Slice 1 closed (commit below). Next: slice 2 — the stop fails at the limit with one `error:` naming the holders and a stamped port snapshot; `ENDPOINT_PID` cleared before the wait so a second stop is silent; then `tools/e2e`'s EXIT trap order (`rm -rf` before `stop_endpoint`). Self-test runs need local port binding, so run outside the Claude sandbox. Evidence logs in `test-results/tdd/B3/`.
+Slices 1–2 closed. `tools/lib/endpoint.sh`: `start_endpoint` = `launch_endpoint` (stamper on fd 3, outside the tree) + `await_endpoint_answers`; `stop_endpoint` clears `ENDPOINT_PID`, snapshots `process_tree`, SIGTERMs, records the PIDs, `await_endpoint_gone` (ms deadline via `now_ms`; at the limit `record_port_holders` + `fail` naming `named_holders`), reaps. `tools/e2e` trap: `rm -rf` before `stop_endpoint`. Next: slice 3 — local `tools/e2e android` (all three groups, group-end snapshots "nothing holds port 8787") and a manual `tools/dev-app` quit; then slice 4, the one CI sweep. Self-test runs need local port binding (outside the Claude sandbox); device commands run outside it too. Evidence logs in `test-results/tdd/B3/`.

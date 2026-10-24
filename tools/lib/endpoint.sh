@@ -21,14 +21,23 @@ seed_endpoint_malformed() {
     || fail "could not seed the local endpoint"
 }
 
+start_endpoint() {
+  local persist_to="$1"
+  launch_endpoint "$persist_to"
+  await_endpoint_answers
+}
+
 # The endpoint's output goes to stdout, stamped. The stamper is opened here, before the fork, so it
 # stays outside the endpoint's process tree: stop_endpoint leaves it running to record the last lines.
-start_endpoint() {
+launch_endpoint() {
   local persist_to="$1"
   exec 3> >(stamp_lines endpoint)
   (run_endpoint_server "$persist_to") >&3 2>&1 3>&- &
   ENDPOINT_PID=$!
   exec 3>&-
+}
+
+await_endpoint_answers() {
   for _ in $(seq 1 60); do
     curl -s -o /dev/null "$ENDPOINT_URL$ENDPOINT_READY_PATH" \
       && { record_milestone "endpoint answers on $ENDPOINT_URL$ENDPOINT_READY_PATH"; return; }
@@ -45,14 +54,15 @@ run_endpoint_server() {
 
 stop_endpoint() {
   [[ -n "$ENDPOINT_PID" ]] || return 0
-  local tree
+  local endpoint="$ENDPOINT_PID" tree
+  # Cleared before anything can fail, so the stop an EXIT trap repeats after a failed one does nothing.
+  ENDPOINT_PID=""
   # shellcheck disable=SC2207
-  tree=($(process_tree "$ENDPOINT_PID"))
+  tree=($(process_tree "$endpoint"))
   kill "${tree[@]}" 2>/dev/null || true
   record_milestone "stopping the endpoint: signalled PIDs ${tree[*]}"
   await_endpoint_gone "${tree[@]}"
-  wait "$ENDPOINT_PID" 2>/dev/null || true
-  ENDPOINT_PID=""
+  wait "$endpoint" 2>/dev/null || true
 }
 
 # The process and all its descendants, taken in one pass before any of them is signalled: a parent
@@ -66,12 +76,28 @@ process_tree() {
 }
 
 await_endpoint_gone() {
-  local waited holders
-  for (( waited = 0; waited < ENDPOINT_STOP_TIMEOUT_MS; waited += 100 )); do
+  local deadline holders
+  deadline=$(( $(now_ms) + ENDPOINT_STOP_TIMEOUT_MS ))
+  while true; do
     holders="$(port_holders)"
     any_running "$@" || [[ -n "$holders" ]] || return 0
+    (( $(now_ms) < deadline )) || break
     sleep 0.1
   done
+  record_port_holders
+  fail "the local endpoint did not stop within $ENDPOINT_STOP_TIMEOUT_MS ms; port $ENDPOINT_PORT is held by $(named_holders "$holders")"
+}
+
+# bash 3.2 (macOS) has no millisecond clock of its own.
+now_ms() {
+  node -e 'console.log(Date.now())'
+}
+
+# "<command> <pid>" per port holder, comma-separated; lsof's header row dropped.
+named_holders() {
+  local named
+  named="$(awk 'NR > 1 { print $1, $2 }' <<<"$1" | paste -sd, -)"
+  echo "${named:-nothing}"
 }
 
 # A zombie has exited; it only awaits its parent's wait.

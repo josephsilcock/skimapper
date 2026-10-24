@@ -15,7 +15,8 @@ groups=("$@")
 device="$(boot_device "$platform")"
 forward_endpoint_port "$platform" "$device"
 work_dir="$(mktemp -d)"
-trap 'stop_device_log; stop_endpoint; rm -rf "$work_dir"' EXIT
+# The endpoint stops last: a stop that fails exits, and must not leak the work dir.
+trap 'stop_device_log; rm -rf "$work_dir"; stop_endpoint' EXIT
 
 prepare_endpoint() {
   local group="$1"

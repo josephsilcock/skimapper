@@ -16,9 +16,12 @@ const freePort = (): Promise<number> =>
     });
   });
 
+const shutsDown = `process.stdout.write("stand-in shutting down\\n", () => process.exit(0))`;
+const ignoresIt = "{}";
+
 // A stand-in for wrangler shaped like CI's: the endpoint process waits on a middle parent that
-// exits on SIGTERM, whose child (workerd's place) serves HTTP on the port.
-const standInEndpoint = (): string => {
+// exits on SIGTERM, whose child (workerd's place) serves HTTP on the port and answers SIGTERM as told.
+const standInEndpoint = (onSigterm: string): string => {
   const dir = mkdtempSync(join(tmpdir(), "endpoint-stop-"));
   writeFileSync(
     join(dir, "server.mjs"),
@@ -26,7 +29,7 @@ const standInEndpoint = (): string => {
 import { writeFileSync } from "node:fs";
 writeFileSync("${dir}/server.pid", String(process.pid));
 createServer((_, response) => response.end("stand-in")).listen(Number(process.env.ENDPOINT_PORT), "127.0.0.1");
-process.on("SIGTERM", () => process.stdout.write("stand-in shutting down\\n", () => process.exit(0)));
+process.on("SIGTERM", () => ${onSigterm});
 `,
   );
   writeFileSync(join(dir, "middle.sh"), `echo $$ > "${dir}/middle.pid"; node "${dir}/server.mjs" & wait\n`);
@@ -40,27 +43,21 @@ const signalledPids = (output: string): string[] | undefined =>
 const standInPids = (dir: string): string[] =>
   ["endpoint", "middle", "server"].map((name) => readFileSync(join(dir, `${name}.pid`), "utf8").trim());
 
-// Starts the stand-in through the real start_endpoint beside a sibling process, stops it through the
-// real stop_endpoint, then reports whether the port answers and the sibling lives. Output goes to a
-// file, not a pipe, so a survivor holding it can't keep the run open; everything the run started is
+// Runs the harness script against the stand-in, with the real tools/lib sourced and the real
+// start_endpoint launching the stand-in, on a port of its own and a short stop limit. Output goes to
+// a file, not a pipe, so a survivor holding it can't keep the run open; everything the run started is
 // killed afterwards through its own process group.
-const startThenStop = async () => {
-  const standIn = standInEndpoint();
+const runAgainstStandIn = async (onSigterm: string, harness: string) => {
+  const standIn = standInEndpoint(onSigterm);
   const script = `
 source "${toolsDir}/lib/common.sh"
 source "${toolsDir}/lib/endpoint.sh"
 run_endpoint_server() { exec bash "${standIn}/endpoint.sh"; }
-sleep 60 &
-sibling=$!
-start_endpoint "${standIn}"
-stop_endpoint
-if curl -s -o /dev/null "$ENDPOINT_URL/"; then echo "after stop: port answers"; else echo "after stop: port free"; fi
-if kill -0 "$sibling" 2>/dev/null; then echo "after stop: sibling alive"; else echo "after stop: sibling gone"; fi
-`;
+${harness}`;
   const output = join(standIn, "output.log");
   const outputFd = openSync(output, "w");
   const run = spawnSync("bash", ["-c", script], {
-    env: { ...process.env, ENDPOINT_PORT: String(await freePort()) },
+    env: { ...process.env, ENDPOINT_PORT: String(await freePort()), ENDPOINT_STOP_TIMEOUT_MS: "500" },
     stdio: ["ignore", outputFd, outputFd],
     detached: true,
     timeout: 30_000,
@@ -68,8 +65,23 @@ if kill -0 "$sibling" 2>/dev/null; then echo "after stop: sibling alive"; else e
   try {
     process.kill(-run.pid!, "SIGKILL");
   } catch {}
-  return { output: readFileSync(output, "utf8"), pids: standInPids(standIn) };
+  return { status: run.status, output: readFileSync(output, "utf8"), pids: standInPids(standIn) };
 };
+
+// Starts and stops the stand-in beside a sibling process, then reports whether the port answers and
+// the sibling lives.
+const startThenStop = () =>
+  runAgainstStandIn(
+    shutsDown,
+    `
+sleep 60 &
+sibling=$!
+start_endpoint unused
+stop_endpoint
+if curl -s -o /dev/null "$ENDPOINT_URL/"; then echo "after stop: port answers"; else echo "after stop: port free"; fi
+if kill -0 "$sibling" 2>/dev/null; then echo "after stop: sibling alive"; else echo "after stop: sibling gone"; fi
+`,
+  );
 
 test("stopping the endpoint frees its port even when the port's holder outlives its parent, and leaves siblings running", async () => {
   const { output } = await startThenStop();
@@ -88,4 +100,20 @@ test("stopping the endpoint leaves its output stamper running, so the endpoint's
   const { output } = await startThenStop();
 
   assert.match(output, /^\[endpoint - [^\]]+\] stand-in shutting down$/m, output);
+});
+
+test("a stop whose endpoint keeps the port past the limit fails, with a port snapshot and an error naming the holder", async () => {
+  const { status, output, pids } = await runAgainstStandIn(ignoresIt, "start_endpoint unused\nstop_endpoint");
+  const server = pids[2];
+
+  assert.equal(status, 1, output);
+  assert.match(output, new RegExp(`^\\[port - [^\\]]+\\] node +${server} .*\\(LISTEN\\)$`, "m"));
+  assert.match(output, new RegExp(`^error: .*${server}`, "m"));
+});
+
+test("a second stop after a failed one, as from an EXIT trap, is silent: the first error stays the only one", async () => {
+  const { status, output } = await runAgainstStandIn(ignoresIt, "start_endpoint unused\ntrap stop_endpoint EXIT\nstop_endpoint");
+
+  assert.equal(status, 1, output);
+  assert.equal(output.match(/^error: /gm)?.length, 1, output);
 });
