@@ -24,11 +24,13 @@ function trigger(workflow: string, event: string): string | undefined {
 }
 
 // The arguments of each tools/full-sweep call in a workflow: a `run:` value, or a line of a `run: |` block,
-// whose first word is tools/full-sweep. A plain word split, so a quoted or $VAR value reads as itself.
+// whose first word is tools/full-sweep. A plain word split, so a quoted or $VAR value reads as itself; words
+// after an inline ` #` are the shell's comment. A list item or block-scalar line starting with the word also
+// reads as a call: that fails visibly, which is accepted.
 function fullSweepCalls(workflow: string): string[][] {
   const text = readFileSync(join(workflowsDir, workflow), "utf8");
-  return [...text.matchAll(/^\s*(?:-\s+)?(?:run:\s+)?tools\/full-sweep\b(.*)$/gm)]
-    .map((call) => call[1].split(/\s+/).filter(Boolean));
+  return [...text.matchAll(/^\s*(?:-\s+)?(?:run:\s+)?tools\/full-sweep(?=\s|$)(.*)$/gm)]
+    .map((call) => call[1].replace(/\s#.*/, "").split(/\s+/).filter(Boolean));
 }
 
 function docsOnlyPaths(block: string | undefined): string[] {

@@ -7,7 +7,7 @@ import { test } from "node:test";
 
 const toolsDir = join(import.meta.dirname, "..");
 
-// tools/full-sweep run from a temp copy of tools/, so whatever it selects runs and writes inside the copy.
+// tools/full-sweep run from a temp copy of tools/, so the real test-results/ is never written or cleared.
 function fullSweepCopy(args: string[]) {
   const repoDir = mkdtempSync(join(tmpdir(), "full-sweep-"));
   cpSync(toolsDir, join(repoDir, "tools"), { recursive: true });

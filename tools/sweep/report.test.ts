@@ -100,7 +100,7 @@ test("--expect with an unknown id prints one error line naming the switch, the i
   assert.equal(summary, "");
 });
 
-test("run locally, with no step summary set, the report prints the table and exits with the verdict", () => {
+test("run locally, with no step summary set, the report prints the table and exits 0 on a green run", () => {
   const results = jobResults({ "sweep-fast": [{ id: "app", label: "app", verdict: "green" }] });
 
   for (const summary of [{}, { GITHUB_STEP_SUMMARY: "" }]) {
