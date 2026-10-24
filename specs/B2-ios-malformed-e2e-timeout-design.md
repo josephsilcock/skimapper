@@ -364,4 +364,4 @@ timeout run in a background isolate.
 
 ## Resume
 
-Slices 1–9 are closed. The fix is in: the endpoint fetch runs off the UI isolate. Next is slice 10, the two proving sweeps (`gh workflow run sweep.yml --ref bugfix/b2-ios-malformed-e2e-timeout`, run twice in a row). Each must be a first attempt with e2e-ios green and 5 tests, and the first message response under 1 s on both the endpoint side (the wrangler line for the app's request) and the app side (the outcome line's ms). Record them in `test-results/tdd/B2/slice-10-proving.md`, then hand off with the demo-pack note (backend-only for screens).
+Slices 1–9 are closed. Slice 10 is the proving sweeps 40034308726 and 40034325935: both first attempts, both e2e-ios green with 5 tests, so AC3 is met. **AC4 is not met.** On first launches the fetching isolate and the endpoint also stall: app-side 4.4–8.0 s, endpoint-side 0.6–2.4 s. The cold Metal compile starves the whole CI VM. Work is stopped for a ruling on AC4 (`test-results/tdd/B2/slice-10-proving.md`).
