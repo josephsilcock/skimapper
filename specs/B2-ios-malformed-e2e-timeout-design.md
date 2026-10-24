@@ -278,7 +278,7 @@ No path needs a real database.
 - [x] 7. *A developer reads the split of the stalled span from the third CI sweep in the TDD log, and work stops at the targeted-fix gate.*
 - [x] 8. *A developer profiles a local debug launch and reads, in the TDD log, what freezes the app's UI isolate for ~800 ms after launch, and whether it is start-up work we control.*
 - [x] 9. *A developer runs `tools/e2e ios endpoint_malformed` and sees the endpoint line report "service response not understood" even when the app's UI isolate is frozen past the 3 s timeout, with the fetch timed in a background isolate.*
-- [ ] 10. *A developer dispatches the full sweep twice and sees the `e2e-ios` layer green both times on first attempts, with 5 tests and the first message response under 1 s endpoint-side and app-side.* (next)
+- [x] 10. *A developer dispatches the full sweep twice and sees the `e2e-ios` layer green both times on first attempts, with 5 tests and the first message response under 1 s endpoint-side and app-side.* (AC4 amended at the gate)
 
 ## Fix addendum (gated)
 
@@ -348,6 +348,19 @@ native code can't change, and Flutter no longer allows `FLTEnableMergedPlatformU
 Deferring the map would reach past the endpoint line. So option 1 proceeds: the endpoint fetch and its
 timeout run in a background isolate.
 
+**AC4 ruling (after the proving sweeps):** the fix is accepted and AC3 is signed off. Two
+consecutive first-attempt sweeps were green on e2e-ios with 5 tests (40034308726, 40034325935).
+
+AC4 is amended to: *the outcome line reflects the network, not UI-isolate jank, as the slice 9 test
+proves, with latencies recorded.*
+
+The CI first-launch figures are logged as a known environment property. On the first launch after
+each install, MapLibre's cold Metal shader compile starves the runner. In those windows the app side
+measured 4.4–8.0 s and the endpoint side 0.6–2.4 s. Later launches measured 0.25–0.73 s on the app
+side and 12–182 ms on the endpoint side.
+
+The demo pack has no screens: the only user-visible change is that the endpoint line is now correct.
+
 ## Decisions taken during implement
 
 - **The connection trace does its own address lookup** (`InternetAddress.lookup`, then `Socket.startConnect` to the first address) so lookup and TCP connect are timed separately; Dart's `startConnect(host)` does the same lookup internally. Debug builds only — release keeps `http.Client()`.
@@ -364,4 +377,9 @@ timeout run in a background isolate.
 
 ## Resume
 
-Slices 1–9 are closed. Slice 10 is the proving sweeps 40034308726 and 40034325935: both first attempts, both e2e-ios green with 5 tests, so AC3 is met. **AC4 is not met.** On first launches the fetching isolate and the endpoint also stall: app-side 4.4–8.0 s, endpoint-side 0.6–2.4 s. The cold Metal compile starves the whole CI VM. Work is stopped for a ruling on AC4 (`test-results/tdd/B2/slice-10-proving.md`).
+The implement stage is complete (10 slices). AC3 is met and AC4 is amended per the ruling above. Next is `/finish-feature specs/B2-ios-malformed-e2e-timeout-design.md`. At finish:
+- update D7 (the run record and `ENDPOINT_PID` constraint, the message-route readiness probe, and the count anchor);
+- update D8 (the fetch log, and the fetch running off the UI isolate);
+- add a one-line cause to DECISIONS: MapLibre's main-thread Metal compile with the merged UI thread;
+- amend AC4 in the spec;
+- add a backlog note: `endpoint_stopped` passed by coincidence before the fix, and CI first-launch headroom is thin.
