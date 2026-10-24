@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F22`, `B5`, `C8`.
+**Next free IDs**: `F22`, `B5`, `C9`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -64,5 +64,6 @@ below that gets picked up out of turn should say why in its spec.
 - **C1** The service behind the app is protected from abuse: heavy or automated use is limited, AI scrapers are refused, and resort data can only be reached through the service.
 - **C2** The service can tell requests from genuine installs of the app apart from others, so it can refuse anything that isn't the real app.
 - **C3** Failures in the service and its daily refresh are noticed and reported, with enough detail to find and fix the cause quickly. Depends on F20.
-- **C6** Skeleton hardening: the skeleton message line shows the text "null" when a valid envelope has no `message` field, and a missing `ENDPOINT_URL`/`ENDPOINT_TIMEOUT_MS` define (or a `FutureBuilder` error) shows "endpoint: loading" or a misleading "could not be reached" instead of a clear failure. Also extract a shared TypeScript envelope builder (currently duplicated in `endpoint/scripts/seed-local.ts` and `endpoint/test/integration/artefacts.test.ts`) when the second document kind lands.
+- **C6** Skeleton hardening: a missing `ENDPOINT_URL`/`ENDPOINT_TIMEOUT_MS` define shows a loading or misleading "could not be reached" state instead of a clear failure.
 - **C7** CI tooling nits from C5's review: `listSwitch` (`tools/sweep/layers.ts`) throws a bare TypeError when `--layers` is last; `report.ts` relies on `GITHUB_STEP_SUMMARY!`, so a local run throws after printing the table; `toolchain.test.ts` covers only the failing cases of `require_given_jdk` (add a passing case); nothing checks that the `linux`/`android`/`ios` jobs' `--layers` together cover `sweepLayers`.
+- **C8** The service is deployed for real: a Cloudflare account, the private R2 bucket and a deploy workflow, so the app works on a phone outside development, with D1's free-tier limits checked against the first deploy.

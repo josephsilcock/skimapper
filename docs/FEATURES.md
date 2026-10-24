@@ -8,6 +8,10 @@ area docs at [definitions/](definitions/README.md)** (linked per section below).
 - Bugs and suggestions: [BACKLOG.md](BACKLOG.md)
 - In-flight specs: [../specs/](../specs/README.md) (transient — merged into area docs at finish)
 
+## Features
+
+- **F1** Skiers browse the supported ski areas by name and country, refresh by pulling down, and keep the list without a signal — `in progress`
+
 ## Code
 
 - **C4** Initial technical decisions and walking skeleton — `done`
