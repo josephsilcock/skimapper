@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F22`, `B4`, `C8`.
+**Next free IDs**: `F22`, `B5`, `C8`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -55,7 +55,7 @@ below that gets picked up out of turn should say why in its spec.
 
 ## Bugs
 
-- **B2** On CI's iOS simulator, `patrol_test/endpoint_malformed/endpoint_not_understood_test.dart` fails with a 6 s `WaitUntilVisibleTimeoutException` (the "service response not understood" line never appears in time); passes locally and was green in C5's slice 4. Found by C5 (run 39160525305); it keeps the iOS E2E red on CI (B1's teardown failure is fixed). Check whether it is slow-simulator timing or a real fault; don't just lengthen the timeout without knowing which.
+- **B4** `endpoint_stopped` passed on CI by coincidence before B2's fix: its "unreachable" line appeared because the first fetch hit the same first-launch UI freeze, not because a closed port was refused. Its pass is now real, but CI's first launch still has thin headroom (app-side fetch measured 4.4-8.0 s, endpoint-side 0.6-2.4 s, on the first launch after each install); watch for a recurrence.
 - **B3** On CI, the Android E2E runs only its first group. After `endpoint_serving`, `tools/e2e` aborts with `something is already listening on http://127.0.0.1:8787` before `endpoint_stopped`, so `endpoint_stopped` and `endpoint_malformed` never run. Likely cause: `stop_endpoint` in `tools/lib/endpoint.sh` kills only the endpoint process's direct children (`pkill -P`), so a wrangler/workerd grandchild keeps the port on CI's Linux runner. Locally all three groups run. Found by B1's branch sweep (run 40007409887). It only showed up there because, before B1 was fixed, the first group always failed first.
 
 ---

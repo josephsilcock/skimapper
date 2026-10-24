@@ -1,7 +1,11 @@
 # Runs the local endpoint (wrangler dev over Miniflare R2). Source, don't execute.
+source "$TOOLS_DIR/lib/run-record.sh"
 
 ENDPOINT_DIR="$REPO_DIR/endpoint"
 ENDPOINT_URL="http://127.0.0.1:$ENDPOINT_PORT"
+# The route the app reads first (the Worker's documentRoutes; the app's SkeletonMessageLine). Start-up
+# waits until it answers, with any status and any body, so its cold first answer isn't the app's.
+ENDPOINT_READY_PATH="/v1/skeleton/message"
 export WRANGLER_SEND_METRICS=false
 ENDPOINT_PID=""
 
@@ -17,18 +21,20 @@ seed_endpoint_malformed() {
     || fail "could not seed the local endpoint"
 }
 
+# The endpoint's output goes to stdout, stamped. Process substitution rather than a pipe, so
+# ENDPOINT_PID stays the endpoint itself and stop_endpoint stops the right process.
 start_endpoint() {
-  local persist_to="$1" log="$2"
-  mkdir -p "$(dirname "$log")"
+  local persist_to="$1"
   (cd "$ENDPOINT_DIR" && exec npx wrangler dev --ip 127.0.0.1 --port "$ENDPOINT_PORT" --persist-to "$persist_to") \
-    >"$log" 2>&1 &
+    > >(stamp_lines endpoint) 2>&1 &
   ENDPOINT_PID=$!
   for _ in $(seq 1 60); do
-    curl -s -o /dev/null "$ENDPOINT_URL/" && return
-    kill -0 "$ENDPOINT_PID" 2>/dev/null || fail "local endpoint exited during start-up (see $log)"
+    curl -s -o /dev/null "$ENDPOINT_URL$ENDPOINT_READY_PATH" \
+      && { record_milestone "endpoint answers on $ENDPOINT_URL$ENDPOINT_READY_PATH"; return; }
+    kill -0 "$ENDPOINT_PID" 2>/dev/null || fail "local endpoint exited during start-up (see its output)"
     sleep 0.5
   done
-  fail "local endpoint did not start on $ENDPOINT_URL (see $log)"
+  fail "local endpoint did not start on $ENDPOINT_URL (see its output)"
 }
 
 stop_endpoint() {
