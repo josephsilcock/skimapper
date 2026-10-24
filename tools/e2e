@@ -15,7 +15,16 @@ groups=("$@")
 device="$(boot_device "$platform")"
 forward_endpoint_port "$platform" "$device"
 work_dir="$(mktemp -d)"
-trap 'stop_device_log; stop_endpoint; rm -rf "$work_dir"' EXIT
+# The endpoint stops first, while its persist dir exists. A stop that fails exits, so it runs in a
+# subshell: the work dir is still removed, and the failure is still the exit status.
+cleanup() {
+  local stop_status=0
+  stop_device_log
+  (stop_endpoint) || stop_status=$?
+  rm -rf "$work_dir"
+  return "$stop_status"
+}
+trap cleanup EXIT
 
 prepare_endpoint() {
   local group="$1"

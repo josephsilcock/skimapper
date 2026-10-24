@@ -21,13 +21,23 @@ seed_endpoint_malformed() {
     || fail "could not seed the local endpoint"
 }
 
-# The endpoint's output goes to stdout, stamped. Process substitution rather than a pipe, so
-# ENDPOINT_PID stays the endpoint itself and stop_endpoint stops the right process.
 start_endpoint() {
   local persist_to="$1"
-  (cd "$ENDPOINT_DIR" && exec npx wrangler dev --ip 127.0.0.1 --port "$ENDPOINT_PORT" --persist-to "$persist_to") \
-    > >(stamp_lines endpoint) 2>&1 &
+  launch_endpoint "$persist_to"
+  await_endpoint_answers
+}
+
+# The endpoint's output goes to stdout, stamped. The stamper is opened here, before the fork, so it
+# stays outside the endpoint's process tree: stop_endpoint leaves it running to record the last lines.
+launch_endpoint() {
+  local persist_to="$1"
+  exec 3> >(stamp_lines endpoint)
+  (run_endpoint_server "$persist_to") >&3 2>&1 3>&- &
   ENDPOINT_PID=$!
+  exec 3>&-
+}
+
+await_endpoint_answers() {
   for _ in $(seq 1 60); do
     curl -s -o /dev/null "$ENDPOINT_URL$ENDPOINT_READY_PATH" \
       && { record_milestone "endpoint answers on $ENDPOINT_URL$ENDPOINT_READY_PATH"; return; }
@@ -37,12 +47,74 @@ start_endpoint() {
   fail "local endpoint did not start on $ENDPOINT_URL (see its output)"
 }
 
+run_endpoint_server() {
+  local persist_to="$1"
+  cd "$ENDPOINT_DIR" && exec npx wrangler dev --ip 127.0.0.1 --port "$ENDPOINT_PORT" --persist-to "$persist_to"
+}
+
 stop_endpoint() {
   [[ -n "$ENDPOINT_PID" ]] || return 0
-  pkill -P "$ENDPOINT_PID" 2>/dev/null || true
-  kill "$ENDPOINT_PID" 2>/dev/null || true
-  wait "$ENDPOINT_PID" 2>/dev/null || true
+  local endpoint="$ENDPOINT_PID" tree
+  # Cleared before anything can fail, so the stop an EXIT trap repeats after a failed one does nothing.
   ENDPOINT_PID=""
+  # shellcheck disable=SC2207
+  tree=($(process_tree "$endpoint"))
+  kill "${tree[@]}" 2>/dev/null || true
+  record_milestone "stopping the endpoint: signalled PIDs ${tree[*]}"
+  await_endpoint_gone "${tree[@]}"
+  wait "$endpoint" 2>/dev/null || true
+}
+
+# The process and all its descendants, taken in one pass before any of them is signalled: a parent
+# that dies first would otherwise orphan its children out of reach.
+process_tree() {
+  local pid="$1" child
+  echo "$pid"
+  for child in $(pgrep -P "$pid" || true); do
+    process_tree "$child"
+  done
+}
+
+await_endpoint_gone() {
+  local deadline holders running
+  deadline=$(( $(now_ms) + ENDPOINT_STOP_TIMEOUT_MS ))
+  while true; do
+    holders="$(port_holders)"
+    running="$(running_pids "$@")"
+    [[ -n "$running" || -n "$holders" ]] || return 0
+    (( $(now_ms) < deadline )) || break
+    sleep 0.1
+  done
+  record_port_holders
+  fail "the local endpoint did not stop within $ENDPOINT_STOP_TIMEOUT_MS ms; still running: ${running:-nothing}; port $ENDPOINT_PORT is held by $(named_holders "$holders")"
+}
+
+# bash 3.2 (macOS) has no millisecond clock of its own.
+now_ms() {
+  node -e 'console.log(Date.now())'
+}
+
+# "<command> <pid>" per port holder, comma-separated; lsof's header row dropped.
+named_holders() {
+  local named
+  named="$(awk 'NR > 1 { print $1, $2 }' <<<"$1" | paste -sd, -)"
+  echo "${named:-nothing}"
+}
+
+# Those of the given PIDs still running, space-separated. A zombie has exited; it only awaits its
+# parent's wait.
+running_pids() {
+  local pid stat
+  for pid in "$@"; do
+    stat="$(ps -o stat= -p "$pid" || true)"
+    [[ -z "$stat" || "$stat" == Z* ]] || echo "$pid"
+  done | paste -sd' ' -
+}
+
+# The processes listening on the endpoint port; none means the port is free.
+port_holders() {
+  command -v lsof >/dev/null || fail "lsof is not installed; it shows who holds the endpoint port"
+  lsof -nP -iTCP:"$ENDPOINT_PORT" -sTCP:LISTEN || true
 }
 
 ensure_port_free() {

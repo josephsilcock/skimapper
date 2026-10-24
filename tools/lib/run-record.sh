@@ -14,9 +14,8 @@ record_milestone() {
 
 # Which processes hold the endpoint port; none is a valid answer.
 record_port_holders() {
-  command -v lsof >/dev/null || fail "lsof is not installed; the E2E run record needs it for port snapshots"
   local holders
-  holders="$(lsof -nP -iTCP:"$ENDPOINT_PORT" || true)"
+  holders="$(port_holders)"
   echo "${holders:-nothing holds port $ENDPOINT_PORT}" | stamp_lines port
 }
 
