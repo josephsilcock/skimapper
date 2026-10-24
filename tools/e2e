@@ -41,25 +41,28 @@ run_group() {
   record_port_holders
   ensure_port_free
   prepare_endpoint "$group"
-  run_patrol "$group" || status=$?
+  run_patrol "$group"
+  status=$patrol_status
   stop_endpoint
   record_port_holders
   return "$status"
 }
 
+# Leaves Patrol's exit status in patrol_status and returns 0, so a failing capture step
+# still fails the group (a `|| status=$?` at the call would switch errexit off inside).
 run_patrol() {
-  local group="$1" targets=() test_file status=0
+  local group="$1" targets=() test_file
   for test_file in "$APP_DIR/patrol_test/$group"/*_test.dart; do
     targets+=(--target "${test_file#"$APP_DIR"/}")
   done
   record_milestone "patrol start"
   start_device_log "$platform" "$device"
+  patrol_status=0
   (cd "$APP_DIR" && "$PATROL" test --device "$device" --show-flutter-logs "${targets[@]}" \
     $(endpoint_dart_defines) \
-    --dart-define "E2E_SEEDED_MESSAGE=${seeded_message:-}") || status=$?
+    --dart-define "E2E_SEEDED_MESSAGE=${seeded_message:-}") || patrol_status=$?
   stop_device_log
-  record_milestone "patrol end (exit $status)"
-  return "$status"
+  record_milestone "patrol end (exit $patrol_status)"
 }
 
 for group in "${groups[@]}"; do

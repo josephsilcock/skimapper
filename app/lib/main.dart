@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'endpoint/event_loop_lag.dart';
+import 'diagnostics/event_loop_lag.dart';
 import 'endpoint/run_record.dart';
 import 'placeholder_screen.dart';
 

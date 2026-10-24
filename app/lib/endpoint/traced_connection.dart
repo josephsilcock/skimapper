@@ -15,6 +15,7 @@ Future<ConnectionTask<Socket>> _tracedConnect(String host, int port) async {
   recordRun('connect start $target');
   final addresses = await InternetAddress.lookup(host);
   recordRun('looked up $host in ${elapsed.elapsedMilliseconds} ms');
+  // First address only: the dev endpoint is a literal loopback IP, so there is no fallback to try.
   final task = await Socket.startConnect(addresses.first, port);
   task.socket.then(
     (_) => recordRun('connected $target in ${elapsed.elapsedMilliseconds} ms'),

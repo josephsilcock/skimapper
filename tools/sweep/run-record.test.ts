@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -22,10 +23,12 @@ const e2eLayerPrinting = (output: string, exitCode: number): Layer => ({
 
 test("captured lines that look like a test count or an error neither count nor become the layer's reason", async () => {
   const patrol = "✅ Successful: 2\n❌ Failed: 1\nerror: patrol reported failures\n";
-  const lookalikes = captured("endpoint", "endpoint_malformed", "✅ Successful: 7\n❌ Failed: 3\nerror: boom\n");
+  const lookalikes =
+    captured("endpoint", "endpoint_malformed", "✅ Successful: 7\n❌ Failed: 3\nerror: boom\n") +
+    "flutter: ✅ Successful: 5\nflutter: ❌ Failed: 4\n";
 
   const result = await runSweep({
-    resultsDir: join(tmpdir(), `run-record-${process.pid}`),
+    resultsDir: mkdtempSync(join(tmpdir(), "run-record-")),
     layers: [e2eLayerPrinting(patrol + lookalikes, 1)],
   });
 

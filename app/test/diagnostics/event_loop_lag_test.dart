@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:skimapper/endpoint/event_loop_lag.dart';
+import 'package:skimapper/diagnostics/event_loop_lag.dart';
 
+import '../support/block_for.dart';
 import '../support/run_record_capture.dart';
 
 void main() {
@@ -10,7 +11,7 @@ void main() {
       final logged = await runRecordDuring(() async {
         final watch = watchEventLoopLag(over: const Duration(seconds: 2));
         await Future<void>.delayed(const Duration(milliseconds: 150));
-        _blockFor(const Duration(milliseconds: 600));
+        blockFor(const Duration(milliseconds: 600));
         await Future<void>.delayed(const Duration(milliseconds: 300));
         watch.cancel();
       });
@@ -21,12 +22,7 @@ void main() {
           )
           .nonNulls
           .map((match) => int.parse(match.group(1)!));
-      expect(lateness, [greaterThanOrEqualTo(400)]);
+      expect(lateness, contains(greaterThanOrEqualTo(400)));
     },
   );
-}
-
-void _blockFor(Duration duration) {
-  final blocked = Stopwatch()..start();
-  while (blocked.elapsed < duration) {}
 }

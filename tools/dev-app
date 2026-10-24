@@ -12,7 +12,8 @@ require_platform "$platform"
 dev_state="$ENDPOINT_DIR/.wrangler/dev-state"
 ensure_port_free
 seed_endpoint_message "$dev_state" "Hello from the local SkiMapper endpoint"
-start_endpoint "$dev_state" >"$dev_state/endpoint.log"
+start_endpoint "$dev_state" >"$dev_state/endpoint.log" \
+  || { echo "endpoint output: $dev_state/endpoint.log" >&2; exit 1; }
 trap stop_endpoint EXIT
 
 device="$(boot_device "$platform")"

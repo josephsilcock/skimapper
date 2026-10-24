@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:skimapper/endpoint/endpoint_client.dart';
 
+import '../support/block_for.dart';
 import '../support/run_record_capture.dart';
 
 void main() {
@@ -104,13 +105,21 @@ void main() {
       newHttpClient: http.Client.new,
     );
 
-    final outcome = client.fetchDocument(
-      '/v1/skeleton/message',
-      kind: 'skeleton-message',
-    );
-    _blockFor(const Duration(milliseconds: 1500));
+    late final Future<EndpointOutcome> outcome;
+    final logged = await runRecordDuring(() async {
+      outcome = client.fetchDocument(
+        '/v1/skeleton/message',
+        kind: 'skeleton-message',
+      );
+      blockFor(const Duration(milliseconds: 1500));
+      await outcome;
+    });
 
     expect(await outcome, isA<NotUnderstood>());
+    final loggedMs = int.parse(
+      RegExp(r'in (\d+) ms').firstMatch(logged.last)!.group(1)!,
+    );
+    expect(loggedMs, lessThan(500), reason: 'the figure times the network, not the block');
   });
 
   group('fetch log', () {
@@ -210,7 +219,8 @@ const _messageEnvelope = {
 /// while this one is blocked.
 Future<int> _serveFromAnotherIsolate(String body) async {
   final ports = ReceivePort();
-  await Isolate.spawn(_serve, (ports.sendPort, body));
+  final server = await Isolate.spawn(_serve, (ports.sendPort, body));
+  addTearDown(server.kill);
   return await ports.first as int;
 }
 
@@ -222,9 +232,4 @@ Future<void> _serve((SendPort, String) setup) async {
     request.response.write(body);
     await request.response.close();
   }
-}
-
-void _blockFor(Duration duration) {
-  final blocked = Stopwatch()..start();
-  while (blocked.elapsed < duration) {}
 }

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'run_record.dart';
+import '../endpoint/run_record.dart';
 
 const _tick = Duration(milliseconds: 100);
 const _worthLogging = Duration(milliseconds: 250);
