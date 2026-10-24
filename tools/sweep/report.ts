@@ -4,13 +4,13 @@
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
-import { listSwitch, selectLayers, sweepLayers } from "./layers.ts";
+import { layersFromArgs, sweepLayers } from "./layers.ts";
 import { runVerdict, type LayerVerdict } from "./verdict.ts";
 
 const repoDir = join(import.meta.dirname, "..", "..");
 const args = process.argv.slice(2);
 
-const expected = selectLayers(sweepLayers(repoDir), listSwitch(args, "--expect"));
+const expected = layersFromArgs(sweepLayers(repoDir), args, "--expect");
 const verdicts = readResults(args.at(-1)!);
 const run = runVerdict(expected, verdicts);
 const table = summaryTable(run.rows);
