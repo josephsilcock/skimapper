@@ -38,11 +38,13 @@ class ResortListView extends ConsumerWidget {
           ),
           ResortListState(firstLoad: FirstLoad.couldNotLoad) =>
             _FullAreaMessage(
+              icon: Icons.cloud_off_outlined,
               heading: "Couldn't load resorts",
               detail: 'Check your connection, then try again or pull down.',
               onRetry: notifier.refresh,
             ),
           ResortListState(firstLoad: FirstLoad.updateApp) => _FullAreaMessage(
+            icon: Icons.system_update_outlined,
             heading: 'Update SkiMapper to see resorts',
             detail: "This version can't read the latest resort list.",
             onRetry: notifier.refresh,
@@ -57,13 +59,31 @@ class _UpdateBanner extends StatelessWidget {
   const _UpdateBanner();
 
   @override
-  Widget build(BuildContext context) => const MaterialBanner(
-    content: Text(
-      'A newer resort list needs an app update. Showing your saved list.',
-    ),
-    // MaterialBanner requires an action; this one deliberately offers none.
-    actions: [SizedBox.shrink()],
-  );
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Card(
+        color: scheme.primaryContainer,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline, color: scheme.onPrimaryContainer),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'A newer resort list needs an app update. Showing your saved list.',
+                  style: TextStyle(color: scheme.onPrimaryContainer),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _Resorts extends StatelessWidget {
@@ -72,26 +92,34 @@ class _Resorts extends StatelessWidget {
   final Catalogue catalogue;
 
   @override
-  Widget build(BuildContext context) => ListView(
-    physics: const AlwaysScrollableScrollPhysics(),
-    children: [
-      for (final resort in catalogue.byName)
-        ListTile(
-          title: Text(resort.name),
-          subtitle: Text(resort.countriesLabel),
+  Widget build(BuildContext context) {
+    final resorts = catalogue.byName;
+    return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
+      // Room above and below for the cards' shadows.
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      itemCount: resorts.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (_, i) => Card(
+        child: ListTile(
+          title: Text(resorts[i].name),
+          subtitle: Text(resorts[i].countriesLabel),
         ),
-    ],
-  );
+      ),
+    );
+  }
 }
 
 /// A message filling the list area, still pullable.
 class _FullAreaMessage extends StatelessWidget {
   const _FullAreaMessage({
+    required this.icon,
     required this.heading,
     required this.detail,
     required this.onRetry,
   });
 
+  final IconData icon;
   final String heading;
   final String detail;
   final VoidCallback onRetry;
@@ -101,7 +129,9 @@ class _FullAreaMessage extends StatelessWidget {
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(heading, style: Theme.of(context).textTheme.titleMedium),
+        Icon(icon, size: 48, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(height: 12),
+        Text(heading, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
         Text(detail, textAlign: TextAlign.center),
         const SizedBox(height: 16),

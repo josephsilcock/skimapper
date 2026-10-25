@@ -407,10 +407,25 @@ There is no authorisation in this feature.
 - **`catalogue_unknown_version` seeds the catalogue at schema 999** (`seed-local.ts --unknown-version`), replacing the retired `endpoint_malformed`.
 - **The launch fetch starts first, then the saved copy is read and shown, then the fetch's answer is applied** — the sequencing that keeps a fast failure from beating the saved list (decision 4), without a second mechanism.
 
+- **F1 sets the app's base colour and visual language (via /ux-iterate after the demo-pack gate); F21 still owns the full light/dark theme and the contrast standards.** The user rejected the default Material look (purple buttons, colourless list, a banner and rows that didn't stand out from the background) and chose "Glacier teal" over an alpine-blue and a pine-green direction. The ruling and its detail are under *Visual language* below, for `/finish-feature` to carry into the area doc and DECISIONS.md.
+- **The credits line moved into the scaffold's bottom bar** (`Scaffold.bottomNavigationBar`), so a floating snackbar sits above it rather than over it. The rejected alternative was a fixed bottom margin on the snackbar, a hard-coded offset that would break when F5 replaces the fixture map.
+- **The update banner is a `primaryContainer` card, not a `MaterialBanner`**, and its tests find it by its text rather than its widget type.
+
+### Visual language
+
+These choices set the app's look. Every screen inherits them.
+- **One theme, one home:** `app/lib/theme/app_theme.dart` (`appTheme()`), passed to `MaterialApp`. Screens style themselves from the theme's scheme and never use literal colours.
+- **Colour:** `ColorScheme.fromSeed(seedColor: #00687A)`, "glacier teal". It is light-only for now: F21 adds the dark scheme and checks contrast.
+- **Ground and surfaces:** the screen background is the scheme's `surfaceContainer`, a light teal-grey. Content items are white cards (`surfaceContainerLowest`) with elevation 1, corner radius 12 and an 8 px gap, so they lift off the ground. A card means a content item: messages about state don't get one.
+- **Accent:** the screen title, primary buttons and progress indicators are in `primary`.
+- **Notices over content** are a `primaryContainer` card (text and icon in `onPrimaryContainer`) with a leading info icon. They are tinted with the theme colour, not amber, so they read as information, not as a warning.
+- **Full-area state messages** (e.g. couldn't load, update the app) sit on the ground without a card. A 48 px `primary` icon and a `titleLarge` heading make them stand out, with the action as a `FilledButton` below.
+- **Snackbars float** with a 12 px inset (set in the theme), above anything in the bottom bar.
+
 ## Resume
 
 - **Closed:** slices 1-6 — every spec scenario is built and tested. Remaining in this stage: the refactor confirmation across the change, the demo pack (dev app via `run`, 480 px, one shot per mainline AC flow, `test-results/demo/F1/`, published as an Artifact from `test-results/demo/F1/pack.html`), then the visual-acceptance gate.
 - **E2E groups:** `catalogue_serving`, `catalogue_unknown_version`, `endpoint_scripted`.
 - **Docs for /finish-feature:** QUICK_START names `endpoint_serving` in its cheatsheet; D7 (groups, watcher, clearPackageData, ready path), D8, D9, D5; PIPELINE groups wording; ARCHITECTURE catalogue line; new `docs/definitions/resorts.md`.
 - **Seams as built:** `openDocument<T>`; `fetchCatalogue()` / `openCatalogue(body)`; `CatalogueStore`; `ResortList` (`refresh()`; `_launch`; apply step `_accept` + `_notUnderstood`; `_save` chain; `_write` reports); `ResortListState(shown, firstLoad, failedRefreshes, updateNeeded)`; `ResortListView` (banner + `RefreshIndicator` over `_Resorts` / `_FullArea` / `_FullAreaMessage`).
-- **E2E runs here use `IOS_SIMULATOR="iPhone Air" ENDPOINT_PORT=8797`** (another worktree session shares the defaults).
+- **E2E runs here use `IOS_SIMULATOR="iPhone 17e" ENDPOINT_PORT=8791`** while the dev app holds "iPhone Air" on 8790 (another worktree session uses the defaults and 8797).

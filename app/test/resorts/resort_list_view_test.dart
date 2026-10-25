@@ -271,7 +271,7 @@ void main() {
       await tester.pumpWidget(
         _resortList(endpoint: _answering(_unknownVersion), store: store),
       );
-      await pumpUntilFound(tester, find.byType(MaterialBanner));
+      await pumpUntilFound(tester, find.text(_updateBanner));
 
       expect(find.text(_updateBanner), findsOneWidget);
       expect(find.text('Paradiski'), findsOneWidget);
@@ -288,13 +288,13 @@ void main() {
     await tester.pumpWidget(
       _resortList(endpoint: _answeringFrom(served.path), store: store),
     );
-    await pumpUntilFound(tester, find.byType(MaterialBanner));
+    await pumpUntilFound(tester, find.text(_updateBanner));
 
     served.writeAsStringSync(jsonEncode(_catalogue));
     await _pullDown(tester);
     await _letTimePass(tester, const Duration(milliseconds: 500));
 
-    expect(find.byType(MaterialBanner), findsNothing);
+    expect(find.text(_updateBanner), findsNothing);
     expect(find.text('Paradiski'), findsOneWidget);
   });
 
@@ -308,13 +308,13 @@ void main() {
       await tester.pumpWidget(
         _resortList(endpoint: _answeringFrom(served.path), store: store),
       );
-      await pumpUntilFound(tester, find.byType(MaterialBanner));
+      await pumpUntilFound(tester, find.text(_updateBanner));
 
       served.writeAsStringSync('service unavailable');
       await _pullDown(tester);
       await pumpUntilFound(tester, find.text("Couldn't refresh resorts"));
 
-      expect(find.byType(MaterialBanner), findsOneWidget);
+      expect(find.text(_updateBanner), findsOneWidget);
       expect(find.text("Couldn't refresh resorts"), findsOneWidget);
     },
   );

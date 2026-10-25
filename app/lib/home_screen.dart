@@ -25,13 +25,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'SkiMapper',
-              style: Theme.of(context).textTheme.headlineMedium,
+              style: Theme.of(context).textTheme.headlineMedium
+                  ?.copyWith(color: Theme.of(context).colorScheme.primary),
             ),
             const SizedBox(height: 8),
             const Expanded(child: ResortListView()),
@@ -42,10 +43,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 8),
             Text(_mapLine),
-            const SizedBox(height: 8),
-            const AttributionLine(),
           ],
         ),
+      ),
+    ),
+    // A floating snackbar sits above the bottom bar, so the credits stay visible under it.
+    bottomNavigationBar: const SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: AttributionLine(),
       ),
     ),
   );
