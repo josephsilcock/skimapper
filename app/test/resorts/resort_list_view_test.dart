@@ -210,6 +210,43 @@ void main() {
     );
   }
 
+  testWidgets(
+    'a pull that cannot reach the service keeps the list and says it couldn\'t refresh',
+    (tester) async {
+      await tester.runAsync(() => store.write(jsonEncode(_catalogue)));
+      await tester.pumpWidget(_resortList(endpoint: _refusing, store: store));
+      await pumpUntilFound(tester, find.text('Paradiski'));
+      await _letTimePass(tester, const Duration(milliseconds: 300));
+      expect(find.text("Couldn't refresh resorts"), findsNothing);
+
+      await _pullDown(tester);
+      await pumpUntilFound(tester, find.text("Couldn't refresh resorts"));
+
+      expect(find.text("Couldn't refresh resorts"), findsOneWidget);
+      expect(find.text('Paradiski'), findsOneWidget);
+    },
+  );
+
+  for (final (answer, endpoint) in [
+    ('a server error', _answeringStatus(500)),
+    ('an empty catalogue', _answering(jsonEncode(_catalogueOf([])))),
+  ]) {
+    testWidgets(
+      'a pull answered with $answer keeps the list and says it couldn\'t refresh',
+      (tester) async {
+        await tester.runAsync(() => store.write(jsonEncode(_catalogue)));
+        await tester.pumpWidget(_resortList(endpoint: endpoint, store: store));
+        await pumpUntilFound(tester, find.text('Paradiski'));
+
+        await _pullDown(tester);
+        await pumpUntilFound(tester, find.text("Couldn't refresh resorts"));
+
+        expect(find.text("Couldn't refresh resorts"), findsOneWidget);
+        expect(find.text('Paradiski'), findsOneWidget);
+      },
+    );
+  }
+
   testWidgets('saves the understood catalogue exactly as served', (
     tester,
   ) async {
@@ -322,6 +359,10 @@ Future<http.Response> _serving(http.Request request) async =>
 
 Future<http.Response> _refusing(http.Request request) async =>
     throw http.ClientException('Connection refused');
+
+/// Answers every request with an empty body and [status].
+MockClientHandler _answeringStatus(int status) =>
+    (request) async => http.Response('', status);
 
 /// Answers every request with [body]; captures nothing but it, so it can cross to the fetch isolate.
 MockClientHandler _answering(String body) =>

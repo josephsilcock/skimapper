@@ -15,11 +15,21 @@ enum FirstLoad { loading, couldNotLoad }
 
 /// What the resort list area shows.
 class ResortListState {
-  const ResortListState({this.shown, this.firstLoad = FirstLoad.loading});
+  const ResortListState({
+    this.shown,
+    this.firstLoad = FirstLoad.loading,
+    this.failedRefreshes = 0,
+  });
 
   final Catalogue? shown;
   final FirstLoad firstLoad;
+
+  /// Counts the skier's refreshes that failed over a shown list; each new one is a brief message.
+  final int failedRefreshes;
 }
+
+/// Who asked for a fetch: the app at launch, quietly, or the skier (pull or Retry).
+enum _Trigger { quietLaunch, skier }
 
 typedef _Answer = (int generation, DocumentOutcome<Catalogue> outcome);
 
@@ -37,14 +47,15 @@ class ResortList extends Notifier<ResortListState> {
   Future<void> _saves = Future.value();
 
   /// The skier's pull.
-  Future<void> refresh() async => _accept(await _fetch());
+  Future<void> refresh() async =>
+      _accept(await _fetch(), trigger: _Trigger.skier);
 
   CatalogueStore get _store => ref.read(catalogueStoreProvider);
 
   Future<void> _launch() async {
     final fetched = _fetch();
     _showSaved(await _store.read());
-    await _accept(await fetched);
+    await _accept(await fetched, trigger: _Trigger.quietLaunch);
   }
 
   Future<_Answer> _fetch() async {
@@ -63,18 +74,30 @@ class ResortList extends Notifier<ResortListState> {
     }
   }
 
-  /// An answer older than the newest applied understood one is dropped, whatever it is.
-  Future<void> _accept(_Answer answer) async {
+  /// The apply step: what the skier sees for an answer, given who asked and whether a list is
+  /// shown. An answer older than the newest applied understood one is dropped, whatever it is.
+  Future<void> _accept(_Answer answer, {required _Trigger trigger}) async {
     final (generation, outcome) = answer;
     if (generation < _newestApplied) return;
-    if (outcome case Understood(:final body, :final value)) {
-      _newestApplied = generation;
-      state = ResortListState(shown: value);
-      await _save(generation, body);
-    } else if (state.shown == null) {
-      state = const ResortListState(firstLoad: FirstLoad.couldNotLoad);
+    switch (outcome) {
+      case Understood(:final body, :final value):
+        _newestApplied = generation;
+        state = ResortListState(shown: value);
+        await _save(generation, body);
+      case Incompatible() || Failed():
+        state = _afterFailure(trigger);
     }
   }
+
+  ResortListState _afterFailure(_Trigger trigger) =>
+      switch ((state.shown, trigger)) {
+        (null, _) => const ResortListState(firstLoad: FirstLoad.couldNotLoad),
+        (final shown, _Trigger.skier) => ResortListState(
+          shown: shown,
+          failedRefreshes: state.failedRefreshes + 1,
+        ),
+        (_, _Trigger.quietLaunch) => state,
+      };
 
   /// Saves run one at a time, and a save whose answer is no longer the newest is skipped, so an
   /// earlier save can never land last.

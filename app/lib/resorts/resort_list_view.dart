@@ -13,6 +13,12 @@ class ResortListView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final list = ref.watch(resortListProvider);
     final notifier = ref.read(resortListProvider.notifier);
+    ref.listen(
+      resortListProvider.select((list) => list.failedRefreshes),
+      (_, _) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Couldn't refresh resorts"))),
+    );
     return RefreshIndicator(
       onRefresh: notifier.refresh,
       child: switch (list) {
