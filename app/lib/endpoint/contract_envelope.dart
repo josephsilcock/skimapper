@@ -3,7 +3,7 @@ import 'dart:convert';
 /// Single home for envelope compatibility (C4 design § 3): every JSON document the endpoint
 /// serves is `{kind, schemaVersion, dataVersion, data}`, and the app accepts only the schema
 /// versions it knows for each kind.
-const _acceptedSchemaVersions = {'skeleton-message': 1, 'catalogue': 1};
+const _acceptedSchemaVersions = {'catalogue': 1};
 
 /// What a document turned out to be (D8): the only three answers any fetch or saved copy gives.
 sealed class DocumentOutcome<T> {

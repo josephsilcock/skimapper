@@ -12,15 +12,15 @@ void main() {
 
         final outcome = openDocument(
           body,
-          kind: 'skeleton-message',
-          parse: (data) => data['message'],
+          kind: 'catalogue',
+          parse: (data) => data['resorts'],
         );
 
         expect(
           outcome,
           isA<Understood<Object?>>()
               .having((understood) => understood.body, 'body', body)
-              .having((understood) => understood.value, 'value', 'hello'),
+              .having((understood) => understood.value, 'value', 'all of them'),
         );
       },
     );
@@ -28,13 +28,13 @@ void main() {
     test('an envelope of another kind or an unknown schema version is incompatible', () {
       for (final envelope in [
         _envelope(schemaVersion: 2),
-        _envelope(kind: 'catalogue'),
+        _envelope(kind: 'skeleton-message'),
       ]) {
         expect(
           openDocument(
             jsonEncode(envelope),
-            kind: 'skeleton-message',
-            parse: (data) => data['message'],
+            kind: 'catalogue',
+            parse: (data) => data['resorts'],
           ),
           isA<Incompatible<Object?>>(),
         );
@@ -46,8 +46,8 @@ void main() {
         expect(
           openDocument(
             body,
-            kind: 'skeleton-message',
-            parse: (data) => data['message'],
+            kind: 'catalogue',
+            parse: (data) => data['resorts'],
           ),
           isA<Failed<Object?>>().having(
             (failed) => failed.cause,
@@ -61,7 +61,7 @@ void main() {
     test('data its kind rejects has failed, naming the rejection', () {
       final outcome = openDocument(
         jsonEncode(_envelope()),
-        kind: 'skeleton-message',
+        kind: 'catalogue',
         parse: (data) => throw const FormatException('no resorts'),
       );
 
@@ -78,11 +78,11 @@ void main() {
 }
 
 Map<String, Object?> _envelope({
-  String kind = 'skeleton-message',
+  String kind = 'catalogue',
   int schemaVersion = 1,
 }) => {
   'kind': kind,
   'schemaVersion': schemaVersion,
   'dataVersion': '2026-10-18',
-  'data': {'message': 'hello'},
+  'data': {'resorts': 'all of them'},
 };

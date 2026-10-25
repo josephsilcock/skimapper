@@ -385,7 +385,7 @@ There is no authorisation in this feature.
 - [x] 1. A skier opens the app and sees the three curated ski areas listed by name, each with its countries.
 - [x] 2. With the endpoint stopped and the app relaunched, the skier still sees the same list.
 - [x] 3. The skier pulls the list down after the catalogue gains a ski area, and sees it appear in its sorted place.
-- [ ] 4. A skier opening the app for the first time with no signal sees "couldn't load resorts", and retrying loads the list.
+- [x] 4. A skier opening the app for the first time with no signal sees "couldn't load resorts", and retrying loads the list.
 - [ ] 5. A skier looking at a saved list pulls it down while the service is unreachable, erroring or serving an empty catalogue, and sees the list stay with a brief "couldn't refresh" message.
 - [ ] 6. A skier whose app can't read the served catalogue sees "update the app": full-screen with Retry when nothing is saved, a banner over the saved list otherwise.
 
@@ -399,13 +399,15 @@ There is no authorisation in this feature.
 - **The store saves to `catalogue.json.pending`, flushed, then renames over `catalogue.json`.** Its atomicity test opens a handle on the saved copy before a save and checks the handle still reads the old bytes: a concurrent-read test passed against an in-place write, so it couldn't tell the two apart.
 - **`serve-catalogue <variant>` seeds a fresh directory per restart**, and is a no-op while that variant is already served. The extra area is "Évasion Mont-Blanc" (`EXTRA_AREA` in `tools/e2e`, the one home for its name), chosen to sort between Espace San Bernardo and Les 3 Vallées only once accents are folded.
 - **Saves are serialised through one future chain** in the notifier, and a queued save whose answer is no longer the newest applied is skipped: overlapping saves otherwise collide on the one pending file.
+- **The skeleton message's two E2E groups retired with it; their coverage moved, not lost:** `endpoint_stopped` → `endpoint_scripted`'s first-launch test; `endpoint_malformed` → `catalogue_unknown_version` (slice 6). The envelope and client unit tests now use the catalogue kind as their example.
+- **Every non-list state of the list area sits in one always-scrollable full-area wrapper**, so loading, couldn't load and (slice 6) update the app all stay pullable.
 - **The launch fetch starts first, then the saved copy is read and shown, then the fetch's answer is applied** — the sequencing that keeps a fast failure from beating the saved list (decision 4), without a second mechanism.
 
 ## Resume
 
-- **Closed:** slices 1-3 (list on the home screen, sorted by folded name; saved copy shown at launch and surviving a relaunch offline; pull-to-refresh with generation ordering and newest-only chained saves).
-- **Next:** slice 4 — *A skier opening the app for the first time with no signal sees "couldn't load resorts", and retrying loads the list.* Screen state gains the first-load status (loading / couldn't load), Retry and pull from the full-screen state; the "fast offline failure before the saved read" race; then retire the skeleton message (line, route, seed, `E2E_SEEDED_MESSAGE`, `endpoint_stopped`/`endpoint_malformed` groups), rename `endpoint_serving` → `catalogue_serving`, `ENDPOINT_READY_PATH` → `/v1/catalogue`, dev app seeds the catalogue only, `run-record.test.ts` fixture strings.
-- **Then:** slice 5 (couldn't refresh snackbar: unreachable / server error / empty catalogue over a saved list), slice 6 (update the app: full-screen with Retry; banner over the saved list; `catalogue_unknown_version` group).
-- **Seams as built:** `openDocument<T>`; `fetchCatalogue()` / `openCatalogue(body)`; `CatalogueStore`; `ResortList`: `refresh()`, `_launch` = `_fetch` → `_showSaved` → `_accept((generation, outcome))` → `_save` (chained) → `_write` (reports failures); `Catalogue.byName` over `folded` (`lib/text/fold.dart`); `ResortListView` = `RefreshIndicator` + `ListView`.
-- **Harness vocabulary:** `stop-endpoint`, `serve-catalogue curated|extra-area`; Dart: `requestEndpointStopped`, `requestCuratedCatalogue`, `requestCatalogueWithExtraArea`, `extraArea`, `expectTopToBottom`, `clearSavedCatalogue`, `awaitSavedCatalogue`.
-- **E2E runs here use `IOS_SIMULATOR="iPhone Air" ENDPOINT_PORT=8797`.** A failing iOS run sits ~10 min in xcodebuild after its tests; don't start the next run on the same port until it exits. Widget tests that need fake timers and real IO use `_letTimePass`.
+- **Closed:** slices 1-4 (list sorted by folded name; saved copy as served, shown at launch, surviving a relaunch offline; pull-to-refresh with generation ordering and newest-only chained saves; loading / couldn't load with Retry; skeleton message retired; groups are `catalogue_serving` + `endpoint_scripted`).
+- **Next:** slice 5 — *A skier looking at a saved list pulls it down while the service is unreachable, erroring or serving an empty catalogue, and sees the list stay with a brief "couldn't refresh" message.* Outer test: widget tests (design § 5), no E2E. The apply step needs the trigger (quiet launch vs pull/retry): a failed quiet launch fetch over a list shows nothing.
+- **Then:** slice 6 — update the app (full-screen with Retry when nothing saved; MaterialBanner over a saved list, clearing on a later understood answer, staying on a failed pull), new E2E group `catalogue_unknown_version` (seed variant `--unknown-version` for the catalogue, harness group).
+- **Docs for /finish-feature:** QUICK_START names `endpoint_serving` in its cheatsheet; D7/D9 text; PIPELINE groups line.
+- **Seams as built:** `openDocument<T>`; `fetchCatalogue()` / `openCatalogue(body)`; `CatalogueStore`; `ResortList`: `refresh()`, `_launch` = `_fetch` → `_showSaved` → `_accept((generation, outcome))` (understood → show + `_save`; otherwise `couldNotLoad` if nothing shown); `ResortListState(shown, firstLoad)`; `ResortListView` = `RefreshIndicator` over `_Resorts` / `_FullArea` (spinner) / `_FullAreaMessage` (heading, detail, Retry).
+- **E2E runs here use `IOS_SIMULATOR="iPhone Air" ENDPOINT_PORT=8797`.** A failing iOS run sits ~10 min in xcodebuild after its tests.

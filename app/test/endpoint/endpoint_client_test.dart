@@ -15,11 +15,10 @@ import '../support/run_record_capture.dart';
 void main() {
   test('a served envelope is understood, with its data', () async {
     final server = MockClient((request) async {
-      if (request.url.toString() !=
-          'http://endpoint.test/v1/skeleton/message') {
+      if (request.url.toString() != 'http://endpoint.test/v1/catalogue') {
         return http.Response('not found', 404);
       }
-      return http.Response(jsonEncode(_messageEnvelope), 200);
+      return http.Response(jsonEncode(_envelope), 200);
     });
     final client = EndpointClient(
       baseUrl: Uri.parse('http://endpoint.test'),
@@ -28,9 +27,9 @@ void main() {
     );
 
     final outcome = await client.fetchDocument(
-      '/v1/skeleton/message',
-      kind: 'skeleton-message',
-      parse: _message,
+      '/v1/catalogue',
+      kind: 'catalogue',
+      parse: _resorts,
     );
 
     expect(
@@ -38,7 +37,7 @@ void main() {
       isA<Understood<String>>().having(
         (understood) => understood.value,
         'value',
-        'hello',
+        'all of them',
       ),
     );
   });
@@ -51,9 +50,9 @@ void main() {
     );
 
     final outcome = await client.fetchDocument(
-      '/v1/skeleton/message',
-      kind: 'skeleton-message',
-      parse: _message,
+      '/v1/catalogue',
+      kind: 'catalogue',
+      parse: _resorts,
     );
 
     expect(outcome, isA<Failed<String>>());
@@ -65,9 +64,9 @@ void main() {
     );
 
     final outcome = await client.fetchDocument(
-      '/v1/skeleton/message',
-      kind: 'skeleton-message',
-      parse: _message,
+      '/v1/catalogue',
+      kind: 'catalogue',
+      parse: _resorts,
     );
 
     expect(outcome, isA<Failed<String>>());
@@ -75,15 +74,13 @@ void main() {
 
   test('a non-2xx answer has failed, naming its status', () async {
     final client = _clientFor(
-      MockClient(
-        (request) async => http.Response(jsonEncode(_messageEnvelope), 404),
-      ),
+      MockClient((request) async => http.Response(jsonEncode(_envelope), 404)),
     );
 
     final outcome = await client.fetchDocument(
-      '/v1/skeleton/message',
-      kind: 'skeleton-message',
-      parse: _message,
+      '/v1/catalogue',
+      kind: 'catalogue',
+      parse: _resorts,
     );
 
     expect(
@@ -104,9 +101,9 @@ void main() {
     );
 
     final outcome = await client.fetchDocument(
-      '/v1/skeleton/message',
-      kind: 'skeleton-message',
-      parse: _message,
+      '/v1/catalogue',
+      kind: 'catalogue',
+      parse: _resorts,
     );
 
     expect(outcome, isA<Failed<String>>());
@@ -123,9 +120,9 @@ void main() {
     late final Future<DocumentOutcome<String>> outcome;
     final logged = await runRecordDuring(() async {
       outcome = client.fetchDocument(
-        '/v1/skeleton/message',
-        kind: 'skeleton-message',
-        parse: _message,
+        '/v1/catalogue',
+        kind: 'catalogue',
+        parse: _resorts,
       );
       blockFor(const Duration(milliseconds: 1500));
       await outcome;
@@ -152,28 +149,25 @@ void main() {
 
         expect(
           logged.firstOrNull,
-          matches(appRunRecordLine('fetch start /v1/skeleton/message')),
+          matches(appRunRecordLine('fetch start /v1/catalogue')),
         );
       },
     );
 
-    test(
-      'a fetch logs its outcome after its start, with the elapsed ms',
-      () async {
-        final logged = await _fetchLogAgainst(
-          MockClient((request) async => http.Response('not an envelope', 200)),
-        );
+    test('a fetch logs its outcome after its start, with the elapsed ms', () async {
+      final logged = await _fetchLogAgainst(
+        MockClient((request) async => http.Response('not an envelope', 200)),
+      );
 
-        expect(logged, [
-          anything,
-          matches(
-            appRunRecordLine(
-              r'fetch outcome /v1/skeleton/message failed \(not an envelope\) in \d+ ms',
-            ),
+      expect(logged, [
+        anything,
+        matches(
+          appRunRecordLine(
+            r'fetch outcome /v1/catalogue failed \(not an envelope\) in \d+ ms',
           ),
-        ]);
-      },
-    );
+        ),
+      ]);
+    });
 
     test(
       'a failed connection is logged as failed, naming the failure',
@@ -188,7 +182,7 @@ void main() {
           logged.lastOrNull,
           matches(
             appRunRecordLine(
-              r'fetch outcome /v1/skeleton/message failed \(connection failed: Connection refused\) in \d+ ms',
+              r'fetch outcome /v1/catalogue failed \(connection failed: Connection refused\) in \d+ ms',
             ),
           ),
         );
@@ -206,7 +200,7 @@ void main() {
           logged.lastOrNull,
           matches(
             appRunRecordLine(
-              r'fetch outcome /v1/skeleton/message failed \(timeout after 100 ms\) in \d+ ms',
+              r'fetch outcome /v1/catalogue failed \(timeout after 100 ms\) in \d+ ms',
             ),
           ),
         );
@@ -217,14 +211,12 @@ void main() {
 
 /// The run-record lines one fetch of the message document writes.
 Future<List<String>> _fetchLogAgainst(http.Client server) => runRecordDuring(
-  () => _clientFor(server).fetchDocument(
-    '/v1/skeleton/message',
-    kind: 'skeleton-message',
-    parse: _message,
-  ),
+  () =>
+      _clientFor(server)
+          .fetchDocument('/v1/catalogue', kind: 'catalogue', parse: _resorts),
 );
 
-String _message(Map<String, Object?> data) => '${data['message']}';
+String _resorts(Map<String, Object?> data) => '${data['resorts']}';
 
 EndpointClient _clientFor(http.Client server) => EndpointClient(
   baseUrl: Uri.parse('http://endpoint.test'),
@@ -232,11 +224,11 @@ EndpointClient _clientFor(http.Client server) => EndpointClient(
   newHttpClient: () => server,
 );
 
-const _messageEnvelope = {
-  'kind': 'skeleton-message',
+const _envelope = {
+  'kind': 'catalogue',
   'schemaVersion': 1,
   'dataVersion': '2026-10-18',
-  'data': {'message': 'hello'},
+  'data': {'resorts': 'all of them'},
 };
 
 /// Serves [body] (200) on a loopback port from another isolate, so it answers

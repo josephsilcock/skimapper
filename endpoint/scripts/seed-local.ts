@@ -1,15 +1,13 @@
-// Seeds local (Miniflare) R2 with the curated catalogue and, while it lasts, the skeleton message.
-//   node scripts/seed-local.ts --persist-to <dir>                    (the catalogue only)
-//   node scripts/seed-local.ts --persist-to <dir> --extra-area <name> (the catalogue gains an area)
-//   node scripts/seed-local.ts --persist-to <dir> --message <text>
-//   node scripts/seed-local.ts --persist-to <dir> --unknown-version  (a message this app can't read)
+// Seeds local (Miniflare) R2 with the curated catalogue, or an E2E variant of it.
+//   node scripts/seed-local.ts --persist-to <dir>
+//   node scripts/seed-local.ts --persist-to <dir> --extra-area <name>  (the catalogue gains an area)
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 
-import { catalogueKey, skeletonMessageKey } from "../src/artefact-layout.ts";
+import { catalogueKey } from "../src/artefact-layout.ts";
 import { buildEnvelope } from "../src/envelope.ts";
 
 const endpointDir = join(import.meta.dirname, "..");
@@ -17,16 +15,12 @@ const endpointDir = join(import.meta.dirname, "..");
 const { values } = parseArgs({
   options: {
     "persist-to": { type: "string" },
-    message: { type: "string" },
-    "unknown-version": { type: "boolean" },
     "extra-area": { type: "string" },
   },
 });
 const persistTo = required(values["persist-to"], "--persist-to");
 
 put(catalogueKey, buildEnvelope("catalogue", 1, catalogue()));
-if (values["unknown-version"]) put(skeletonMessageKey, buildEnvelope("skeleton-message", 2, {}));
-if (values.message) put(skeletonMessageKey, buildEnvelope("skeleton-message", 1, { message: values.message }));
 
 // The curated catalogue, or an E2E variant derived from it.
 function catalogue(): { resorts: unknown[] } {

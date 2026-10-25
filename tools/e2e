@@ -11,7 +11,7 @@ require_platform "$platform"
 [[ "$platform" == android ]] && use_android_jdk
 shift
 groups=("$@")
-[[ ${#groups[@]} -gt 0 ]] || groups=(endpoint_serving endpoint_stopped endpoint_malformed endpoint_scripted)
+[[ ${#groups[@]} -gt 0 ]] || groups=(catalogue_serving endpoint_scripted)
 
 device="$(boot_device "$platform")"
 forward_endpoint_port "$platform" "$device"
@@ -31,14 +31,8 @@ trap cleanup EXIT
 prepare_endpoint() {
   local group="$1"
   case "$group" in
-    endpoint_serving)
-      seeded_message="Seeded by E2E at $(date +%H:%M:%S)"
-      seed_endpoint_message "$work_dir/$group" "$seeded_message"
-      start_endpoint "$work_dir/$group"
-      ;;
-    endpoint_stopped) ;;
-    endpoint_malformed)
-      seed_endpoint_malformed "$work_dir/$group"
+    catalogue_serving)
+      seed_endpoint_catalogue "$work_dir/$group"
       start_endpoint "$work_dir/$group"
       ;;
     endpoint_scripted) serve_catalogue curated ;;
@@ -73,7 +67,6 @@ run_patrol() {
   : >"$patrol_output"
   (cd "$APP_DIR" && exec "$PATROL" test --device "$device" --show-flutter-logs "${targets[@]}" \
     $(endpoint_dart_defines) \
-    --dart-define "E2E_SEEDED_MESSAGE=${seeded_message:-}" \
     --dart-define "E2E_EXTRA_AREA=$EXTRA_AREA") >"$patrol_output" 2>&1 &
   PATROL_PID=$!
   follow_patrol_output "$patrol_output"

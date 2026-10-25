@@ -133,6 +133,83 @@ void main() {
     },
   );
 
+  testWidgets(
+    'a fast failed launch fetch never beats a slow saved read to the screen',
+    (tester) async {
+      final directory = Directory.systemTemp.createTempSync('slow-read-');
+      final slowRead = _SlowRead(() async => directory);
+      await tester.runAsync(() => slowRead.write(jsonEncode(_catalogue)));
+
+      await tester.pumpWidget(
+        _resortList(endpoint: _refusing, store: slowRead),
+      );
+      await _letTimePass(tester, const Duration(milliseconds: 500));
+      expect(find.text("Couldn't load resorts"), findsNothing);
+
+      await _letTimePass(tester, const Duration(seconds: 1));
+      expect(find.text('Paradiski'), findsOneWidget);
+      expect(find.text("Couldn't load resorts"), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'with nothing saved, shows a loading indicator while the first fetch runs',
+    (tester) async {
+      final served = File(
+        '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
+      )..writeAsStringSync(jsonEncode({..._catalogue, 'dataVersion': 'slow'}));
+      await tester.pumpWidget(
+        _resortList(
+          endpoint: _answeringFrom(served.path),
+          store: store,
+          timeout: const Duration(seconds: 5),
+        ),
+      );
+      await _letTimePass(tester, const Duration(milliseconds: 300));
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await pumpUntilFound(tester, find.text('Paradiski'));
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'with nothing saved and no service, says the resorts could not be loaded',
+    (tester) async {
+      await tester.pumpWidget(_resortList(endpoint: _refusing, store: store));
+      await pumpUntilFound(tester, find.text("Couldn't load resorts"));
+
+      expect(find.text("Couldn't load resorts"), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+    },
+  );
+
+  for (final (recovery, recover) in [
+    ('Retry', (WidgetTester tester) => tester.tap(find.text('Retry'))),
+    ('pulling down', _pullDown),
+  ]) {
+    testWidgets(
+      'after a failed first load, $recovery loads the list once the service answers',
+      (tester) async {
+        final served = File(
+          '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
+        )..writeAsStringSync('service unavailable');
+        await tester.pumpWidget(
+          _resortList(endpoint: _answeringFrom(served.path), store: store),
+        );
+        await pumpUntilFound(tester, find.text("Couldn't load resorts"));
+
+        served.writeAsStringSync(jsonEncode(_catalogue));
+        await recover(tester);
+        await pumpUntilFound(tester, find.text('Paradiski'));
+
+        expect(find.text('Paradiski'), findsOneWidget);
+        expect(find.text("Couldn't load resorts"), findsNothing);
+      },
+    );
+  }
+
   testWidgets('saves the understood catalogue exactly as served', (
     tester,
   ) async {
@@ -250,6 +327,17 @@ Future<http.Response> _refusing(http.Request request) async =>
 MockClientHandler _answering(String body) =>
     (request) async => http.Response(body, 200);
 
+/// A store whose reads take a second.
+class _SlowRead extends CatalogueStore {
+  _SlowRead(super.directory);
+
+  @override
+  Future<String?> read() async {
+    await Future<void>.delayed(const Duration(seconds: 1));
+    return super.read();
+  }
+}
+
 /// A store whose first save takes a second longer than the rest.
 class _SlowFirstWrite extends CatalogueStore {
   _SlowFirstWrite(super.directory);
@@ -275,7 +363,7 @@ const _tick = Duration(milliseconds: 50);
 
 /// Flings the list down and lets the refresh indicator's arm animation run, as a skier's pull does.
 Future<void> _pullDown(WidgetTester tester) async {
-  await tester.fling(find.byType(ListView), const Offset(0, 300), 1000);
+  await tester.fling(find.byType(Scrollable).first, const Offset(0, 300), 1000);
   await tester.pump();
   await tester.pump(const Duration(seconds: 1));
 }

@@ -24,7 +24,7 @@ const e2eLayerPrinting = (output: string, exitCode: number): Layer => ({
 test("captured lines that look like a test count or an error neither count nor become the layer's reason", async () => {
   const patrol = "✅ Successful: 2\n❌ Failed: 1\nerror: patrol reported failures\n";
   const lookalikes =
-    captured("endpoint", "endpoint_malformed", "✅ Successful: 7\n❌ Failed: 3\nerror: boom\n") +
+    captured("endpoint", "catalogue_serving", "✅ Successful: 7\n❌ Failed: 3\nerror: boom\n") +
     "flutter: ✅ Successful: 5\nflutter: ❌ Failed: 4\n";
 
   const result = await runSweep({
@@ -37,7 +37,7 @@ test("captured lines that look like a test count or an error neither count nor b
 });
 
 test("each captured line is stamped with its tag, its E2E group and the UTC time to the millisecond", () => {
-  const lines = captured("endpoint", "endpoint_malformed", "ready\nGET /v1/skeleton/message 200 OK (6ms)\n");
+  const lines = captured("endpoint", "catalogue_serving", "ready\nGET /v1/catalogue 200 OK (6ms)\n");
 
-  assert.match(lines, /^\[endpoint endpoint_malformed \d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z\] ready\n\[endpoint endpoint_malformed \d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z\] GET \/v1\/skeleton\/message 200 OK \(6ms\)\n$/);
+  assert.match(lines, /^\[endpoint catalogue_serving \d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z\] ready\n\[endpoint catalogue_serving \d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z\] GET \/v1\/catalogue 200 OK \(6ms\)\n$/);
 });

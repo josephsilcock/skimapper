@@ -10,11 +10,15 @@ import 'catalogue_document.dart';
 import 'catalogue_store.dart';
 import 'resort_list_providers.dart';
 
+/// How the first load is going while no list is shown.
+enum FirstLoad { loading, couldNotLoad }
+
 /// What the resort list area shows.
 class ResortListState {
-  const ResortListState({this.shown});
+  const ResortListState({this.shown, this.firstLoad = FirstLoad.loading});
 
   final Catalogue? shown;
+  final FirstLoad firstLoad;
 }
 
 typedef _Answer = (int generation, DocumentOutcome<Catalogue> outcome);
@@ -67,6 +71,8 @@ class ResortList extends Notifier<ResortListState> {
       _newestApplied = generation;
       state = ResortListState(shown: value);
       await _save(generation, body);
+    } else if (state.shown == null) {
+      state = const ResortListState(firstLoad: FirstLoad.couldNotLoad);
     }
   }
 

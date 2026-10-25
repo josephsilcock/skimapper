@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'attribution/attribution_line.dart';
-import 'endpoint/dev_endpoint.dart';
-import 'endpoint/skeleton_message_line.dart';
 import 'map/fixture_map.dart';
 import 'resorts/resort_list_view.dart';
 
@@ -15,7 +13,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _endpoint = devEndpointClient();
   String _mapLine = 'map: loading';
 
   void _showFixtureChecked(bool found) => setState(
@@ -38,7 +35,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 8),
             const Expanded(child: ResortListView()),
-            SkeletonMessageLine(client: _endpoint),
             const SizedBox(height: 16),
             SizedBox(
               height: 240,
