@@ -11,8 +11,9 @@ void main() {
   patrolTest(
     'relaunch 1 of 2: loads the resort list while the endpoint serves',
     ($) async {
-      // Preconditions: nothing saved; the endpoint serves the curated catalogue (group start).
+      // Preconditions: nothing saved; the endpoint serves the curated catalogue.
       await clearSavedCatalogue();
+      await requestCuratedCatalogue();
 
       await $.pumpWidget(const SkimapperApp());
 

@@ -17,6 +17,8 @@ class ResortListState {
   final Catalogue? shown;
 }
 
+typedef _Answer = (int generation, DocumentOutcome<Catalogue> outcome);
+
 /// The only writer of the shown resort list and its saved copy.
 class ResortList extends Notifier<ResortListState> {
   @override
@@ -25,12 +27,28 @@ class ResortList extends Notifier<ResortListState> {
     return const ResortListState();
   }
 
+  /// Fetches are numbered as they start; the newest applied understood answer's number.
+  var _fetchesStarted = 0;
+  var _newestApplied = 0;
+  Future<void> _saves = Future.value();
+
+  /// The skier's pull.
+  Future<void> refresh() async => _accept(await _fetch());
+
   CatalogueStore get _store => ref.read(catalogueStoreProvider);
 
   Future<void> _launch() async {
-    final fetched = ref.read(endpointClientProvider).fetchCatalogue();
+    final fetched = _fetch();
     _showSaved(await _store.read());
     await _accept(await fetched);
+  }
+
+  Future<_Answer> _fetch() async {
+    final generation = ++_fetchesStarted;
+    return (
+      generation,
+      await ref.read(endpointClientProvider).fetchCatalogue(),
+    );
   }
 
   /// A saved copy this app can't read counts as nothing saved.
@@ -41,15 +59,25 @@ class ResortList extends Notifier<ResortListState> {
     }
   }
 
-  Future<void> _accept(DocumentOutcome<Catalogue> outcome) async {
+  /// An answer older than the newest applied understood one is dropped, whatever it is.
+  Future<void> _accept(_Answer answer) async {
+    final (generation, outcome) = answer;
+    if (generation < _newestApplied) return;
     if (outcome case Understood(:final body, :final value)) {
+      _newestApplied = generation;
       state = ResortListState(shown: value);
-      await _save(body);
+      await _save(generation, body);
     }
   }
 
+  /// Saves run one at a time, and a save whose answer is no longer the newest is skipped, so an
+  /// earlier save can never land last.
+  Future<void> _save(int generation, String body) => _saves = _saves.then(
+    (_) => generation == _newestApplied ? _write(body) : null,
+  );
+
   /// A failed save keeps the list shown and the previous copy saved; it is reported, not shown.
-  Future<void> _save(String body) async {
+  Future<void> _write(String body) async {
     try {
       await _store.write(body);
     } on FileSystemException catch (failure, stack) {

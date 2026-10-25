@@ -9,15 +9,19 @@ class ResortListView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final resorts = ref.watch(resortListProvider).shown?.resorts ?? const [];
-    return ListView(
-      children: [
-        for (final resort in resorts)
-          ListTile(
-            title: Text(resort.name),
-            subtitle: Text(resort.countriesLabel),
-          ),
-      ],
+    final resorts = ref.watch(resortListProvider).shown?.byName ?? const [];
+    return RefreshIndicator(
+      onRefresh: ref.read(resortListProvider.notifier).refresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          for (final resort in resorts)
+            ListTile(
+              title: Text(resort.name),
+              subtitle: Text(resort.countriesLabel),
+            ),
+        ],
+      ),
     );
   }
 }

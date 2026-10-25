@@ -384,7 +384,7 @@ There is no authorisation in this feature.
 
 - [x] 1. A skier opens the app and sees the three curated ski areas listed by name, each with its countries.
 - [x] 2. With the endpoint stopped and the app relaunched, the skier still sees the same list.
-- [ ] 3. The skier pulls the list down after the catalogue gains a ski area, and sees it appear in its sorted place.
+- [x] 3. The skier pulls the list down after the catalogue gains a ski area, and sees it appear in its sorted place.
 - [ ] 4. A skier opening the app for the first time with no signal sees "couldn't load resorts", and retrying loads the list.
 - [ ] 5. A skier looking at a saved list pulls it down while the service is unreachable, erroring or serving an empty catalogue, and sees the list stay with a brief "couldn't refresh" message.
 - [ ] 6. A skier whose app can't read the served catalogue sees "update the app": full-screen with Retry when nothing is saved, a banner over the saved list otherwise.
@@ -397,12 +397,15 @@ There is no authorisation in this feature.
 - **`placeholder_screen.dart` became `home_screen.dart` in slice 1**, since the list joins it there; the skeleton line still sits in it until slice 4.
 - **A relaunch pair is ordered by name, not declaration.** iOS's runner sorts tests by name, so the pair is named `relaunch 1 of 2: …` / `relaunch 2 of 2: …`; the two-invocation fallback wasn't needed (Android keeps the same order). Every scripted test still states its preconditions, since name order across files is not a contract.
 - **The store saves to `catalogue.json.pending`, flushed, then renames over `catalogue.json`.** Its atomicity test opens a handle on the saved copy before a save and checks the handle still reads the old bytes: a concurrent-read test passed against an in-place write, so it couldn't tell the two apart.
+- **`serve-catalogue <variant>` seeds a fresh directory per restart**, and is a no-op while that variant is already served. The extra area is "Évasion Mont-Blanc" (`EXTRA_AREA` in `tools/e2e`, the one home for its name), chosen to sort between Espace San Bernardo and Les 3 Vallées only once accents are folded.
+- **Saves are serialised through one future chain** in the notifier, and a queued save whose answer is no longer the newest applied is skipped: overlapping saves otherwise collide on the one pending file.
 - **The launch fetch starts first, then the saved copy is read and shown, then the fetch's answer is applied** — the sequencing that keeps a fast failure from beating the saved list (decision 4), without a second mechanism.
 
 ## Resume
 
-- **Closed:** slices 1-2 (list on the home screen; saved copy as served, shown at launch, survives a relaunch with the endpoint stopped).
-- **Next:** slice 3 — *The skier pulls the list down after the catalogue gains a ski area, and sees it appear in its sorted place.* `diacritic` + `lib/text/` fold; `Catalogue` order; `RefreshIndicator` → notifier `refresh()`; generation ordering + newest-only chained saves; `serve-catalogue <variant>` request (stop, seed fresh dir, start; idempotent on the served variant) with the extra area's name as a dart-define (plan: "Évasion Mont-Blanc", sorting between Espace San Bernardo and Les 3 Vallées); every scripted test requests `serve-catalogue curated` (or stop) as its precondition.
-- **Seams as built:** `openDocument<T>` → `Understood(body, value)` / `Incompatible` / `Failed(cause)`; `fetchCatalogue()` / `openCatalogue(body)` in `lib/resorts/catalogue_document.dart`; `CatalogueStore(read/write/clear)` + `catalogueStoreProvider`; `ResortList._launch` = fetch → `_showSaved` → `_accept` (→ `_save`, reports failures); `ResortListState.shown`.
-- **Harness:** `tools/e2e` `follow_patrol_output` / `act_on_request` (vocabulary: `stop-endpoint`); Dart side `patrol_test/support/endpoint_requests.dart`, `saved_catalogue.dart`.
-- **E2E runs here use `IOS_SIMULATOR="iPhone Air" ENDPOINT_PORT=8797`** (another worktree session shares the defaults). A failing iOS run sits ~10 min in xcodebuild after the tests before Patrol exits.
+- **Closed:** slices 1-3 (list on the home screen, sorted by folded name; saved copy shown at launch and surviving a relaunch offline; pull-to-refresh with generation ordering and newest-only chained saves).
+- **Next:** slice 4 — *A skier opening the app for the first time with no signal sees "couldn't load resorts", and retrying loads the list.* Screen state gains the first-load status (loading / couldn't load), Retry and pull from the full-screen state; the "fast offline failure before the saved read" race; then retire the skeleton message (line, route, seed, `E2E_SEEDED_MESSAGE`, `endpoint_stopped`/`endpoint_malformed` groups), rename `endpoint_serving` → `catalogue_serving`, `ENDPOINT_READY_PATH` → `/v1/catalogue`, dev app seeds the catalogue only, `run-record.test.ts` fixture strings.
+- **Then:** slice 5 (couldn't refresh snackbar: unreachable / server error / empty catalogue over a saved list), slice 6 (update the app: full-screen with Retry; banner over the saved list; `catalogue_unknown_version` group).
+- **Seams as built:** `openDocument<T>`; `fetchCatalogue()` / `openCatalogue(body)`; `CatalogueStore`; `ResortList`: `refresh()`, `_launch` = `_fetch` → `_showSaved` → `_accept((generation, outcome))` → `_save` (chained) → `_write` (reports failures); `Catalogue.byName` over `folded` (`lib/text/fold.dart`); `ResortListView` = `RefreshIndicator` + `ListView`.
+- **Harness vocabulary:** `stop-endpoint`, `serve-catalogue curated|extra-area`; Dart: `requestEndpointStopped`, `requestCuratedCatalogue`, `requestCatalogueWithExtraArea`, `extraArea`, `expectTopToBottom`, `clearSavedCatalogue`, `awaitSavedCatalogue`.
+- **E2E runs here use `IOS_SIMULATOR="iPhone Air" ENDPOINT_PORT=8797`.** A failing iOS run sits ~10 min in xcodebuild after its tests; don't start the next run on the same port until it exits. Widget tests that need fake timers and real IO use `_letTimePass`.

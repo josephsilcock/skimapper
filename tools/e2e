@@ -41,10 +41,7 @@ prepare_endpoint() {
       seed_endpoint_malformed "$work_dir/$group"
       start_endpoint "$work_dir/$group"
       ;;
-    endpoint_scripted)
-      seed_endpoint_catalogue "$work_dir/$group"
-      start_endpoint "$work_dir/$group"
-      ;;
+    endpoint_scripted) serve_catalogue curated ;;
     *) fail "unknown E2E group '$group'" ;;
   esac
 }
@@ -76,7 +73,8 @@ run_patrol() {
   : >"$patrol_output"
   (cd "$APP_DIR" && exec "$PATROL" test --device "$device" --show-flutter-logs "${targets[@]}" \
     $(endpoint_dart_defines) \
-    --dart-define "E2E_SEEDED_MESSAGE=${seeded_message:-}") >"$patrol_output" 2>&1 &
+    --dart-define "E2E_SEEDED_MESSAGE=${seeded_message:-}" \
+    --dart-define "E2E_EXTRA_AREA=$EXTRA_AREA") >"$patrol_output" 2>&1 &
   PATROL_PID=$!
   follow_patrol_output "$patrol_output"
   wait "$PATROL_PID" || patrol_status=$?
@@ -117,11 +115,35 @@ act_on_request() {
   record_milestone "e2e request: $request"
   case "$request" in
     stop-endpoint) stop_endpoint ;;
-    *)
-      kill "$PATROL_PID" 2>/dev/null || true
-      fail "unknown E2E request '$request'"
-      ;;
+    "serve-catalogue "*) serve_catalogue "${request#serve-catalogue }" ;;
+    *) fail_run "unknown E2E request '$request'" ;;
   esac
+}
+
+# The area the extra-area catalogue gains; the test reads the same name as E2E_EXTRA_AREA.
+EXTRA_AREA="Évasion Mont-Blanc"
+SERVED_VARIANT=""
+
+# (Re)starts the endpoint serving a catalogue variant, seeded into a fresh directory.
+serve_catalogue() {
+  local variant="$1" seed_args=()
+  [[ -z "$ENDPOINT_PID" || "$SERVED_VARIANT" != "$variant" ]] || return 0
+  case "$variant" in
+    curated) ;;
+    extra-area) seed_args=(--extra-area "$EXTRA_AREA") ;;
+    *) fail_run "unknown catalogue variant '$variant'" ;;
+  esac
+  stop_endpoint
+  local persist_to
+  persist_to="$(mktemp -d "$work_dir/$RUN_GROUP-$variant-XXXX")"
+  seed_endpoint_catalogue "$persist_to" ${seed_args[@]+"${seed_args[@]}"}
+  start_endpoint "$persist_to"
+  SERVED_VARIANT="$variant"
+}
+
+fail_run() {
+  [[ -z "$PATROL_PID" ]] || kill "$PATROL_PID" 2>/dev/null || true
+  fail "$@"
 }
 
 PATROL_PID=""

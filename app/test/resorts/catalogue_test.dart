@@ -64,4 +64,25 @@ void main() {
 
     expect(resort.countriesLabel, 'France · Italy');
   });
+
+  test('orders resorts by name, ignoring accents and capitals, ties on the name as written', () {
+    Resort named(String name) => Resort(
+      name: name,
+      countries: const ['France'],
+      centre: (lat: 0, lon: 0),
+    );
+    final catalogue = Catalogue([
+      named('Zermatt'),
+      named('Évolène'),
+      named('alpe'),
+      named('Alpe'),
+    ]);
+
+    expect(catalogue.byName.map((resort) => resort.name), [
+      'Alpe',
+      'alpe',
+      'Évolène',
+      'Zermatt',
+    ]);
+  });
 }

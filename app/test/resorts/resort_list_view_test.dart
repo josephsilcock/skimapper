@@ -34,6 +34,105 @@ void main() {
     expect(find.text('France'), findsOneWidget);
   });
 
+  testWidgets('lists resorts by name, ignoring accents and capitals', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _resortList(
+        endpoint: _answering(
+          jsonEncode(_catalogueOf(['Zermatt', 'Évolène', 'alpe'])),
+        ),
+        store: store,
+      ),
+    );
+    await pumpUntilFound(tester, find.text('Zermatt'));
+
+    final tops = [
+      'alpe',
+      'Évolène',
+      'Zermatt',
+    ].map((name) => tester.getTopLeft(find.text(name)).dy).toList();
+    expect(tops, orderedEquals([...tops]..sort()));
+  });
+
+  testWidgets('pulling the list down fetches again and shows the new list', (
+    tester,
+  ) async {
+    final served = File(
+      '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
+    )..writeAsStringSync(jsonEncode(_catalogue));
+    await tester.pumpWidget(
+      _resortList(endpoint: _answeringFrom(served.path), store: store),
+    );
+    await pumpUntilFound(tester, find.text('Paradiski'));
+
+    served.writeAsStringSync(
+      jsonEncode(_catalogueOf(['Paradiski', 'Évasion Mont-Blanc'])),
+    );
+    await _pullDown(tester);
+    await pumpUntilFound(tester, find.text('Évasion Mont-Blanc'));
+
+    expect(find.text('Évasion Mont-Blanc'), findsOneWidget);
+  });
+
+  testWidgets(
+    'a slow launch answer landing after a pull never overwrites the pull\'s list',
+    (tester) async {
+      final served = File(
+        '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
+      )..writeAsStringSync(jsonEncode({..._catalogue, 'dataVersion': 'slow'}));
+      final pulled = jsonEncode(
+        _catalogueOf(['Paradiski', 'Évasion Mont-Blanc']),
+      );
+      await tester.pumpWidget(
+        _resortList(
+          endpoint: _answeringFrom(served.path),
+          store: store,
+          timeout: const Duration(seconds: 5),
+        ),
+      );
+
+      served.writeAsStringSync(pulled);
+      await _pullDown(tester);
+      await pumpUntilFound(tester, find.text('Évasion Mont-Blanc'));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(seconds: 2)),
+      );
+      await tester.pump();
+
+      expect(find.text('Évasion Mont-Blanc'), findsOneWidget);
+      expect(await _savedCopyOnceItIs(pulled, tester, store), pulled);
+    },
+  );
+
+  testWidgets(
+    'the newest understood answer is the one saved, even when an earlier save is slow',
+    (tester) async {
+      final directory = Directory.systemTemp.createTempSync('slow-store-');
+      final slowFirstSave = _SlowFirstWrite(() async => directory);
+      final served = File(
+        '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
+      )..writeAsStringSync(jsonEncode(_catalogue));
+      final pulled = jsonEncode(
+        _catalogueOf(['Paradiski', 'Évasion Mont-Blanc']),
+      );
+      await tester.pumpWidget(
+        _resortList(
+          endpoint: _answeringFrom(served.path),
+          store: slowFirstSave,
+        ),
+      );
+      await pumpUntilFound(tester, find.text('Paradiski'));
+
+      served.writeAsStringSync(pulled);
+      await _pullDown(tester);
+      await pumpUntilFound(tester, find.text('Évasion Mont-Blanc'));
+      await _letTimePass(tester, const Duration(seconds: 2));
+
+      expect(await tester.runAsync(slowFirstSave.read), pulled);
+    },
+  );
+
   testWidgets('saves the understood catalogue exactly as served', (
     tester,
   ) async {
@@ -106,12 +205,13 @@ void main() {
 Widget _resortList({
   required MockClientHandler endpoint,
   required CatalogueStore store,
+  Duration timeout = const Duration(milliseconds: 100),
 }) => ProviderScope(
   overrides: [
     endpointClientProvider.overrideWithValue(
       EndpointClient(
         baseUrl: Uri.parse('http://endpoint.test'),
-        timeout: const Duration(milliseconds: 100),
+        timeout: timeout,
         newHttpClient: () => MockClient(endpoint),
       ),
     ),
@@ -145,6 +245,65 @@ Future<http.Response> _serving(http.Request request) async =>
 
 Future<http.Response> _refusing(http.Request request) async =>
     throw http.ClientException('Connection refused');
+
+/// Answers every request with [body]; captures nothing but it, so it can cross to the fetch isolate.
+MockClientHandler _answering(String body) =>
+    (request) async => http.Response(body, 200);
+
+/// A store whose first save takes a second longer than the rest.
+class _SlowFirstWrite extends CatalogueStore {
+  _SlowFirstWrite(super.directory);
+
+  var _writes = 0;
+
+  @override
+  Future<void> write(String body) async {
+    if (_writes++ == 0) await Future<void>.delayed(const Duration(seconds: 1));
+    await super.write(body);
+  }
+}
+
+/// Lets [duration] pass in both real time (isolates, file IO) and the test's clock (timers).
+Future<void> _letTimePass(WidgetTester tester, Duration duration) async {
+  for (var step = Duration.zero; step < duration; step += _tick) {
+    await tester.runAsync(() => Future<void>.delayed(_tick));
+    await tester.pump(_tick);
+  }
+}
+
+const _tick = Duration(milliseconds: 50);
+
+/// Flings the list down and lets the refresh indicator's arm animation run, as a skier's pull does.
+Future<void> _pullDown(WidgetTester tester) async {
+  await tester.fling(find.byType(ListView), const Offset(0, 300), 1000);
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 1));
+}
+
+/// Answers every request with the file at [path] as it reads when the request arrives, so a test
+/// can change what is served between fetches; a document whose dataVersion is "slow" is answered
+/// a second late.
+MockClientHandler _answeringFrom(String path) => (request) async {
+  final body = File(path).readAsStringSync();
+  if (body.contains('"dataVersion":"slow"')) {
+    await Future<void>.delayed(const Duration(seconds: 1));
+  }
+  return http.Response(body, 200);
+};
+
+Map<String, Object?> _catalogueOf(List<String> names) => {
+  ..._catalogue,
+  'data': {
+    'resorts': [
+      for (final name in names)
+        {
+          'name': name,
+          'countries': ['Switzerland'],
+          'centre': {'lat': 46.0, 'lon': 7.5},
+        },
+    ],
+  },
+};
 
 const _catalogue = {
   'kind': 'catalogue',

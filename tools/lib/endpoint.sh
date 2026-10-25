@@ -15,9 +15,11 @@ seed_endpoint_message() {
     || fail "could not seed the local endpoint"
 }
 
+# Extra arguments pick a variant (see seed-local.ts).
 seed_endpoint_catalogue() {
   local persist_to="$1"
-  (cd "$ENDPOINT_DIR" && node scripts/seed-local.ts --persist-to "$persist_to") \
+  shift
+  (cd "$ENDPOINT_DIR" && node scripts/seed-local.ts --persist-to "$persist_to" "$@") \
     || fail "could not seed the local endpoint"
 }
 
