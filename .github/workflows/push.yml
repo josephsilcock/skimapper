@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FAST_LAYERS: app,endpoint,self-test
+  FAST_LAYERS: app,endpoint,self-test,status-site
 
 jobs:
   fast:
@@ -33,6 +33,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/toolchains
+      - name: Install status-site dependencies
+        run: npm ci
+        working-directory: status-site
       # Runner preparation failing must not hide the sweep: its own red names the layer.
       - name: Sweep
         if: ${{ !cancelled() }}

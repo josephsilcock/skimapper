@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skimapper Test Status</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --ground: #eef3f4;
+  --surface: #ffffff;
+  --ink: #142326;
+  --muted: #55686c;
+  --line: #d6e0e2;
+  --accent: #00687a;
+  --accent-soft: #d3eef3;
+  --pass: #1d6b3a;
+  --fail: #b3261e;
+  --fail-soft: #fbe3e1;
+  --skip: #6b5a00;
+  --none: #4f4a6b;
+  --none-soft: #ebe8f5;
+  --board: #e2e9ea;
+  --on-accent: #ffffff;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ground: #0f1a1c; --surface: #172427; --ink: #e3eef0; --muted: #9db1b5; --line: #2b3c40;
+  --accent: #6fd3e6; --accent-soft: #123d45; --pass: #74d498; --fail: #ff9b92; --fail-soft: #3b1c1a;
+  --skip: #e3cf6a; --none: #b9b2e6; --none-soft: #26233a; --board: #0a1214; --on-accent: #0f1a1c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --ground: #0f1a1c; --surface: #172427; --ink: #e3eef0; --muted: #9db1b5; --line: #2b3c40;
+  --accent: #6fd3e6; --accent-soft: #123d45; --pass: #74d498; --fail: #ff9b92; --fail-soft: #3b1c1a;
+  --skip: #e3cf6a; --none: #b9b2e6; --none-soft: #26233a; --board: #0a1214; --on-accent: #0f1a1c; color-scheme: dark }
+
+body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+#page { max-width: 720px; margin: 0 auto; }
+
+/* page */
+.head { background: var(--accent); color: var(--on-accent); padding: 18px 18px 16px; display: grid; gap: 6px; }
+.head .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; opacity: .85; font-weight: 600; }
+.head h1 { margin: 0; font-size: 20px; text-wrap: balance; }
+.head .meta { font-size: 13px; opacity: .92; }
+.head code { font-family: var(--font-data); font-size: 12.5px; }
+.content { padding: 14px 14px 18px; display: grid; gap: 14px; }
+
+.tally { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; padding: 3px 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.chip b { font-weight: 600; }
+
+.never { background: var(--accent-soft); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; }
+.never h3 { margin: 0; font-size: 14px; }
+.never ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; font-size: 14px; }
+.never p { margin: 0; font-size: 13px; color: var(--muted); }
+
+.section-title { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin: 4px 2px -4px; }
+.folders { display: grid; gap: 8px; }
+details.folder { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+details.folder.has-fail { border-color: var(--fail); }
+details.folder.has-none { border-color: var(--none); }
+.folder summary { list-style: none; cursor: pointer; padding: 11px 14px; display: flex; align-items: center; gap: 10px; }
+.folder summary::-webkit-details-marker { display: none; }
+.folder summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+.caret { width: 10px; color: var(--muted); font-size: 11px; transition: transform .15s; }
+details[open] .caret { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .caret { transition: none; } }
+.fname { font-weight: 600; flex: 1; min-width: 0; }
+.fname span { color: var(--muted); font-weight: 400; }
+.fcount { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.flag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.flag.fail { color: var(--fail); background: var(--fail-soft); }
+.flag.none { color: var(--none); background: var(--none-soft); }
+
+.reason { margin: 0 14px 8px; padding: 8px 10px; border-radius: 8px; background: var(--none-soft); color: var(--ink); font-size: 13px; display: grid; gap: 2px; }
+.reason code { font-family: var(--font-data); font-size: 12px; overflow-wrap: anywhere; }
+ul.tests { list-style: none; margin: 0; padding: 0 0 6px; border-top: 1px solid var(--line); }
+ul.tests li { display: grid; grid-template-columns: 92px 1fr; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--line); align-items: start; }
+ul.tests li:last-child { border-bottom: 0; }
+.st { font-size: 13px; font-weight: 600; display: inline-flex; gap: 5px; align-items: baseline; white-space: nowrap; }
+.st.pass { color: var(--pass); }
+.st.fail { color: var(--fail); }
+.st.skip { color: var(--skip); }
+.st.none { color: var(--none); }
+.tname { min-width: 0; overflow-wrap: anywhere; }
+.tname small { display: block; color: var(--muted); font-size: 12.5px; }
+.foot { font-size: 12.5px; color: var(--muted); padding: 0 2px; }
+.foot a { color: var(--accent); }
+.banner { background: var(--none-soft); color: var(--ink); border-radius: 10px; padding: 10px 14px; font-size: 14px; }
+</style>
+</head>
+<body>
+<main id="page"><p class="content">Loading the latest test run…</p></main>
+<script type="module" src="/page/main.js"></script>
+</body>
+</html>

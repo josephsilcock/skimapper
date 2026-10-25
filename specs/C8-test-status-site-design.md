@@ -187,3 +187,20 @@ Nothing is superseded.
 4. Production's latest-published and non-publishing cases are proven against a fake API before merge, and **verified for real at the first trunk runs after merge**, as recorded at sign-off.
 
 Later: the rename pass (done when its list has been reviewed; runs the full E2E sweep), the never-checks list, skipped tests, tallies.
+
+## Slices
+
+- [ ] 1. A developer opens the `skimapper-tests` preview at `?run=<branch dispatch>` and sees the app and the iOS and Android E2E tests by name under their folders, each passed or failed, with the folder roll-up and the commit and time from the JUnit.
+- [ ] 2. A stakeholder sees the endpoint, self-test and status-site folders, and the relaunch pair as one line.
+- [ ] 3. After a branch dispatch with `withhold_job=android`, the preview shows Android's folders as "no result this run", with "the android job did not run", filled in from the earlier branch run.
+- [ ] 4. Production's latest-published and non-publishing cases are proven against a fake API before merge (verified for real at the first trunk runs after merge).
+- [ ] Later: the never-checks list, skipped tests, tallies, the empty state and whole-page error, the rename pass.
+
+## Decisions taken during implement
+
+- **`status-site/` is plain JavaScript ES modules, no build step.** The page's renderer and the function's modules load unbuilt in the browser, on Vercel and under `node --test`; TypeScript would need a build for the page and `.ts`-extension imports Vercel's function bundler may not take. Dependencies: `fast-xml-parser` (the JUnit reader) and `fflate` (artifact zips).
+- **Folder order travels as a `position` property on the JUnit root**, the layer's index in `sweepLayers`, so the app orders folders by layer without naming one.
+- **`classname` is the file's path below the layer's test root** (`resorts/catalogue_test.dart`), unique within a folder for relaunch pairing.
+- **The `status-site` layer sits after `self-test`** (fast layers before E2E, as the local sweep runs them), so its folder shows before `ios` and `android`; the sketch drew it last.
+- **The function reads the token from `GITHUB_TOKEN`** in the Vercel environment.
+- **Each layer's JUnit is `test-results/sweep/junit/<layer id>.xml`**; a runner's report file (Flutter's JSON) is `test-results/sweep/<layer id>.report`.

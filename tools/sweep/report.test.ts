@@ -85,7 +85,7 @@ test("when no job left any results the report still runs and shows every layer r
 test("--expect with no value prints one error line naming the switch and the ids, and reports nothing", () => {
   const { exitCode, summary, stdout, stderr } = report(["--expect"]);
 
-  assert.equal(stderr, "error: --expect needs a comma-separated list of layer ids (ids: app, endpoint, self-test, e2e-ios, e2e-android)\n");
+  assert.equal(stderr, "error: --expect needs a comma-separated list of layer ids (ids: app, endpoint, self-test, status-site, e2e-ios, e2e-android)\n");
   assert.equal(exitCode, 1);
   assert.equal(stdout, "");
   assert.equal(summary, "");
@@ -94,7 +94,7 @@ test("--expect with no value prints one error line naming the switch and the ids
 test("--expect with an unknown id prints one error line naming the switch, the id and the ids, and reports nothing", () => {
   const { exitCode, summary, stdout, stderr } = report(["--expect", "app,e2e-windows", jobResults({})]);
 
-  assert.equal(stderr, "error: --expect: unknown layer 'e2e-windows' (ids: app, endpoint, self-test, e2e-ios, e2e-android)\n");
+  assert.equal(stderr, "error: --expect: unknown layer 'e2e-windows' (ids: app, endpoint, self-test, status-site, e2e-ios, e2e-android)\n");
   assert.equal(exitCode, 1);
   assert.equal(stdout, "");
   assert.equal(summary, "");

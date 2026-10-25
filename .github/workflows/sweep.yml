@@ -38,15 +38,26 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/toolchains
+      - name: Install status-site dependencies
+        run: npm ci
+        working-directory: status-site
       - name: Sweep
         if: ${{ !cancelled() }}
-        run: tools/full-sweep --layers app,endpoint,self-test
+        run: tools/full-sweep --layers app,endpoint,self-test,status-site
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: sweep-linux
           path: test-results/sweep/
           retention-days: 14
+      # The status site's per-test results (C8); a re-run replaces them with its latest attempt.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: junit-linux
+          path: test-results/sweep/junit/
+          retention-days: 90
+          overwrite: true
 
   android:
     if: ${{ inputs.withhold_job != 'android' }}
@@ -121,6 +132,14 @@ jobs:
           name: sweep-android
           path: test-results/sweep/
           retention-days: 14
+      # The status site's per-test results (C8); a re-run replaces them with its latest attempt.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: junit-android
+          path: test-results/sweep/junit/
+          retention-days: 90
+          overwrite: true
 
   ios:
     if: ${{ inputs.withhold_job != 'ios' }}
@@ -165,6 +184,14 @@ jobs:
           name: sweep-ios
           path: test-results/sweep/
           retention-days: 14
+      # The status site's per-test results (C8); a re-run replaces them with its latest attempt.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: junit-ios
+          path: test-results/sweep/junit/
+          retention-days: 90
+          overwrite: true
 
   report:
     needs: [linux, android, ios]

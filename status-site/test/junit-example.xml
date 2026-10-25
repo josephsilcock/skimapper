@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <properties>
+    <property name="commit" value="e76ac93c0ffee"/>
+    <property name="time" value="2026-10-24T14:52:07.000Z"/>
+    <property name="position" value="0"/>
+  </properties>
+  <testsuite name="app" tests="1" failures="0" skipped="0">
+    <testcase classname="main_test.dart" name="the app logs its launch once"/>
+  </testsuite>
+  <testsuite name="app / resorts" tests="3" failures="1" skipped="1">
+    <testcase classname="resorts/catalogue_test.dart" name="lists each resort &amp; its &quot;countries&quot; &lt;sorted&gt;"/>
+    <testcase classname="resorts/catalogue_test.dart" name="pulling the list down fetches again">
+      <failure/>
+    </testcase>
+    <testcase classname="resorts/resort_list_view_test.dart" name="a corrupt saved copy counts as nothing saved">
+      <skipped/>
+    </testcase>
+  </testsuite>
+</testsuites>

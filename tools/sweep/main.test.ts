@@ -19,7 +19,7 @@ function fullSweepCopy(args: string[]) {
 test("tools/full-sweep with --layers and no value prints one error line naming the switch and the ids, and runs nothing", () => {
   const { exitCode, stderr, ranAnything } = fullSweepCopy(["--layers"]);
 
-  assert.equal(stderr, "error: --layers needs a comma-separated list of layer ids (ids: app, endpoint, self-test, e2e-ios, e2e-android)\n");
+  assert.equal(stderr, "error: --layers needs a comma-separated list of layer ids (ids: app, endpoint, self-test, status-site, e2e-ios, e2e-android)\n");
   assert.equal(exitCode, 1);
   assert.equal(ranAnything, false);
 });

@@ -73,3 +73,43 @@ test("the full sweep's jobs between them run every layer exactly once", () => {
 
   assert.deepEqual(notOnce, []);
 });
+
+// Each job's steps under `jobs:`, as text, by job id.
+function jobs(workflow: string): Record<string, string> {
+  const text = readFileSync(join(workflowsDir, workflow), "utf8");
+  const body = text.slice(text.search(/^jobs:\n/m));
+  return Object.fromEntries([...body.matchAll(/^  ([\w-]+):\n((?:(?:    .*)?\n)*)/gm)].map(([, id, block]) => [id, block]));
+}
+
+test("each job that runs the sweep uploads its JUnit as junit-<job id>, kept 90 days and replaced on a re-run", () => {
+  const sweepJobs = Object.entries(jobs("sweep.yml")).filter(([, steps]) => /tools\/full-sweep/.test(steps));
+  const upload = (id: string) =>
+    ["        if: ${{ !cancelled() }}", "        with:", `          name: junit-${id}`, "          path: test-results/sweep/junit/",
+      "          retention-days: 90", "          overwrite: true"].join("\n");
+
+  assert.deepEqual(sweepJobs.map(([id]) => id), ["linux", "android", "ios"]);
+  for (const [id, steps] of sweepJobs) assert.ok(steps.includes(upload(id)), `job ${id} uploads no junit-${id}`);
+});
+
+// The layer ids a job's tools/full-sweep calls run, with a workflow-level env value such as $FAST_LAYERS
+// read as itself.
+function layersRunBy(workflow: string, steps: string): string[] {
+  const env = Object.fromEntries(
+    [...readFileSync(join(workflowsDir, workflow), "utf8").matchAll(/^  ([A-Z_]+): (.*)$/gm)].map(([, name, value]) => [name, value]),
+  );
+  return [...steps.matchAll(/tools\/full-sweep (.*)$/gm)]
+    .map(([, args]) => args.replace(/"?\$([A-Z_]+)"?/g, (_, name: string) => env[name] ?? "").split(/\s+/))
+    .flatMap((args) => layersFromArgs(sweepLayers(repoDir), args, "--layers").map((layer) => layer.id));
+}
+
+test("every job that runs the status-site layer installs the site's packages first, and no other job does", () => {
+  const install = "      - name: Install status-site dependencies\n        run: npm ci\n        working-directory: status-site\n";
+  const installsFirst = (steps: string) => steps.includes(install) && steps.indexOf(install) < steps.indexOf("tools/full-sweep");
+  const offenders = ["push.yml", "sweep.yml"].flatMap((workflow) =>
+    Object.entries(jobs(workflow))
+      .filter(([, steps]) => layersRunBy(workflow, steps).includes("status-site") !== installsFirst(steps))
+      .map(([id]) => `${workflow} ${id}`),
+  );
+
+  assert.deepEqual(offenders, []);
+});
