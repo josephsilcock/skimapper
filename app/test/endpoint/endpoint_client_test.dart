@@ -209,7 +209,7 @@ void main() {
   });
 }
 
-/// The run-record lines one fetch of the message document writes.
+/// The run-record lines one fetch of the catalogue document writes.
 Future<List<String>> _fetchLogAgainst(http.Client server) => runRecordDuring(
   () =>
       _clientFor(server)

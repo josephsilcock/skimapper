@@ -6,6 +6,7 @@ the requirements-of-record for the whole application.
 
 | Doc | Area |
 |-----|------|
+| [resorts.md](resorts.md) | The resort list: what is listed, its order and rows, freshness, the failure states, the app's visual basis |
 
 ---
 

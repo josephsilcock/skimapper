@@ -46,7 +46,7 @@ flowchart LR
   EC --> ST --> MAP
 ```
 
-Only the skeleton parts are built: the artefact handler, `EndpointClient` + `ContractEnvelope`, and a local-file map. The refresh, live status handler, storage and routing are future features.
+Built so far: the artefact handler serving the resort catalogue, `EndpointClient` + `openDocument` (the envelope's one reader), the saved catalogue file behind the resort list, and a local-file map proof. The refresh, live status handler, per-resort storage and routing are future features.
 
 ### Where things run
 

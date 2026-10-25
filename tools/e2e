@@ -87,21 +87,31 @@ follow_patrol_output() {
   local output="$1"
   COPIED_LINES=0
   while kill -0 "$PATROL_PID" 2>/dev/null; do
-    copy_lines_up_to "$output" "$(( $(wc -l <"$output") ))"
+    copy_lines_through "$output" "$(( $(wc -l <"$output") ))"
     sleep 0.2
   done
-  copy_lines_up_to "$output" '$'
+  copy_remaining_lines "$output"
 }
 
-# Reads on fd 5, so nothing a request starts can swallow the lines.
-copy_lines_up_to() {
-  local output="$1" last="$2" line
-  [[ "$last" == '$' ]] || (( last > COPIED_LINES )) || return 0
+# Both read on fd 5, so nothing a request starts can swallow the lines.
+copy_lines_through() {
+  local output="$1" last="$2"
+  (( last > COPIED_LINES )) || return 0
+  act_on_each_line 5< <(sed -n "$((COPIED_LINES + 1)),${last}p" "$output")
+  COPIED_LINES=$last
+}
+
+# What is left once Patrol has exited, including a last line with no newline.
+copy_remaining_lines() {
+  act_on_each_line 5< <(sed -n "$((COPIED_LINES + 1)),\$p" "$1")
+}
+
+act_on_each_line() {
+  local line
   while IFS= read -r line <&5 || [[ -n "$line" ]]; do
     echo "$line"
     act_on_request "${line%$'\r'}"
-  done 5< <(sed -n "$((COPIED_LINES + 1)),${last}p" "$output")
-  [[ "$last" == '$' ]] || COPIED_LINES=$last
+  done
 }
 
 # What an endpoint_scripted test can ask for, as a "[e2e-request] <request>" line in its log.
@@ -113,7 +123,7 @@ act_on_request() {
   case "$request" in
     stop-endpoint) stop_endpoint ;;
     "serve-catalogue "*) serve_catalogue "${request#serve-catalogue }" ;;
-    *) fail_run "unknown E2E request '$request'" ;;
+    *) fail "unknown E2E request '$request'" ;;
   esac
 }
 
@@ -128,7 +138,7 @@ serve_catalogue() {
   case "$variant" in
     curated) ;;
     extra-area) seed_args=(--extra-area "$EXTRA_AREA") ;;
-    *) fail_run "unknown catalogue variant '$variant'" ;;
+    *) fail "unknown catalogue variant '$variant'" ;;
   esac
   stop_endpoint
   local persist_to
@@ -136,11 +146,6 @@ serve_catalogue() {
   seed_endpoint_catalogue "$persist_to" ${seed_args[@]+"${seed_args[@]}"}
   start_endpoint "$persist_to"
   SERVED_VARIANT="$variant"
-}
-
-fail_run() {
-  [[ -z "$PATROL_PID" ]] || kill "$PATROL_PID" 2>/dev/null || true
-  fail "$@"
 }
 
 PATROL_PID=""

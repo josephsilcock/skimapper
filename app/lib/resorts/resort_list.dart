@@ -85,9 +85,10 @@ class ResortList extends Notifier<ResortListState> {
     );
   }
 
-  /// A saved copy this app can't read counts as nothing saved.
+  /// A saved copy this app can't read counts as nothing saved, and one that arrives after a
+  /// fetch's answer was applied is older than it.
   void _showSaved(String? saved) {
-    if (saved == null) return;
+    if (saved == null || _newestApplied > 0) return;
     if (openCatalogue(saved) case Understood(:final value)) {
       state = state.showing(value);
     }
@@ -102,7 +103,7 @@ class ResortList extends Notifier<ResortListState> {
       case Understood(:final body, :final value):
         _newestApplied = generation;
         state = state.showing(value);
-        await _save(generation, body);
+        await _save(body);
       case Incompatible() || Failed():
         state = _notUnderstood(outcome, trigger);
     }
@@ -121,11 +122,8 @@ class ResortList extends Notifier<ResortListState> {
     (_, _, _Trigger.quietLaunch) => state,
   };
 
-  /// Saves run one at a time, and a save whose answer is no longer the newest is skipped, so an
-  /// earlier save can never land last.
-  Future<void> _save(int generation, String body) => _saves = _saves.then(
-    (_) => generation == _newestApplied ? _write(body) : null,
-  );
+  /// Saves run one at a time, in the order their answers were applied, so the newest lands last.
+  Future<void> _save(String body) => _saves = _saves.then((_) => _write(body));
 
   /// A failed save keeps the list shown and the previous copy saved; it is reported, not shown.
   Future<void> _write(String body) async {

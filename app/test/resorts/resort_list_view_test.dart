@@ -58,9 +58,7 @@ void main() {
   testWidgets('pulling the list down fetches again and shows the new list', (
     tester,
   ) async {
-    final served = File(
-      '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
-    )..writeAsStringSync(jsonEncode(_catalogue));
+    final served = _servedFile()..writeAsStringSync(jsonEncode(_catalogue));
     await tester.pumpWidget(
       _resortList(endpoint: _answeringFrom(served.path), store: store),
     );
@@ -76,29 +74,33 @@ void main() {
   });
 
   testWidgets(
-    'a slow launch answer landing after a pull never overwrites the pull\'s list',
+    'a launch answer landing after a pull never overwrites the pull\'s list',
     (tester) async {
-      final served = File(
-        '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
-      )..writeAsStringSync(jsonEncode({..._catalogue, 'dataVersion': 'slow'}));
+      final directory = Directory.systemTemp.createTempSync('served-');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final served = File('${directory.path}/catalogue.json')
+        ..writeAsStringSync(jsonEncode(_catalogue));
+      final launchAnswerHeldUntil = File('${directory.path}/release');
       final pulled = jsonEncode(
         _catalogueOf(['Paradiski', 'Évasion Mont-Blanc']),
       );
       await tester.pumpWidget(
         _resortList(
-          endpoint: _answeringFrom(served.path),
+          endpoint: _holdingFirstRequestUntil(
+            launchAnswerHeldUntil.path,
+            serving: served.path,
+          ),
           store: store,
-          timeout: const Duration(seconds: 5),
+          timeout: const Duration(seconds: 10),
         ),
       );
+      await _waitForFile('${directory.path}/claimed', tester);
 
       served.writeAsStringSync(pulled);
       await _pullDown(tester);
       await pumpUntilFound(tester, find.text('Évasion Mont-Blanc'));
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(seconds: 2)),
-      );
-      await tester.pump();
+      launchAnswerHeldUntil.writeAsStringSync('');
+      await _letTimePass(tester, const Duration(seconds: 1));
 
       expect(find.text('Évasion Mont-Blanc'), findsOneWidget);
       expect(await _savedCopyOnceItIs(pulled, tester, store), pulled);
@@ -109,10 +111,9 @@ void main() {
     'the newest understood answer is the one saved, even when an earlier save is slow',
     (tester) async {
       final directory = Directory.systemTemp.createTempSync('slow-store-');
+      addTearDown(() => directory.deleteSync(recursive: true));
       final slowFirstSave = _SlowFirstWrite(() async => directory);
-      final served = File(
-        '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
-      )..writeAsStringSync(jsonEncode(_catalogue));
+      final served = _servedFile()..writeAsStringSync(jsonEncode(_catalogue));
       final pulled = jsonEncode(
         _catalogueOf(['Paradiski', 'Évasion Mont-Blanc']),
       );
@@ -137,6 +138,7 @@ void main() {
     'a fast failed launch fetch never beats a slow saved read to the screen',
     (tester) async {
       final directory = Directory.systemTemp.createTempSync('slow-read-');
+      addTearDown(() => directory.deleteSync(recursive: true));
       final slowRead = _SlowRead(() async => directory);
       await tester.runAsync(() => slowRead.write(jsonEncode(_catalogue)));
 
@@ -153,11 +155,31 @@ void main() {
   );
 
   testWidgets(
+    'a pull answered while the saved copy is still being read is not replaced by that copy',
+    (tester) async {
+      final directory = Directory.systemTemp.createTempSync('slow-read-');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final slowRead = _SlowRead(() async => directory);
+      await tester.runAsync(() => slowRead.write(jsonEncode(_catalogue)));
+      final pulled = jsonEncode(_catalogueOf(['Évasion Mont-Blanc']));
+
+      await tester.pumpWidget(
+        _resortList(endpoint: _answering(pulled), store: slowRead),
+      );
+      await _pullDown(tester);
+      await pumpUntilFound(tester, find.text('Évasion Mont-Blanc'));
+      await _letTimePass(tester, const Duration(seconds: 2));
+
+      expect(find.text('Évasion Mont-Blanc'), findsOneWidget);
+      expect(find.text('Paradiski'), findsNothing);
+    },
+  );
+
+  testWidgets(
     'with nothing saved, shows a loading indicator while the first fetch runs',
     (tester) async {
-      final served = File(
-        '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
-      )..writeAsStringSync(jsonEncode({..._catalogue, 'dataVersion': 'slow'}));
+      final served = _servedFile()
+        ..writeAsStringSync(jsonEncode({..._catalogue, 'dataVersion': 'slow'}));
       await tester.pumpWidget(
         _resortList(
           endpoint: _answeringFrom(served.path),
@@ -192,9 +214,7 @@ void main() {
     testWidgets(
       'after a failed first load, $recovery loads the list once the service answers',
       (tester) async {
-        final served = File(
-          '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
-        )..writeAsStringSync('service unavailable');
+        final served = _servedFile()..writeAsStringSync('service unavailable');
         await tester.pumpWidget(
           _resortList(endpoint: _answeringFrom(served.path), store: store),
         );
@@ -281,9 +301,7 @@ void main() {
   testWidgets('the update banner clears when a later pull is understood', (
     tester,
   ) async {
-    final served = File(
-      '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
-    )..writeAsStringSync(_unknownVersion);
+    final served = _servedFile()..writeAsStringSync(_unknownVersion);
     await tester.runAsync(() => store.write(jsonEncode(_catalogue)));
     await tester.pumpWidget(
       _resortList(endpoint: _answeringFrom(served.path), store: store),
@@ -301,9 +319,7 @@ void main() {
   testWidgets(
     'the update banner stays when a later pull fails, and the pull says it couldn\'t refresh',
     (tester) async {
-      final served = File(
-        '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
-      )..writeAsStringSync(_unknownVersion);
+      final served = _servedFile()..writeAsStringSync(_unknownVersion);
       await tester.runAsync(() => store.write(jsonEncode(_catalogue)));
       await tester.pumpWidget(
         _resortList(endpoint: _answeringFrom(served.path), store: store),
@@ -322,9 +338,7 @@ void main() {
   testWidgets(
     'an understood pull after a failed one brings no couldn\'t-refresh message',
     (tester) async {
-      final served = File(
-        '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
-      )..writeAsStringSync('service unavailable');
+      final served = _servedFile()..writeAsStringSync('service unavailable');
       await tester.runAsync(() => store.write(jsonEncode(_catalogue)));
       await tester.pumpWidget(
         _resortList(endpoint: _answeringFrom(served.path), store: store),
@@ -389,6 +403,24 @@ void main() {
     );
   }
 
+  testWidgets('a saved copy that is not text counts as nothing saved', (
+    tester,
+  ) async {
+    final directory = Directory.systemTemp.createTempSync('binary-copy-');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    File('${directory.path}/catalogue.json').writeAsBytesSync([0xC3, 0x28]);
+
+    await tester.pumpWidget(
+      _resortList(
+        endpoint: _serving,
+        store: CatalogueStore(() async => directory),
+      ),
+    );
+    await pumpUntilFound(tester, find.text('Espace San Bernardo'));
+
+    expect(find.text('Espace San Bernardo'), findsOneWidget);
+  });
+
   testWidgets(
     'a save that fails still shows the new list, and reports the failure',
     (tester) async {
@@ -430,6 +462,13 @@ Widget _resortList({
   ],
   child: const MaterialApp(home: Scaffold(body: ResortListView())),
 );
+
+/// A file for a test to serve from, and change between requests; removed when the test ends.
+File _servedFile() {
+  final directory = Directory.systemTemp.createTempSync('served-');
+  addTearDown(() => directory.deleteSync(recursive: true));
+  return File('${directory.path}/catalogue.json');
+}
 
 /// The saved copy once it reads as [expected], or as it last read if it doesn't within a second:
 /// the app's save lands after the list shows.
@@ -516,6 +555,40 @@ MockClientHandler _answeringFrom(String path) => (request) async {
   }
   return http.Response(body, 200);
 };
+
+/// Answers the first request it sees only once the file at [releasePath] exists, with the
+/// document as it read when that request arrived; later requests get [serving] as it reads then.
+/// The claim and the release are files, so the handler can cross to the fetch isolate.
+MockClientHandler _holdingFirstRequestUntil(
+  String releasePath, {
+  required String serving,
+}) => (request) async {
+  final body = File(serving).readAsStringSync();
+  final claim = File('${File(releasePath).parent.path}/claimed');
+  var first = true;
+  try {
+    claim.createSync(exclusive: true);
+  } on FileSystemException {
+    first = false;
+  }
+  while (first && !File(releasePath).existsSync()) {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+  }
+  return http.Response(body, 200);
+};
+
+Future<void> _waitForFile(String path, WidgetTester tester) async {
+  for (var tries = 0; tries < 100 && !File(path).existsSync(); tries++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
+  }
+  expect(
+    File(path).existsSync(),
+    isTrue,
+    reason: 'the launch fetch never arrived',
+  );
+}
 
 Map<String, Object?> _catalogueOf(List<String> names) => {
   ..._catalogue,

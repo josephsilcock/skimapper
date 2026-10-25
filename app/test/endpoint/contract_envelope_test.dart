@@ -28,7 +28,7 @@ void main() {
     test('an envelope of another kind or an unknown schema version is incompatible', () {
       for (final envelope in [
         _envelope(schemaVersion: 2),
-        _envelope(kind: 'skeleton-message'),
+        _envelope(kind: 'some-other-kind'),
       ]) {
         expect(
           openDocument(

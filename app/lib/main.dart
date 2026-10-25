@@ -40,8 +40,7 @@ class _SkimapperAppState extends State<SkimapperApp> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      ProviderScope(
-        child: MaterialApp(theme: appTheme(), home: const HomeScreen()),
-      );
+  Widget build(BuildContext context) => ProviderScope(
+    child: MaterialApp(theme: appTheme(), home: const HomeScreen()),
+  );
 }

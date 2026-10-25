@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
@@ -10,9 +11,15 @@ class CatalogueStore {
 
   final Future<Directory> Function() _directory;
 
+  /// The saved copy, or null if there is none or it isn't text.
   Future<String?> read() async {
     final file = await _file();
-    return await file.exists() ? file.readAsString() : null;
+    if (!await file.exists()) return null;
+    try {
+      return utf8.decode(await file.readAsBytes());
+    } on FormatException {
+      return null;
+    }
   }
 
   /// Writes [body] beside the saved copy, flushed, then renames it into place, so a failure at

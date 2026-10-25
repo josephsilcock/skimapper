@@ -10,7 +10,7 @@ area docs at [definitions/](definitions/README.md)** (linked per section below).
 
 ## Features
 
-- **F1** Skiers browse the supported ski areas by name and country, refresh by pulling down, and keep the list without a signal — `in progress`
+- **F1** Skiers browse the supported ski areas by name and country, refresh by pulling down, and keep the list without a signal — `done`
 
 ## Code
 

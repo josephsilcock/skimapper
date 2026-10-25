@@ -35,6 +35,8 @@ void main() {
         .waitUntilVisible(timeout: const Duration(seconds: 10));
     expect($('Paradiski'), findsOneWidget);
     expect($('France · Italy'), findsOneWidget);
-    expect($("Couldn't refresh"), findsNothing);
+    await $.pump(const Duration(seconds: 3));
+    expect($("Couldn't refresh resorts"), findsNothing);
+    expect($("Couldn't load resorts"), findsNothing);
   });
 }
