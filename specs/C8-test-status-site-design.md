@@ -204,3 +204,10 @@ Later: the rename pass (done when its list has been reviewed; runs the full E2E 
 - **The `status-site` layer sits after `self-test`** (fast layers before E2E, as the local sweep runs them), so its folder shows before `ios` and `android`; the sketch drew it last.
 - **The function reads the token from `GITHUB_TOKEN`** in the Vercel environment.
 - **Each layer's JUnit is `test-results/sweep/junit/<layer id>.xml`**; a runner's report file (Flutter's JSON) is `test-results/sweep/<layer id>.report`.
+
+## Resume
+
+- Slice 1 code committed (51d9cf5) and pushed; the self-test (49 pass) and status-site tests (8 pass) are green locally and in CI (`fast` on 51d9cf5 succeeded). Branch dispatch 40227299992 started to supply `?run=` for the demo.
+- **Blocked:** no Vercel deployment exists for the branch (no commit status or GitHub deployment after ~10 minutes; skimapper-tests.vercel.app is DEPLOYMENT_NOT_FOUND). Slice 1 closes once the preview at `?run=40227299992` shows the run's app, ios and android folders.
+- Next slice: 2, "a stakeholder sees the endpoint, self-test and status-site folders, and the relaunch pair as one line". Seam to settle there: Node's `--test` ignores options placed after its path arguments, so `reportArgs` must be inserted before the self-test's `tools/sweep/` and the status-site's test glob, not appended.
+- Evidence log: `test-results/tdd/C8/slice-01-walking-skeleton.md`.
