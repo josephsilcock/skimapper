@@ -388,6 +388,7 @@ There is no authorisation in this feature.
 - [x] 4. A skier opening the app for the first time with no signal sees "couldn't load resorts", and retrying loads the list.
 - [x] 5. A skier looking at a saved list pulls it down while the service is unreachable, erroring or serving an empty catalogue, and sees the list stay with a brief "couldn't refresh" message.
 - [x] 6. A skier whose app can't read the served catalogue sees "update the app": full-screen with Retry when nothing is saved, a banner over the saved list otherwise.
+- [x] Visual-language detour (`/ux-iterate`, after the demo-pack gate rejected the default look): glacier-teal theme, raised resort cards, tinted update banner, floating snackbar clear of the credits — `ff9b7c3`; evidence in `test-results/ux/F1/`.
 
 ## Decisions taken during implement
 
@@ -424,7 +425,7 @@ These choices set the app's look. Every screen inherits them.
 
 ## Resume
 
-- **Closed:** slices 1-6 — every spec scenario is built and tested. Remaining in this stage: the refactor confirmation across the change, the demo pack (dev app via `run`, 480 px, one shot per mainline AC flow, `test-results/demo/F1/`, published as an Artifact from `test-results/demo/F1/pack.html`), then the visual-acceptance gate.
+- **Closed:** `/implement` is complete — slices 1-6 plus the visual-language detour; demo pack v2 (`test-results/demo/F1/pack.html`, https://claude.ai/artifact/RxJWK3BZM4o494Tdcc9XcG) accepted at the visual gate. Next: `/finish-feature` (whole-change review, demo gap-check, one full sweep, docs, merge).
 - **E2E groups:** `catalogue_serving`, `catalogue_unknown_version`, `endpoint_scripted`.
 - **Docs for /finish-feature:** QUICK_START names `endpoint_serving` in its cheatsheet; D7 (groups, watcher, clearPackageData, ready path), D8, D9, D5; PIPELINE groups wording; ARCHITECTURE catalogue line; new `docs/definitions/resorts.md`.
 - **Seams as built:** `openDocument<T>`; `fetchCatalogue()` / `openCatalogue(body)`; `CatalogueStore`; `ResortList` (`refresh()`; `_launch`; apply step `_accept` + `_notUnderstood`; `_save` chain; `_write` reports); `ResortListState(shown, firstLoad, failedRefreshes, updateNeeded)`; `ResortListView` (banner + `RefreshIndicator` over `_Resorts` / `_FullArea` / `_FullAreaMessage`).
