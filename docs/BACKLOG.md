@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F22`, `B5`, `C11`.
+**Next free IDs**: `F22`, `B5`, `C13`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -75,3 +75,5 @@ below that gets picked up out of turn should say why in its spec.
   - Builds on C5's sweep reporting (`.github/workflows/push.yml`, `sweep.yml`).
 - **C9** The sweep and CI report reject arguments they don't recognise: today `tools/full-sweep --layer app` or `--layers=app` is silently ignored and runs every layer, E2E included (about 90 minutes), because `layersFromArgs` (`tools/sweep/layers.ts`) only looks for the exact switch. Each entry point should accept only its own switch and value (plus `report.ts`'s results dir) and fail with one `error:` line. Build on `layersFromArgs` and the `tools/sweep/cli.ts` boundary.
 - **C10** The service is deployed for real: a Cloudflare account, the private R2 bucket and a deploy workflow, so the app works on a phone outside development, with D1's free-tier limits checked against the first deploy.
+- **C11** The test status site (C8) shows how much of the app and endpoint the tests exercise, and how that changes over the run history: code coverage (the share of lines or branches run by tests) or another measure the spec decides, presented so a stakeholder doesn't read a high percentage as "nothing to test by hand". Split out of C8, which ships without any coverage figure.
+- **C12** The test status site (C8) shows, per product area, the behaviours that have no automated test, for planning manual testing. C8 dropped this because test names, not area-doc behaviours, are its wording, so the gap can't be computed from them; this item decides where the list of untested behaviours comes from and how it is kept current.

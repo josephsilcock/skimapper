@@ -17,6 +17,7 @@ area docs at [definitions/](definitions/README.md)** (linked per section below).
 - **C4** Initial technical decisions and walking skeleton — `done`
 - **C5** Continuous integration: fast checks on every push and PR, full sweep on every code push to the trunk — `done`
 - **C7** CI tooling fails clearly when misused: layer switches without a value, a local CI report, sweep jobs that drop or repeat a layer — `done`
+- **C8** A public test status site: every automated test in plain words with its latest trunk result, its history and flakiness, and a developer drill-down — `in progress`
 
 ## Bugs
 
