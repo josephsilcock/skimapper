@@ -21,27 +21,34 @@ with no history.
   root sit under the layer's name. E2E results appear separately under an `ios` and an `android`
   folder. A behaviour checked by both a widget test and an E2E test shows as separate lines. There is
   no mapping to product areas or features.
-- **Every test appears.** Every test that exists at the tested commit appears, whether or not its
-  layer reported it. A test with no result (its layer stopped early, crashed or never ran) says
-  "no result this run" with the layer's reason: never shown as passed, never omitted. A skipped test
-  is shown as skipped, never as passed.
-- **One line, one test.** A line is identified by platform + folder + test name. Names are unique
-  within a folder; a collision fails the publish visibly rather than merging two tests.
+- **Every test appears, as far as the reports allow.** The site knows a test only from the JUnit
+  reports of published runs in the retention window. A test the latest run reported shows its result.
+  A folder that a test job reported in its last published run, but is missing now because that job
+  uploaded nothing or failed, shows its tests from that earlier report as "no result this run", with
+  the job's reason: never shown as passed. Those filled-in lines come from an older commit, so they can
+  include tests deleted since and miss new ones. A partial drop inside one folder is not shown. A
+  skipped test is shown as skipped, never as passed.
+- **One line, one test.** A line is identified by folder + test name (E2E folders begin with their
+  platform). Names are unique within a folder; a collision shows as an error on the page, naming the
+  run and folder, rather than merging two tests.
 - **Relaunch pairs read as one line.** Tests split into `relaunch 1 of 2` / `relaunch 2 of 2` (D7,
   for iOS ordering) show as one line named with both parts' names joined, minus their
   `relaunch k of 2:` prefixes. It passes only if both parts pass, fails if either fails, and
   otherwise has no result. An unpaired part shows as its own line under its full name.
 - **Published from trunk only.** Every completed full sweep on main publishes, from a push or a
   manual run, except a manual run with any non-default input (`withhold_job` other than `none`, or an
-  `ios_simulator` override). Branch runs and `fast` runs never publish. The site states which trunk
-  commit it describes and when that sweep ran. Docs-only merges trigger no sweep, so they appear at
+  `ios_simulator` override). A red sweep still publishes. Branch runs and `fast` runs never publish,
+  though a preview deployment of the site can show an unpublished run, marked "not published". The
+  site describes the published run with the highest run number, and states which trunk commit it
+  describes and when that sweep ran. Docs-only merges trigger no sweep, so they appear at
   the next code merge.
-- **Hosting:** GitHub Pages, public, no access control (the repo is already public). Readable
-  without a GitHub account.
+- **Hosting:** a Vercel project in this repo (`status-site/`), public, no access control (the repo is
+  already public). Readable without a GitHub account.
 - **"Automation never checks":** one short hand-written, site-wide list kept in the repo (for
   example look and feel, real devices, real GPS on the mountain, app-store builds).
-- **Retention:** each run's per-test results are kept indefinitely; failure output is kept for the
-  latest run only.
+- **Retention:** each run's per-test results are kept about 90 days (GitHub artifact retention); a
+  re-run replaces that run's results with its latest attempt. Failure output is kept for the latest
+  run only.
 
 ## Stages
 
@@ -57,7 +64,7 @@ Epic exit criteria: S1-S3 are done. Each stage gets its own design and approval 
 Scenario: the latest trunk sweep is published
   Given a full sweep has completed on main
   When a stakeholder opens the site
-  Then they see each test by name, grouped by its folder
+  Then they see each test by name, grouped by its folder (an all-passed folder opens with one tap)
   And each test shows whether it passed, failed or was skipped in that sweep
   And the page says which trunk commit was tested and when
 
@@ -66,15 +73,16 @@ Scenario: a test that failed is visible as failed
   When a stakeholder opens the site
   Then that test is shown as failed, and its folder shows it contains a failure
 
-Scenario: a layer that stopped partway
-  Given a layer of trunk's latest sweep reported some of its tests and then stopped
+Scenario: a test job that failed before reporting some folders
+  Given a test job of trunk's latest sweep failed, and reported only some of the folders it reported in its last published run
   When a stakeholder opens the site
-  Then each of that layer's tests it did not report is shown as "no result this run", with the layer's reason
+  Then each test in the missing folders is shown as "no result this run", with the job's reason
 
-Scenario: a layer that reported nothing
-  Given a layer of trunk's latest sweep was red without reporting any tests
+Scenario: a test job that reported nothing
+  Given a test job of trunk's latest sweep never ran, was cancelled or uploaded no results
   When a stakeholder opens the site
-  Then every test in that layer is shown as "no result this run", with the layer's reason
+  Then every test in that job's last published report is shown as "no result this run", with the job's reason
+  And if no published run in the last 90 days has that job's results, its tests do not appear
 
 Scenario: runs that do not publish
   Given a full sweep is run manually on a branch, or on main with a non-default input
@@ -97,8 +105,8 @@ adjacency). The window is its last 20 runs, or all of them if fewer. A test is *
 window holds one or more failures with a pass immediately on each side, both inside the window. The
 flag is always shown beside the plain count, "failed k of the last n runs", with the real n.
 
-"Tracked since" is the first published sweep that included the test, which for tests that predate
-the site is not when they started running. Renaming a test starts a new history; the old name's
+"Tracked since" is the first published sweep still in the 90-day window that included the test,
+which for older tests is not when they started running. Past runs stay viewable within that window. Renaming a test starts a new history; the old name's
 history stays viewable under that name.
 
 ```gherkin
@@ -147,26 +155,29 @@ Scenario Outline: filtering the latest run
 
 - **No "not covered" list.** The site does not say which behaviours have no automated test (backlog
   C12); the area docs remain the place to compare against by hand.
-- **No coverage figure**: neither line coverage nor test counts nor trends (backlog C11).
+- **No coverage figure**: neither line coverage nor trends (backlog C11). Plain tallies of passed,
+  failed, skipped and no-result tests are shown.
 - No behaviour IDs, test annotations or mapping of tests to product areas or features; grouping is
   by folder.
 - No pairing of a widget test and an E2E test of the same behaviour into one line.
 - No results from branch runs, PR runs or `fast`; no republishing on docs-only merges.
 - No failure output for past runs; the drill-down covers the latest run only.
-- No access control, no Cloudflare hosting, no dependence on C10.
-- No change to what the sweep runs, its layers or its green rule; the GitHub run summary stays.
+- No access control, no Cloudflare hosting, no dependence on C10. No GitHub Pages.
+- No change to what the existing layers test or their green rule; the GitHub run summary stays. The
+  site's own tests are added as a sixth layer, `status-site`.
 - No notifications (email, chat) about failures.
 
 ## NFR trigger
 
 Data volume: one run per completed main sweep (a pending sweep superseded in the concurrency group
-is not swept separately). Per-test results are small and kept indefinitely; failure output is kept
-for the latest run only, which keeps the site well inside GitHub Pages' 1 GB published-size limit.
-Ordering: two main sweeps run one after another (`sweep.yml` concurrency group), and "latest" means
-the most recently completed published sweep; a run must never lose or overwrite another's history
-(S2). Security: the site is public. Its content is drawn from the same sweep logs already public as
+is not swept separately). Per-test results are small JUnit artifacts kept about 90 days; failure
+output is kept for the latest run only. Ordering: two main sweeps run one after another (`sweep.yml`
+concurrency group), and "latest" means the published run with the highest run number, so re-running
+an older run never displaces a newer one; a run must never lose or overwrite another run's history
+(S2). Security: the site is public. Its content is drawn from the same sweep results already public as
 Actions artefacts of this public repo, so it adds no new exposure; that risk is accepted with no
-scrubbing. No migration or performance implications.
+scrubbing. The site reads them with a read-only token scoped to this repo, held by Vercel. No
+migration; reading runs at request time is cached for a few minutes.
 
 ## Simplification levers
 
@@ -177,6 +188,6 @@ little readability).
 
 ## UX note
 
-A static site, mobile-readable. The stakeholder view (folders and tests with their results, the
+A Vercel-hosted page, mobile-readable, whose data is read when it is requested. The stakeholder view (folders and tests with their results, the
 trunk commit and run time, the never-checks list) is the landing page; the drill-down (S3) is a
 secondary view. Passed, failed, skipped and no-result must be distinguishable without colour alone.

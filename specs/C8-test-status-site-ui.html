@@ -1,0 +1,226 @@
+<title>Skimapper Test Status</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sketch board of 480px phone frames, stacked; each frame is one proposed page state. */
+:root {
+  --ground: #eef3f4;
+  --surface: #ffffff;
+  --ink: #142326;
+  --muted: #55686c;
+  --line: #d6e0e2;
+  --accent: #00687a;
+  --accent-soft: #d3eef3;
+  --pass: #1d6b3a;
+  --fail: #b3261e;
+  --fail-soft: #fbe3e1;
+  --skip: #6b5a00;
+  --none: #4f4a6b;
+  --none-soft: #ebe8f5;
+  --board: #e2e9ea;
+  --on-accent: #ffffff;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ground: #0f1a1c; --surface: #172427; --ink: #e3eef0; --muted: #9db1b5; --line: #2b3c40;
+  --accent: #6fd3e6; --accent-soft: #123d45; --pass: #74d498; --fail: #ff9b92; --fail-soft: #3b1c1a;
+  --skip: #e3cf6a; --none: #b9b2e6; --none-soft: #26233a; --board: #0a1214; --on-accent: #0f1a1c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --ground: #0f1a1c; --surface: #172427; --ink: #e3eef0; --muted: #9db1b5; --line: #2b3c40;
+  --accent: #6fd3e6; --accent-soft: #123d45; --pass: #74d498; --fail: #ff9b92; --fail-soft: #3b1c1a;
+  --skip: #e3cf6a; --none: #b9b2e6; --none-soft: #26233a; --board: #0a1214; --on-accent: #0f1a1c; color-scheme: dark }
+
+body { background: var(--board); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+.board { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 48px; display: grid; gap: 40px; justify-items: center; }
+.intro { max-width: 640px; display: grid; gap: 6px; }
+.intro h1 { font-size: 22px; margin: 0; text-wrap: balance; }
+.intro p { margin: 0; color: var(--muted); }
+.state { display: grid; gap: 10px; width: 100%; max-width: 480px; }
+.state-label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.state-note { font-size: 13px; color: var(--muted); margin: 0; }
+.phone { background: var(--ground); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+
+/* page */
+.head { background: var(--accent); color: var(--on-accent); padding: 18px 18px 16px; display: grid; gap: 6px; }
+.head .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; opacity: .85; font-weight: 600; }
+.head h2 { margin: 0; font-size: 20px; text-wrap: balance; }
+.head .meta { font-size: 13px; opacity: .92; }
+.head code { font-family: var(--font-data); font-size: 12.5px; }
+.content { padding: 14px 14px 18px; display: grid; gap: 14px; }
+
+.tally { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; padding: 3px 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.chip b { font-weight: 600; }
+
+.never { background: var(--accent-soft); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; }
+.never h3 { margin: 0; font-size: 14px; }
+.never ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; font-size: 14px; }
+.never p { margin: 0; font-size: 13px; color: var(--muted); }
+
+.section-title { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin: 4px 2px -4px; }
+.folders { display: grid; gap: 8px; }
+details.folder { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+details.folder.has-fail { border-color: var(--fail); }
+details.folder.has-none { border-color: var(--none); }
+.folder summary { list-style: none; cursor: pointer; padding: 11px 14px; display: flex; align-items: center; gap: 10px; }
+.folder summary::-webkit-details-marker { display: none; }
+.folder summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+.caret { width: 10px; color: var(--muted); font-size: 11px; transition: transform .15s; }
+details[open] .caret { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .caret { transition: none; } }
+.fname { font-weight: 600; flex: 1; min-width: 0; }
+.fname span { color: var(--muted); font-weight: 400; }
+.fcount { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.flag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.flag.fail { color: var(--fail); background: var(--fail-soft); }
+.flag.none { color: var(--none); background: var(--none-soft); }
+
+.reason { margin: 0 14px 8px; padding: 8px 10px; border-radius: 8px; background: var(--none-soft); color: var(--ink); font-size: 13px; display: grid; gap: 2px; }
+.reason code { font-family: var(--font-data); font-size: 12px; overflow-wrap: anywhere; }
+ul.tests { list-style: none; margin: 0; padding: 0 0 6px; border-top: 1px solid var(--line); }
+ul.tests li { display: grid; grid-template-columns: 92px 1fr; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--line); align-items: start; }
+ul.tests li:last-child { border-bottom: 0; }
+.st { font-size: 13px; font-weight: 600; display: inline-flex; gap: 5px; align-items: baseline; white-space: nowrap; }
+.st.pass { color: var(--pass); }
+.st.fail { color: var(--fail); }
+.st.skip { color: var(--skip); }
+.st.none { color: var(--none); }
+.tname { min-width: 0; overflow-wrap: anywhere; }
+.tname small { display: block; color: var(--muted); font-size: 12.5px; }
+.foot { font-size: 12.5px; color: var(--muted); padding: 0 2px; }
+.foot a { color: var(--accent); }
+</style>
+
+<div class="board">
+  <div class="intro">
+    <h1>C8 S1 sketch: the latest-run page</h1>
+    <p>Static sketch at 480px. Content is plausible, not real. Wider screens centre the same column at about 720px. Status is always a glyph plus a word.</p>
+  </div>
+
+  <!-- State 1 -->
+  <section class="state">
+    <div class="state-label">1 · Landing: a trunk sweep with one failure</div>
+    <div class="phone">
+      <header class="head">
+        <div class="eyebrow">Skimapper automated tests</div>
+        <h2>Trunk's latest full test run</h2>
+        <div class="meta">Tested <code>e76ac93</code> on main · ran Sat 24 Oct 2026, 14:52 UTC</div>
+      </header>
+      <div class="content">
+        <div class="tally" aria-label="Totals">
+          <span class="chip"><b>✓ 88</b> passed</span>
+          <span class="chip"><b>✗ 1</b> failed</span>
+          <span class="chip"><b>– 1</b> skipped</span>
+          <span class="chip"><b>? 0</b> no result</span>
+        </div>
+
+        <div class="never">
+          <h3>What automation never checks</h3>
+          <ul>
+            <li>How the app looks and feels</li>
+            <li>Real phones (tests run on simulators and emulators)</li>
+            <li>Real GPS on the mountain</li>
+            <li>App-store builds and installs</li>
+          </ul>
+          <p>Test these by hand.</p>
+        </div>
+
+        <div class="section-title">Tests by folder</div>
+        <div class="folders">
+          <details class="folder">
+            <summary><span class="caret">▶</span><span class="fname">app</span><span class="fcount">✓ 2 of 2</span></summary>
+          </details>
+          <details class="folder">
+            <summary><span class="caret">▶</span><span class="fname">app <span>/</span> endpoint</span><span class="fcount">✓ 14 of 14</span></summary>
+          </details>
+          <details class="folder">
+            <summary><span class="caret">▶</span><span class="fname">app <span>/</span> map</span><span class="fcount">✓ 8 of 8</span></summary>
+          </details>
+          <details class="folder has-fail" open>
+            <summary><span class="caret">▶</span><span class="fname">app <span>/</span> resorts</span><span class="flag fail">✗ 1 failed</span><span class="fcount">20</span></summary>
+            <ul class="tests">
+              <li><span class="st pass">✓ Passed</span><span class="tname">Lists each resort by name, with its countries</span></li>
+              <li><span class="st fail">✗ Failed</span><span class="tname">Pulling the list down fetches again and shows the new list</span></li>
+              <li><span class="st pass">✓ Passed</span><span class="tname">Shows the saved list when the service cannot be reached</span></li>
+              <li><span class="st skip">– Skipped</span><span class="tname">A corrupt saved copy counts as nothing saved, and the fetch replaces it</span></li>
+              <li><span class="st pass">✓ Passed</span><span class="tname">A pull that cannot reach the service keeps the list and says it couldn't refresh</span></li>
+              <li><span class="st pass">✓ Passed</span><span class="tname">Saves the catalogue exactly as served</span></li>
+            </ul>
+          </details>
+          <details class="folder">
+            <summary><span class="caret">▶</span><span class="fname">endpoint <span>/</span> integration</span><span class="fcount">✓ 1 of 1</span></summary>
+          </details>
+          <details class="folder">
+            <summary><span class="caret">▶</span><span class="fname">sweep self-test</span><span class="fcount">✓ 30 of 30</span></summary>
+          </details>
+          <details class="folder">
+            <summary><span class="caret">▶</span><span class="fname">ios <span>/</span> catalogue_serving</span><span class="fcount">✓ 3 of 3</span></summary>
+          </details>
+          <details class="folder">
+            <summary><span class="caret">▶</span><span class="fname">ios <span>/</span> catalogue_unknown_version</span><span class="fcount">✓ 1 of 1</span></summary>
+          </details>
+          <details class="folder">
+            <summary><span class="caret">▶</span><span class="fname">ios <span>/</span> endpoint_scripted</span><span class="fcount">✓ 3 of 3</span></summary>
+          </details>
+          <details class="folder">
+            <summary><span class="caret">▶</span><span class="fname">android <span>/</span> catalogue_serving</span><span class="fcount">✓ 3 of 3</span></summary>
+          </details>
+          <details class="folder">
+            <summary><span class="caret">▶</span><span class="fname">android <span>/</span> catalogue_unknown_version</span><span class="fcount">✓ 1 of 1</span></summary>
+          </details>
+          <details class="folder">
+            <summary><span class="caret">▶</span><span class="fname">android <span>/</span> endpoint_scripted</span><span class="fcount">✓ 3 of 3</span></summary>
+          </details>
+          <details class="folder">
+            <summary><span class="caret">▶</span><span class="fname">status-site</span><span class="fcount">✓ 24 of 24</span></summary>
+          </details>
+        </div>
+        <div class="foot">From <a href="#">sweep run #212</a>. Only full test runs on main are published; this page refreshes within a few minutes of a new one.</div>
+      </div>
+    </div>
+    <p class="state-note">Folders follow the sweep's layer order, then the path. Folders with a failure or a missing result open automatically and get a coloured border plus a worded badge; an open folder lists every test in it. Folders that all passed stay closed and show "✓ n of n". The never-checks list sits above the results. Not drawn: a preview showing a named run carries a "Not published" banner under the header.</p>
+  </section>
+
+  <!-- State 2 -->
+  <section class="state">
+    <div class="state-label">2 · A job that gave no results (Android E2E timed out)</div>
+    <div class="phone">
+      <header class="head">
+        <div class="eyebrow">Skimapper automated tests</div>
+        <h2>Trunk's latest full test run</h2>
+        <div class="meta">Tested <code>a3e3a09</code> on main · ran Fri 23 Oct 2026, 09:07 UTC</div>
+      </header>
+      <div class="content">
+        <div class="tally" aria-label="Totals">
+          <span class="chip"><b>✓ 81</b> passed</span>
+          <span class="chip"><b>✗ 0</b> failed</span>
+          <span class="chip"><b>– 0</b> skipped</span>
+          <span class="chip"><b>? 6</b> no result</span>
+        </div>
+        <div class="section-title">Tests by folder</div>
+        <div class="folders">
+          <details class="folder has-none" open>
+            <summary><span class="caret">▶</span><span class="fname">android <span>/</span> catalogue_serving</span><span class="flag none">? 3 no result</span><span class="fcount">3</span></summary>
+            <div class="reason"><strong>Why there's no result:</strong> the android test job timed out. These tests are listed from the last published run.</div>
+            <ul class="tests">
+              <li><span class="st none">? No result</span><span class="tname">Credits the map and resort data sources</span></li>
+              <li><span class="st none">? No result</span><span class="tname">Lists the served resorts by name, with their countries</span></li>
+              <li><span class="st none">? No result</span><span class="tname">Shows the offline map with no network</span></li>
+            </ul>
+          </details>
+          <details class="folder has-none" open>
+            <summary><span class="caret">▶</span><span class="fname">android <span>/</span> endpoint_scripted</span><span class="flag none">? 3 no result</span><span class="fcount">3</span></summary>
+            <div class="reason"><strong>Why there's no result:</strong> the android test job timed out. These tests are listed from the last published run.</div>
+            <ul class="tests">
+              <li><span class="st none">? No result</span><span class="tname">With no service on first launch, says it couldn't load resorts</span></li>
+              <li><span class="st none">? No result</span><span class="tname">With the service up, saves the list, then with no service after a relaunch, still shows the saved list</span></li>
+              <li><span class="st none">? No result</span><span class="tname">Pulling the list down shows a newly added area</span></li>
+            </ul>
+          </details>
+        </div>
+      </div>
+    </div>
+    <p class="state-note">The job's reason is shown once per folder, not on every line. Every folder that job held in the last published run is listed this way. The relaunch pair (line 2) is one line named "&lt;part 1&gt;, then &lt;part 2&gt;". Not drawn: if no published run in the last 90 days has that job's results, a single note shows the reason and "No earlier run lists its tests". Also not drawn: a preview of an unpublished run carries a "Not published" banner, and with no published run in 90 days the page says so.</p>
+  </section>
+</div>
