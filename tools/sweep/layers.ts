@@ -1,5 +1,6 @@
 import { join } from "node:path";
 
+import { UsageError } from "./cli.ts";
 import type { Layer } from "./sweep.ts";
 
 // The full sweep's layers, in order: fast, slow, then E2E per platform (docs/PIPELINE.md).
@@ -31,18 +32,23 @@ export function sweepLayers(repoDir: string): Layer[] {
   ];
 }
 
-export function selectLayers(layers: Layer[], ids: string[] | undefined): Layer[] {
-  if (!ids) return layers;
+// The layers a command line selects with the given switch: all when the switch is absent, otherwise the
+// comma-separated ids after it, in sweep order. A missing, empty or unknown id is a UsageError.
+export function layersFromArgs(layers: Layer[], args: string[], name: string): Layer[] {
+  const switchAt = args.indexOf(name);
+  if (switchAt === -1) return layers;
+  const ids = args[switchAt + 1]?.split(",");
+  if (!ids || ids.includes("")) throw new UsageError(`${name} needs a comma-separated list of layer ids (ids: ${idsOf(layers)})`);
+  return selectLayers(layers, ids, name);
+}
+
+function selectLayers(layers: Layer[], ids: string[], name: string): Layer[] {
   const unknown = ids.find((id) => !layers.some((layer) => layer.id === id));
-  if (unknown) throw new Error(`unknown layer '${unknown}' (ids: ${layers.map((layer) => layer.id).join(", ")})`);
+  if (unknown) throw new UsageError(`${name}: unknown layer '${unknown}' (ids: ${idsOf(layers)})`);
   return layers.filter((layer) => ids.includes(layer.id));
 }
 
-// The comma-separated value after a switch such as --layers, or undefined when the switch is absent.
-export const listSwitch = (args: string[], name: string): string[] | undefined => {
-  const switchAt = args.indexOf(name);
-  return switchAt === -1 ? undefined : args[switchAt + 1].split(",");
-};
+const idsOf = (layers: Layer[]): string => layers.map((layer) => layer.id).join(", ");
 
 function e2eLayer(repoDir: string, platform: string): Layer {
   return {

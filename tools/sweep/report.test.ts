@@ -35,6 +35,14 @@ function report(args: string[]) {
   };
 }
 
+// A local run: no step summary to write, whether GITHUB_STEP_SUMMARY is unset or empty. Never inherited, as
+// this self-test runs inside CI, where it names the real run's summary.
+function localReport(args: string[], summary: { GITHUB_STEP_SUMMARY?: string }) {
+  const { GITHUB_STEP_SUMMARY: _, ...env } = process.env;
+  const run = spawnSync(process.execPath, [reportScript, ...args], { encoding: "utf8", env: { ...env, ...summary } });
+  return { exitCode: run.status, stdout: run.stdout, stderr: run.stderr };
+}
+
 test("a red layer turns the report red, and the summary names the layer and why", () => {
   const results = jobResults({
     "sweep-fast": [
@@ -72,4 +80,34 @@ test("when no job left any results the report still runs and shows every layer r
 
   assert.equal(exitCode, 1, stderr);
   assert.match(summary, /\| app \| 🔴 red \| no result/);
+});
+
+test("--expect with no value prints one error line naming the switch and the ids, and reports nothing", () => {
+  const { exitCode, summary, stdout, stderr } = report(["--expect"]);
+
+  assert.equal(stderr, "error: --expect needs a comma-separated list of layer ids (ids: app, endpoint, self-test, e2e-ios, e2e-android)\n");
+  assert.equal(exitCode, 1);
+  assert.equal(stdout, "");
+  assert.equal(summary, "");
+});
+
+test("--expect with an unknown id prints one error line naming the switch, the id and the ids, and reports nothing", () => {
+  const { exitCode, summary, stdout, stderr } = report(["--expect", "app,e2e-windows", jobResults({})]);
+
+  assert.equal(stderr, "error: --expect: unknown layer 'e2e-windows' (ids: app, endpoint, self-test, e2e-ios, e2e-android)\n");
+  assert.equal(exitCode, 1);
+  assert.equal(stdout, "");
+  assert.equal(summary, "");
+});
+
+test("run locally, with no step summary set, the report prints the table and exits 0 on a green run", () => {
+  const results = jobResults({ "sweep-fast": [{ id: "app", label: "app", verdict: "green" }] });
+
+  for (const summary of [{}, { GITHUB_STEP_SUMMARY: "" }]) {
+    const { exitCode, stdout, stderr } = localReport(["--expect", "app", results], summary);
+
+    assert.equal(stderr, "", JSON.stringify(summary));
+    assert.match(stdout, /\| app \| 🟢 green \|/);
+    assert.equal(exitCode, 0);
+  }
 });

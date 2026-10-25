@@ -101,6 +101,7 @@ The resort list is the home screen (area doc `definitions/resorts.md`), with the
 - **CI's AVD uses the `pixel_7_pro` profile** (`ANDROID_AVD_DEVICE`): the SDK command-line tools define no newer one. Rejected: a committed custom `devices.xml`.
 - **The Android job caps Gradle at 2 GB** beside the 4 GB emulator; kept as a guard.
 - **The app layer pins `flutter test --reporter expanded`**, because Flutter's GitHub reporter output is not counted by the zero-test check.
+- **A misused sweep switch is one `error:` line and exit 1.** `layersFromArgs` (`tools/sweep/layers.ts`) is the one function that turns a command line into layers (absent means all; a missing, empty, empty-item or unknown list throws `UsageError`), and `runCli` (`tools/sweep/cli.ts`) wraps each entry point, catching only `UsageError`. Nothing runs or is written before the arguments are accepted. Exit 1 matches Bash `fail`. Rejected: exiting inside the selection function (kills the in-process workflow check); exit 2 for Node only (splits the rule across languages). The self-test also checks that `sweep.yml`'s `tools/full-sweep` calls run each layer exactly once, counted per call through `layersFromArgs` rather than by parsing the YAML (no package install in `tools/`). The report writes the step summary only when `GITHUB_STEP_SUMMARY` is set, so it runs locally. The `tools/full-sweep` subprocess test runs a temp copy of `tools/`, so a selection regression cannot touch the real `test-results/`.
 
 ## AC1 check matrix (C4)
 

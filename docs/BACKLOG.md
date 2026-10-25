@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F22`, `B5`, `C9`.
+**Next free IDs**: `F22`, `B5`, `C11`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -54,7 +54,7 @@ below that gets picked up out of turn should say why in its spec.
 
 ## Bugs
 
-- **B4** The unreachable-endpoint E2E (now the first-launch test in `endpoint_scripted`, formerly `endpoint_stopped`) passed on CI by coincidence before B2's fix: its "unreachable" line appeared because the first fetch hit the same first-launch UI freeze, not because a closed port was refused. Its pass is now real, but CI's first launch still has thin headroom (app-side fetch measured 4.4-8.0 s, endpoint-side 0.6-2.4 s, on the first launch after each install); watch for a recurrence. A second symptom of the same cold-start stall: on a freshly booted emulator `catalogue_serving` on Android once aborted with "Expected 3 tests, received 2" (the app's event loop 14-25 s late, and `resort_list_test` never requested by the native side); a rerun on the warm emulator is the check.
+- **B4** The unreachable-endpoint E2E (now the first-launch test in `endpoint_scripted`, formerly `endpoint_stopped`) passed on CI by coincidence before B2's fix: its "unreachable" line appeared because the first fetch hit the same first-launch UI freeze, not because a closed port was refused. Its pass is now real, but CI's first launch still has thin headroom (app-side fetch measured 4.4-8.0 s, endpoint-side 0.6-2.4 s, on the first launch after each install); watch for a recurrence. A second symptom of the same cold-start stall: on a freshly booted emulator `catalogue_serving` on Android once aborted with "Expected 3 tests, received 2" (the app's event loop 14-25 s late, and `resort_list_test` never requested by the native side); a rerun on the warm emulator is the check. **Recurred 2026-10-24** on main's sweep (run 40105890900, iOS), before F1 retired the group: `endpoint_malformed`'s first fetch logged `event loop late by 4889 ms` then `unreachable (timeout after 3000 ms) in 4514 ms` against a ready endpoint. To be fixed later.
 
 ---
 
@@ -65,4 +65,6 @@ below that gets picked up out of turn should say why in its spec.
 - **C3** Failures in the service and its daily refresh are noticed and reported, with enough detail to find and fix the cause quickly. Depends on F20.
 - **C6** Skeleton hardening: a missing `ENDPOINT_URL`/`ENDPOINT_TIMEOUT_MS` define shows a loading or misleading "could not be reached" state instead of a clear failure.
 - **C7** CI tooling nits from C5's review: `listSwitch` (`tools/sweep/layers.ts`) throws a bare TypeError when `--layers` is last; `report.ts` relies on `GITHUB_STEP_SUMMARY!`, so a local run throws after printing the table; `toolchain.test.ts` covers only the failing cases of `require_given_jdk` (add a passing case); nothing checks that the `linux`/`android`/`ios` jobs' `--layers` together cover `sweepLayers`.
-- **C8** The service is deployed for real: a Cloudflare account, the private R2 bucket and a deploy workflow, so the app works on a phone outside development, with D1's free-tier limits checked against the first deploy.
+- **C8** CI test results can be browsed per test, interactively, from a GitHub Actions run: today the run only shows the per-layer summary table `tools/sweep/report.ts` writes to the step summary, with the raw results buried in the uploaded artefacts. Wants every test across all layers (fast and full sweep, all platforms) with pass/fail, duration and failure output, filterable and drillable. Builds on C5's sweep reporting (`.github/workflows/push.yml`, `sweep.yml`).
+- **C9** The sweep and CI report reject arguments they don't recognise: today `tools/full-sweep --layer app` or `--layers=app` is silently ignored and runs every layer, E2E included (about 90 minutes), because `layersFromArgs` (`tools/sweep/layers.ts`) only looks for the exact switch. Each entry point should accept only its own switch and value (plus `report.ts`'s results dir) and fail with one `error:` line. Build on `layersFromArgs` and the `tools/sweep/cli.ts` boundary.
+- **C10** The service is deployed for real: a Cloudflare account, the private R2 bucket and a deploy workflow, so the app works on a phone outside development, with D1's free-tier limits checked against the first deploy.
