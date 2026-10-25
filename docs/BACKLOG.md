@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F22`, `B5`, `C10`.
+**Next free IDs**: `F22`, `B5`, `C11`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -19,8 +19,8 @@ The agreed order for roughly the next five items — a queue, where the rest of 
 Re-ranked whenever an item lands (`/finish-feature` pops the head and tops the list back up); an item
 below that gets picked up out of turn should say why in its spec.
 
-1. **F1** Resort list
-2. **F5** Resort map
+1. **F5** Resort map
+2. **F4** Open a resort from the list
 3. **F8** Choose route start and end
 4. **F11** Quickest route
 5. **F16** Resort data available offline
@@ -29,11 +29,10 @@ below that gets picked up out of turn should say why in its spec.
 
 ## Features
 
-- **F1** Skiers can browse the ski areas the app supports, each shown with its name and country, so they can find the resort they're visiting. The list can be refreshed by pulling down, and it stays available without a signal once it has been loaded.
-- **F2** Skiers can sort the resort list from closest to furthest, with the distance to each resort shown. Their location is only used on the device to work out distances and never leaves it. Depends on F1.
-- **F3** Skiers can mark resorts as favourites, and their favourites are remembered between visits to the app. Depends on F1.
-- **F4** Opening a resort from the list takes the skier straight to its map, and the app remembers which resort was open, so it reopens there next time. Depends on F1 and F5.
-- **F5** Each resort is shown on a full-screen map that's easy to read on the mountain: a muted background with shaded terrain, runs drawn in their difficulty colours and labelled with their names, and lifts drawn and labelled so they stand apart from the runs, with drag lifts marked differently from aerial lifts. The map frames the whole resort when it opens.
+- **F2** Skiers can sort the resort list from closest to furthest, with the distance to each resort shown. Their location is only used on the device to work out distances and never leaves it. Builds on the resort list (`docs/definitions/resorts.md`), which sorts by name and keeps each resort's centre point for this.
+- **F3** Skiers can mark resorts as favourites, and their favourites are remembered between visits to the app. This is the app's first user state, so it is where the drift database starts (migration 1, DECISIONS.md D5). Builds on the resort list; catalogue entries carry no id yet, so this adds one.
+- **F4** Opening a resort from the list takes the skier straight to its map, and the app remembers which resort was open, so it reopens there next time. Depends on F5. Once a resort opens its map, the resort list stands alone on its screen, so this also moves or retires the fixture-map proof that sits below the list today (with F5).
+- **F5** Each resort is shown on a full-screen map that's easy to read on the mountain: a muted background with shaded terrain, runs drawn in their difficulty colours and labelled with their names, and lifts drawn and labelled so they stand apart from the runs, with drag lifts marked differently from aerial lifts. The map frames the whole resort when it opens. The fixture-map proof (map, map line and attribution) pinned below the resort list today is a temporary arrangement: this moves it onto the resort's map screen or retires it, so the list is alone on its screen. Also confirms the OpenSkiMap licence (DECISIONS.md D2) before OpenSkiMap data ships, unless F20 does first.
 - **F6** The map shows which lifts and runs are open right now. Lifts and runs known to be closed fade back, the resort's name bar says how up to date the information is, and information that has become too old to trust is no longer shown rather than misleading the skier. Depends on F5.
 - **F7** Tapping a lift shows its name, its type and whether it's running, along with any message the resort has given about it, such as when it's due to open. Depends on F5.
 - **F8** Skiers can plan a route between two points in the resort by choosing a start and an end, either by tapping the map or by picking which point they're setting and then tapping where they want it. The chosen points are marked on the map.
@@ -55,7 +54,7 @@ below that gets picked up out of turn should say why in its spec.
 
 ## Bugs
 
-- **B4** `endpoint_stopped` passed on CI by coincidence before B2's fix: its "unreachable" line appeared because the first fetch hit the same first-launch UI freeze, not because a closed port was refused. Its pass is now real, but CI's first launch still has thin headroom (app-side fetch measured 4.4-8.0 s, endpoint-side 0.6-2.4 s, on the first launch after each install); watch for a recurrence. **Recurred 2026-10-24** on main's sweep (run 40105890900, iOS): `endpoint_malformed`'s first fetch logged `event loop late by 4889 ms` then `unreachable (timeout after 3000 ms) in 4514 ms` against a ready endpoint, so the app showed "could not be reached" and the "not understood" wait timed out. To be fixed later.
+- **B4** The unreachable-endpoint E2E (now the first-launch test in `endpoint_scripted`, formerly `endpoint_stopped`) passed on CI by coincidence before B2's fix: its "unreachable" line appeared because the first fetch hit the same first-launch UI freeze, not because a closed port was refused. Its pass is now real, but CI's first launch still has thin headroom (app-side fetch measured 4.4-8.0 s, endpoint-side 0.6-2.4 s, on the first launch after each install); watch for a recurrence. A second symptom of the same cold-start stall: on a freshly booted emulator `catalogue_serving` on Android once aborted with "Expected 3 tests, received 2" (the app's event loop 14-25 s late, and `resort_list_test` never requested by the native side); a rerun on the warm emulator is the check. **Recurred 2026-10-24** on main's sweep (run 40105890900, iOS), before F1 retired the group: `endpoint_malformed`'s first fetch logged `event loop late by 4889 ms` then `unreachable (timeout after 3000 ms) in 4514 ms` against a ready endpoint. To be fixed later.
 
 ---
 
@@ -64,6 +63,8 @@ below that gets picked up out of turn should say why in its spec.
 - **C1** The service behind the app is protected from abuse: heavy or automated use is limited, AI scrapers are refused, and resort data can only be reached through the service.
 - **C2** The service can tell requests from genuine installs of the app apart from others, so it can refuse anything that isn't the real app.
 - **C3** Failures in the service and its daily refresh are noticed and reported, with enough detail to find and fix the cause quickly. Depends on F20.
-- **C6** Skeleton hardening: the skeleton message line shows the text "null" when a valid envelope has no `message` field, and a missing `ENDPOINT_URL`/`ENDPOINT_TIMEOUT_MS` define (or a `FutureBuilder` error) shows "endpoint: loading" or a misleading "could not be reached" instead of a clear failure. Also extract a shared TypeScript envelope builder (currently duplicated in `endpoint/scripts/seed-local.ts` and `endpoint/test/integration/artefacts.test.ts`) when the second document kind lands.
+- **C6** Skeleton hardening: a missing `ENDPOINT_URL`/`ENDPOINT_TIMEOUT_MS` define shows a loading or misleading "could not be reached" state instead of a clear failure.
+- **C7** CI tooling nits from C5's review: `listSwitch` (`tools/sweep/layers.ts`) throws a bare TypeError when `--layers` is last; `report.ts` relies on `GITHUB_STEP_SUMMARY!`, so a local run throws after printing the table; `toolchain.test.ts` covers only the failing cases of `require_given_jdk` (add a passing case); nothing checks that the `linux`/`android`/`ios` jobs' `--layers` together cover `sweepLayers`.
 - **C8** CI test results can be browsed per test, interactively, from a GitHub Actions run: today the run only shows the per-layer summary table `tools/sweep/report.ts` writes to the step summary, with the raw results buried in the uploaded artefacts. Wants every test across all layers (fast and full sweep, all platforms) with pass/fail, duration and failure output, filterable and drillable. Builds on C5's sweep reporting (`.github/workflows/push.yml`, `sweep.yml`).
 - **C9** The sweep and CI report reject arguments they don't recognise: today `tools/full-sweep --layer app` or `--layers=app` is silently ignored and runs every layer, E2E included (about 90 minutes), because `layersFromArgs` (`tools/sweep/layers.ts`) only looks for the exact switch. Each entry point should accept only its own switch and value (plus `report.ts`'s results dir) and fail with one `error:` line. Build on `layersFromArgs` and the `tools/sweep/cli.ts` boundary.
+- **C10** The service is deployed for real: a Cloudflare account, the private R2 bucket and a deploy workflow, so the app works on a phone outside development, with D1's free-tier limits checked against the first deploy.

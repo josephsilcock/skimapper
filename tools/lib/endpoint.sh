@@ -3,21 +3,17 @@ source "$TOOLS_DIR/lib/run-record.sh"
 
 ENDPOINT_DIR="$REPO_DIR/endpoint"
 ENDPOINT_URL="http://127.0.0.1:$ENDPOINT_PORT"
-# The route the app reads first (the Worker's documentRoutes; the app's SkeletonMessageLine). Start-up
+# The route the app reads first (the Worker's documentRoutes; the app's resort list). Start-up
 # waits until it answers, with any status and any body, so its cold first answer isn't the app's.
-ENDPOINT_READY_PATH="/v1/skeleton/message"
+ENDPOINT_READY_PATH="/v1/catalogue"
 export WRANGLER_SEND_METRICS=false
 ENDPOINT_PID=""
 
-seed_endpoint_message() {
-  local persist_to="$1" message="$2"
-  (cd "$ENDPOINT_DIR" && node scripts/seed-local.ts --persist-to "$persist_to" --message "$message") \
-    || fail "could not seed the local endpoint"
-}
-
-seed_endpoint_malformed() {
+# Extra arguments pick a variant (see seed-local.ts).
+seed_endpoint_catalogue() {
   local persist_to="$1"
-  (cd "$ENDPOINT_DIR" && node scripts/seed-local.ts --persist-to "$persist_to" --malformed) \
+  shift
+  (cd "$ENDPOINT_DIR" && node scripts/seed-local.ts --persist-to "$persist_to" "$@") \
     || fail "could not seed the local endpoint"
 }
 

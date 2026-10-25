@@ -1,0 +1,7 @@
+{
+  "resorts": [
+    { "name": "Paradiski", "countries": ["France"], "centre": { "lat": 45.56, "lon": 6.8 } },
+    { "name": "Les 3 Vallées", "countries": ["France"], "centre": { "lat": 45.37, "lon": 6.58 } },
+    { "name": "Espace San Bernardo", "countries": ["France", "Italy"], "centre": { "lat": 45.67, "lon": 6.9 } }
+  ]
+}
