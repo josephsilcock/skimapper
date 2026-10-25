@@ -247,6 +247,103 @@ void main() {
     );
   }
 
+  testWidgets(
+    'with nothing saved, a catalogue version this app does not know asks for an update, with Retry',
+    (tester) async {
+      await tester.pumpWidget(
+        _resortList(endpoint: _answering(_unknownVersion), store: store),
+      );
+      await pumpUntilFound(
+        tester,
+        find.text('Update SkiMapper to see resorts'),
+      );
+
+      expect(find.text('Update SkiMapper to see resorts'), findsOneWidget);
+      expect(find.text("Couldn't load resorts"), findsNothing);
+      expect(find.text('Retry'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'with a saved list, a catalogue version this app does not know shows the list with an update banner over it',
+    (tester) async {
+      await tester.runAsync(() => store.write(jsonEncode(_catalogue)));
+      await tester.pumpWidget(
+        _resortList(endpoint: _answering(_unknownVersion), store: store),
+      );
+      await pumpUntilFound(tester, find.byType(MaterialBanner));
+
+      expect(find.text(_updateBanner), findsOneWidget);
+      expect(find.text('Paradiski'), findsOneWidget);
+    },
+  );
+
+  testWidgets('the update banner clears when a later pull is understood', (
+    tester,
+  ) async {
+    final served = File(
+      '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
+    )..writeAsStringSync(_unknownVersion);
+    await tester.runAsync(() => store.write(jsonEncode(_catalogue)));
+    await tester.pumpWidget(
+      _resortList(endpoint: _answeringFrom(served.path), store: store),
+    );
+    await pumpUntilFound(tester, find.byType(MaterialBanner));
+
+    served.writeAsStringSync(jsonEncode(_catalogue));
+    await _pullDown(tester);
+    await _letTimePass(tester, const Duration(milliseconds: 500));
+
+    expect(find.byType(MaterialBanner), findsNothing);
+    expect(find.text('Paradiski'), findsOneWidget);
+  });
+
+  testWidgets(
+    'the update banner stays when a later pull fails, and the pull says it couldn\'t refresh',
+    (tester) async {
+      final served = File(
+        '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
+      )..writeAsStringSync(_unknownVersion);
+      await tester.runAsync(() => store.write(jsonEncode(_catalogue)));
+      await tester.pumpWidget(
+        _resortList(endpoint: _answeringFrom(served.path), store: store),
+      );
+      await pumpUntilFound(tester, find.byType(MaterialBanner));
+
+      served.writeAsStringSync('service unavailable');
+      await _pullDown(tester);
+      await pumpUntilFound(tester, find.text("Couldn't refresh resorts"));
+
+      expect(find.byType(MaterialBanner), findsOneWidget);
+      expect(find.text("Couldn't refresh resorts"), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'an understood pull after a failed one brings no couldn\'t-refresh message',
+    (tester) async {
+      final served = File(
+        '${Directory.systemTemp.createTempSync('served-').path}/catalogue.json',
+      )..writeAsStringSync('service unavailable');
+      await tester.runAsync(() => store.write(jsonEncode(_catalogue)));
+      await tester.pumpWidget(
+        _resortList(endpoint: _answeringFrom(served.path), store: store),
+      );
+      await pumpUntilFound(tester, find.text('Paradiski'));
+      await _pullDown(tester);
+      await pumpUntilFound(tester, find.text("Couldn't refresh resorts"));
+      ScaffoldMessenger.of(tester.element(find.text('Paradiski')))
+          .clearSnackBars();
+      await tester.pumpAndSettle();
+
+      served.writeAsStringSync(jsonEncode(_catalogue));
+      await _pullDown(tester);
+      await _letTimePass(tester, const Duration(milliseconds: 500));
+
+      expect(find.text("Couldn't refresh resorts"), findsNothing);
+    },
+  );
+
   testWidgets('saves the understood catalogue exactly as served', (
     tester,
   ) async {
@@ -433,6 +530,11 @@ Map<String, Object?> _catalogueOf(List<String> names) => {
     ],
   },
 };
+
+const _updateBanner =
+    'A newer resort list needs an app update. Showing your saved list.';
+
+final _unknownVersion = jsonEncode({..._catalogue, 'schemaVersion': 999});
 
 const _catalogue = {
   'kind': 'catalogue',

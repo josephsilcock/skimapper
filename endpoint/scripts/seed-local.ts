@@ -1,6 +1,7 @@
 // Seeds local (Miniflare) R2 with the curated catalogue, or an E2E variant of it.
 //   node scripts/seed-local.ts --persist-to <dir>
 //   node scripts/seed-local.ts --persist-to <dir> --extra-area <name>  (the catalogue gains an area)
+//   node scripts/seed-local.ts --persist-to <dir> --unknown-version    (a schema version no app knows)
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -16,11 +17,12 @@ const { values } = parseArgs({
   options: {
     "persist-to": { type: "string" },
     "extra-area": { type: "string" },
+    "unknown-version": { type: "boolean" },
   },
 });
 const persistTo = required(values["persist-to"], "--persist-to");
 
-put(catalogueKey, buildEnvelope("catalogue", 1, catalogue()));
+put(catalogueKey, buildEnvelope("catalogue", values["unknown-version"] ? 999 : 1, catalogue()));
 
 // The curated catalogue, or an E2E variant derived from it.
 function catalogue(): { resorts: unknown[] } {

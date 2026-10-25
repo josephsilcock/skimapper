@@ -5,7 +5,8 @@ import 'catalogue.dart';
 import 'resort_list.dart';
 import 'resort_list_providers.dart';
 
-/// The resort list area of the home screen: the list, or the first load's state, always pullable.
+/// The resort list area of the home screen: the list (under an update banner when one is needed),
+/// or the first load's state; always pullable.
 class ResortListView extends ConsumerWidget {
   const ResortListView({super.key});
 
@@ -19,21 +20,50 @@ class ResortListView extends ConsumerWidget {
         context,
       ).showSnackBar(const SnackBar(content: Text("Couldn't refresh resorts"))),
     );
-    return RefreshIndicator(
-      onRefresh: notifier.refresh,
-      child: switch (list) {
-        ResortListState(:final Catalogue shown) => _Resorts(shown),
-        ResortListState(firstLoad: FirstLoad.loading) => const _FullArea(
-          child: CircularProgressIndicator(),
-        ),
-        ResortListState(firstLoad: FirstLoad.couldNotLoad) => _FullAreaMessage(
-          heading: "Couldn't load resorts",
-          detail: 'Check your connection, then try again or pull down.',
-          onRetry: notifier.refresh,
-        ),
-      },
+    return Column(
+      children: [
+        if (list.updateNeeded) const _UpdateBanner(),
+        Expanded(child: _pullable(list, notifier)),
+      ],
     );
   }
+
+  Widget _pullable(ResortListState list, ResortList notifier) =>
+      RefreshIndicator(
+        onRefresh: notifier.refresh,
+        child: switch (list) {
+          ResortListState(:final Catalogue shown) => _Resorts(shown),
+          ResortListState(firstLoad: FirstLoad.loading) => const _FullArea(
+            child: CircularProgressIndicator(),
+          ),
+          ResortListState(firstLoad: FirstLoad.couldNotLoad) =>
+            _FullAreaMessage(
+              heading: "Couldn't load resorts",
+              detail: 'Check your connection, then try again or pull down.',
+              onRetry: notifier.refresh,
+            ),
+          ResortListState(firstLoad: FirstLoad.updateApp) => _FullAreaMessage(
+            heading: 'Update SkiMapper to see resorts',
+            detail: "This version can't read the latest resort list.",
+            onRetry: notifier.refresh,
+          ),
+        },
+      );
+}
+
+/// "Update the app" over a saved list, which stays usable. It has no Dismiss: it clears when a
+/// later answer is understood.
+class _UpdateBanner extends StatelessWidget {
+  const _UpdateBanner();
+
+  @override
+  Widget build(BuildContext context) => const MaterialBanner(
+    content: Text(
+      'A newer resort list needs an app update. Showing your saved list.',
+    ),
+    // MaterialBanner requires an action; this one deliberately offers none.
+    actions: [SizedBox.shrink()],
+  );
 }
 
 class _Resorts extends StatelessWidget {

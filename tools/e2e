@@ -11,7 +11,7 @@ require_platform "$platform"
 [[ "$platform" == android ]] && use_android_jdk
 shift
 groups=("$@")
-[[ ${#groups[@]} -gt 0 ]] || groups=(catalogue_serving endpoint_scripted)
+[[ ${#groups[@]} -gt 0 ]] || groups=(catalogue_serving catalogue_unknown_version endpoint_scripted)
 
 device="$(boot_device "$platform")"
 forward_endpoint_port "$platform" "$device"
@@ -33,6 +33,10 @@ prepare_endpoint() {
   case "$group" in
     catalogue_serving)
       seed_endpoint_catalogue "$work_dir/$group"
+      start_endpoint "$work_dir/$group"
+      ;;
+    catalogue_unknown_version)
+      seed_endpoint_catalogue "$work_dir/$group" --unknown-version
       start_endpoint "$work_dir/$group"
       ;;
     endpoint_scripted) serve_catalogue curated ;;

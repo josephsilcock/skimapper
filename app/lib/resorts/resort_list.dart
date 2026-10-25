@@ -11,7 +11,7 @@ import 'catalogue_store.dart';
 import 'resort_list_providers.dart';
 
 /// How the first load is going while no list is shown.
-enum FirstLoad { loading, couldNotLoad }
+enum FirstLoad { loading, couldNotLoad, updateApp }
 
 /// What the resort list area shows.
 class ResortListState {
@@ -19,6 +19,7 @@ class ResortListState {
     this.shown,
     this.firstLoad = FirstLoad.loading,
     this.failedRefreshes = 0,
+    this.updateNeeded = false,
   });
 
   final Catalogue? shown;
@@ -26,6 +27,24 @@ class ResortListState {
 
   /// Counts the skier's refreshes that failed over a shown list; each new one is a brief message.
   final int failedRefreshes;
+
+  /// The endpoint serves a catalogue this app can't read, over a shown list.
+  final bool updateNeeded;
+
+  ResortListState showing(Catalogue catalogue) =>
+      ResortListState(shown: catalogue, failedRefreshes: failedRefreshes);
+
+  ResortListState withUpdateNeeded() => ResortListState(
+    shown: shown,
+    failedRefreshes: failedRefreshes,
+    updateNeeded: true,
+  );
+
+  ResortListState withFailedRefresh() => ResortListState(
+    shown: shown,
+    failedRefreshes: failedRefreshes + 1,
+    updateNeeded: updateNeeded,
+  );
 }
 
 /// Who asked for a fetch: the app at launch, quietly, or the skier (pull or Retry).
@@ -70,7 +89,7 @@ class ResortList extends Notifier<ResortListState> {
   void _showSaved(String? saved) {
     if (saved == null) return;
     if (openCatalogue(saved) case Understood(:final value)) {
-      state = ResortListState(shown: value);
+      state = state.showing(value);
     }
   }
 
@@ -82,22 +101,25 @@ class ResortList extends Notifier<ResortListState> {
     switch (outcome) {
       case Understood(:final body, :final value):
         _newestApplied = generation;
-        state = ResortListState(shown: value);
+        state = state.showing(value);
         await _save(generation, body);
       case Incompatible() || Failed():
-        state = _afterFailure(trigger);
+        state = _notUnderstood(outcome, trigger);
     }
   }
 
-  ResortListState _afterFailure(_Trigger trigger) =>
-      switch ((state.shown, trigger)) {
-        (null, _) => const ResortListState(firstLoad: FirstLoad.couldNotLoad),
-        (final shown, _Trigger.skier) => ResortListState(
-          shown: shown,
-          failedRefreshes: state.failedRefreshes + 1,
-        ),
-        (_, _Trigger.quietLaunch) => state,
-      };
+  ResortListState _notUnderstood(
+    DocumentOutcome<Catalogue> outcome,
+    _Trigger trigger,
+  ) => switch ((state.shown, outcome, trigger)) {
+    (null, Incompatible(), _) => const ResortListState(
+      firstLoad: FirstLoad.updateApp,
+    ),
+    (null, _, _) => const ResortListState(firstLoad: FirstLoad.couldNotLoad),
+    (_, Incompatible(), _) => state.withUpdateNeeded(),
+    (_, _, _Trigger.skier) => state.withFailedRefresh(),
+    (_, _, _Trigger.quietLaunch) => state,
+  };
 
   /// Saves run one at a time, and a save whose answer is no longer the newest is skipped, so an
   /// earlier save can never land last.
