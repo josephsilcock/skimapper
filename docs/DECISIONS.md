@@ -38,7 +38,7 @@ Rejected: the app fetching resort sites directly (fixing an adapter would need a
 
 Fallback order if a platform fails: `mbtiles://` from a file, then the `maplibre` package (josxha), then `flutter_map`; if all fail, stop and reopen G1. Rejected: MapLibre offline regions from a third-party host (host terms, no per-resort sizing); AWS Terrain Tiles (XYZ PNGs to repack).
 
-The app installs a start-up-safe map platform (`app/lib/map/start_up_safe_map_platform.dart`), a `MapLibreMethodChannel` subclass whose teardown does nothing until its channel has been opened. The plugin tears the platform down on any removal but assigns its channel only once the native view exists, so removing a map early threw `LateInitializationError`. The module's single `MapLibreMap` building point installs it, so every map runs on it, and it catches no error. Remove it once the plugin closes an unopened channel safely. Rejected: catching the error (hides real teardown faults); a vendored patched `maplibre_gl_platform_interface` (a fork to re-patch on every upgrade, and a later upgrade can drop the patch silently); installing in `main()` (Patrol never calls it) or in `SkimapperApp` (widget tests bypass it).
+~~The app installed a start-up-safe map platform, a `MapLibreMethodChannel` subclass whose teardown did nothing until its channel had been opened.~~ Removed with maplibre_gl 0.28: its native platform is private (no longer subclassable) and its `dispose` copes with a map removed before its platform view exists, the removal condition this entry set. Rejected then: catching the `LateInitializationError` (hides real teardown faults); a vendored patched `maplibre_gl_platform_interface` (a fork to re-patch on every upgrade).
 
 ## D5 On-device storage
 
