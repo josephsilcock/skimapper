@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F22`, `B5`, `C11`.
+**Next free IDs**: `F23`, `B5`, `C11`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -48,6 +48,7 @@ below that gets picked up out of turn should say why in its spec.
 - **F18** Skiers can see which resorts are saved on their device and how much space each one uses, and remove any they no longer need. Depends on F16 and F17.
 - **F19** The app keeps resort information up to date without slowing skiers down: it checks for changes at most twice a day, and when a resort's map or routes change, it updates the copies saved on the device. Depends on F16 and F20.
 - **F20** Resort maps, routes and live status stay current without the app needing an update: resort information is refreshed every day, new resorts can be added and sources fixed behind the scenes, and a problem with one resort's information doesn't stop the others refreshing.
+- **F22** The resort map's camera stays on the resort: today panning or zooming out can leave the area the basemap and terrain were cut to (F5 cuts them a tenth beyond the runs' bounds), showing blank map. Hold the camera to the cut area (`MapLibreMap.cameraTargetBounds` and a minimum zoom, from the manifest). Raised at F5's demo-pack gate. Depends on F5.
 - **F21** The app follows the device's light or dark setting, with a consistent look throughout and text that meets accessibility contrast standards.
 
 ---
