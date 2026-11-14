@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -139,6 +140,142 @@ void main() {
     );
   });
 
+  group('parts', () {
+    test(
+      'a part whose size and hash match is written into the directory',
+      () async {
+        final directory = _temporaryDirectory();
+        final client = _clientFor(
+          MockClient(
+            (request) async => request.url.path == '/v1/parts/$_partSha256'
+                ? http.Response.bytes(_partBytes, 200)
+                : http.Response('not found', 404),
+          ),
+        );
+
+        final outcome = await client.fetchPart(
+          sha256: _partSha256,
+          size: _partBytes.length,
+          directory: directory,
+        );
+
+        expect(
+          outcome,
+          isA<VerifiedPart>().having(
+            (verified) => File(verified.path).readAsBytesSync(),
+            'file bytes',
+            _partBytes,
+          ),
+        );
+        expect(File((outcome as VerifiedPart).path).parent.path, directory);
+      },
+    );
+  });
+
+  group('parts, failed', () {
+    test('a part whose bytes stop arriving for longer than the timeout has failed by timeout', () async {
+      final outcome = await _fetchPartFrom(
+        MockClient.streaming(
+          (request, _) async => http.StreamedResponse(
+            _stallingAfter(_partBytes.sublist(0, 10)),
+            200,
+          ),
+        ),
+      );
+
+      expect(
+        outcome,
+        isA<Failed<void>>().having(
+          (failed) => failed.cause,
+          'cause',
+          'timeout after 100 ms',
+        ),
+      );
+    }, timeout: const Timeout(Duration(seconds: 5)));
+
+    test('a non-2xx answer for a part has failed, naming its status', () async {
+      final outcome = await _fetchPartFrom(
+        MockClient((request) async => http.Response.bytes(_partBytes, 404)),
+      );
+
+      expect(
+        outcome,
+        isA<Failed<void>>().having(
+          (failed) => failed.cause,
+          'cause',
+          'HTTP 404',
+        ),
+      );
+    });
+
+    test('a part cut short has failed as incomplete', () async {
+      final client = _clientFor(
+        MockClient(
+          (request) async =>
+              http.Response.bytes(_partBytes.sublist(0, 10), 200),
+        ),
+      );
+
+      final outcome = await client.fetchPart(
+        sha256: _partSha256,
+        size: _partBytes.length,
+        directory: _temporaryDirectory(),
+      );
+
+      expect(
+        outcome,
+        isA<Failed<void>>().having(
+          (failed) => failed.cause,
+          'cause',
+          'incomplete: 10 of ${_partBytes.length} bytes',
+        ),
+      );
+    });
+
+    test(
+      'a part whose bytes do not match its hash has failed, naming why',
+      () async {
+        final client = _clientFor(
+          MockClient((request) async => http.Response.bytes(_partBytes, 200)),
+        );
+
+        final outcome = await client.fetchPart(
+          sha256: 'f' * 64,
+          size: _partBytes.length,
+          directory: _temporaryDirectory(),
+        );
+
+        expect(
+          outcome,
+          isA<Failed<void>>().having(
+            (failed) => failed.cause,
+            'cause',
+            'hash mismatch',
+          ),
+        );
+      },
+    );
+  });
+
+  group('part fetch log', () {
+    test('a part fetch logs its start and its outcome, naming the part', () async {
+      final logged = await runRecordDuring(
+        () => _fetchPartFrom(
+          MockClient((request) async => http.Response.bytes(_partBytes, 404)),
+        ),
+      );
+
+      expect(logged, [
+        matches(appRunRecordLine('fetch start /v1/parts/$_partSha256')),
+        matches(
+          appRunRecordLine(
+            'fetch outcome /v1/parts/$_partSha256 failed \\(HTTP 404\\) in \\d+ ms',
+          ),
+        ),
+      ]);
+    });
+  });
+
   group('fetch log', () {
     test(
       'a fetch logs its start, naming the path, stamped in UTC to the ms',
@@ -215,6 +352,28 @@ Future<List<String>> _fetchLogAgainst(http.Client server) => runRecordDuring(
       _clientFor(server)
           .fetchDocument('/v1/catalogue', kind: 'catalogue', parse: _resorts),
 );
+
+final _partBytes = utf8.encode('{"type":"FeatureCollection","features":[]}');
+final _partSha256 = sha256.convert(_partBytes).toString();
+
+/// [first], then nothing more, never closing; a controller, so cancelling it completes, as a
+/// socket's does.
+Stream<List<int>> _stallingAfter(List<int> first) =>
+    (StreamController<List<int>>()..add(first)).stream;
+
+/// Fetches the test part from [server] into a fresh directory.
+Future<PartOutcome> _fetchPartFrom(http.Client server) => _clientFor(server)
+    .fetchPart(
+      sha256: _partSha256,
+      size: _partBytes.length,
+      directory: _temporaryDirectory(),
+    );
+
+String _temporaryDirectory() {
+  final directory = Directory.systemTemp.createTempSync('parts-');
+  addTearDown(() => directory.deleteSync(recursive: true));
+  return directory.path;
+}
 
 String _resorts(Map<String, Object?> data) => '${data['resorts']}';
 

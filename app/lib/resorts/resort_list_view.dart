@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../map/resort_map_screen.dart';
 import 'catalogue.dart';
 import 'resort_list.dart';
 import 'resort_list_providers.dart';
@@ -100,15 +101,20 @@ class _Resorts extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       itemCount: resorts.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (_, i) => Card(
+      itemBuilder: (context, i) => Card(
         child: ListTile(
           title: Text(resorts[i].name),
           subtitle: Text(resorts[i].countriesLabel),
+          onTap: () => _open(context, resorts[i]),
         ),
       ),
     );
   }
 }
+
+void _open(BuildContext context, Resort resort) => Navigator.of(context).push(
+  MaterialPageRoute<void>(builder: (_) => ResortMapScreen(resort: resort)),
+);
 
 /// A message filling the list area, still pullable.
 class _FullAreaMessage extends StatelessWidget {

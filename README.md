@@ -8,7 +8,7 @@ A ski resort map app for iOS and Android.
 |-------------|---------------------------------------------------------------------------------------|
 | `app/`      | Flutter app (iOS + Android); unit tests in `app/test/`, Patrol E2E in `app/patrol_test/` |
 | `endpoint/` | Cloudflare Worker serving stored artefacts from R2, with its tests                    |
-| `tools/`    | Dev config (`dev.env`), dev-app, E2E runner, full sweep and fixture generator         |
+| `tools/`    | Dev config (`dev.env`), dev-app, E2E runner and full sweep                            |
 | `docs/`     | All project documentation (see map below)                                             |
 | `specs/`    | In-flight feature specs only — transient; merged into the docs and deleted at finish  |
 

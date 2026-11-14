@@ -421,3 +421,17 @@ Accepted as they are:
    they tap Retry and see the map.
 4. A skier opens the fixture resort and sees every run difficulty in its colour, drag lifts dotted
    against aerial ones, all named, with the manifest's credits below the map.
+
+## Slices
+
+- [ ] 1. A skier taps "Paradiski" and sees a full-screen map under a "Paradiski" name bar, drawing the fixture's blue run from a pistes part fetched through the manifest and verified against its hash; the fixture map and its "map:" line are gone. *(in progress)*
+- [ ] 2. A skier opening Paradiski sees the run labelled over a grey basemap with hillshade: basemap and terrain parts cut by the build, glyphs installed locally, every file read from `file://` on iOS and Android.
+- [ ] 3. A developer runs the build for Les 3 Vallées and starts the app with `RESORT_DATA=built`; a skier taps Les 3 Vallées, sees the whole real resort framed, and pans across it smoothly.
+- [ ] 4. A skier opens a resort while the endpoint is down and sees "Couldn't load map"; once it is back, they tap Retry and see the map.
+- [ ] 5. A skier opens the fixture resort and sees every run difficulty in its colour, drag lifts dotted against aerial ones, all named, with the manifest's credits below the map; back returns to the list alone.
+- [ ] 6. A skier opens a resort whose part doesn't match its hash (Les 3 Vallées in E2E) and sees "Couldn't load map".
+- [ ] 7. A skier opens a resort whose manifest needs a newer app (Espace San Bernardo in E2E) and sees "Update SkiMapper to see this map".
+- [ ] 8. Only the newest answer reaches the screen, nothing is kept between opens or launches, and the map takes no tilt and no taps.
+
+## Decisions taken during implement
+
