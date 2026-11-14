@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { boundsOf } from "./bounds.ts";
+import { boundsOf, cutArea } from "./bounds.ts";
 import { writeBundle, type Bounds, type BundleContents } from "./bundle.ts";
 import { cutTiles, type Cut } from "./cut-tiles.ts";
 import { pistesPartBytes } from "./pistes-format.ts";
@@ -30,7 +30,7 @@ export function buildResort({ resortId, skiAreaIds, exports, output, zooms = all
   writeBundle(output, {
     bounds,
     credits,
-    parts: [{ role: "pistes", bytes: pistesPartBytes(pistes) }, ...cutBasemapAndTerrain(bounds, zooms, cut)],
+    parts: [{ role: "pistes", bytes: pistesPartBytes(pistes) }, ...cutBasemapAndTerrain(cutArea(bounds), zooms, cut)],
   });
 }
 

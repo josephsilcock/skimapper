@@ -8,7 +8,7 @@ import { readManifest, partPath } from "../../scripts/build/bundle.ts";
 import type { Cut } from "../../scripts/build/cut-tiles.ts";
 import { lifts, run, runs } from "./openskimap-shapes.ts";
 
-it("builds a resort's bundle: its pistes, with basemap and terrain cut to the pistes' bounds, crediting every source", () => {
+it("builds a resort's bundle: its pistes framed on their bounds, with basemap and terrain cut around them, crediting every source", () => {
   const output = mkdtempSync(join(tmpdir(), "build-resort-"));
   const cuts: Cut[] = [];
   const cut = (request: Cut) => {
@@ -28,7 +28,7 @@ it("builds a resort's bundle: its pistes, with basemap and terrain cut to the pi
   expect(manifest.bounds).toEqual([6.8, 45.5, 6.9, 45.6]);
   expect(manifest.parts.map((part) => part.role)).toEqual(["pistes", "basemap", "terrain"]);
   expect(manifest.credits).toEqual(["© OpenStreetMap contributors", "OpenSkiMap", "Skimap.org", "Protomaps", "Mapterhorn"]);
-  expect(cuts.map(({ bounds }) => bounds)).toEqual([[6.8, 45.5, 6.9, 45.6], [6.8, 45.5, 6.9, 45.6]]);
+  expect(cuts).toHaveLength(2);
   const terrain = manifest.parts.find((part) => part.role === "terrain")!;
   expect(readFileSync(partPath(output, terrain.sha256), "utf8")).toBe("tiles from https://download.mapterhorn.com/planet.pmtiles");
 });
@@ -43,4 +43,23 @@ it("fails, naming the resort, when its ski areas hold no runs", () => {
       cut: () => {},
     }),
   ).toThrow("les-3-vallees: no runs or lifts in its ski areas");
+});
+
+it("cuts the basemap and terrain 10% beyond the runs' bounds on every side, so the framed map has no blank edge", () => {
+  const cuts: Cut[] = [];
+
+  buildResort({
+    resortId: "paradiski",
+    skiAreaIds: ["area-1"],
+    exports: { runs: runs(run({ skiAreaId: "area-1", coordinates: [[6.8, 45.5, 0], [6.9, 45.6, 0]] })), lifts: lifts() },
+    output: mkdtempSync(join(tmpdir(), "build-resort-")),
+    cut: (request) => {
+      cuts.push(request);
+      writeFileSync(request.output, "tiles");
+    },
+  });
+
+  for (const { bounds } of cuts) {
+    expect(bounds.map((edge) => Number(edge.toFixed(6)))).toEqual([6.79, 45.49, 6.91, 45.61]);
+  }
 });

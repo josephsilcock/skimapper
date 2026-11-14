@@ -20,12 +20,12 @@
     },
     {
       "role": "basemap",
-      "sha256": "744a5ddb390d272d4b67846b15d490fb407380cce1093960122f712a03cdb2d3",
+      "sha256": "4a23f715b6e8d17317790e2df181f75cf48937ec56ef6e8b3c9d60fe4bd762c3",
       "size": 233912
     },
     {
       "role": "terrain",
-      "sha256": "5636546960e0a5b6fefac64d340bafc97f95246aae3883c7c478d663500810d0",
+      "sha256": "68add3fafcfba9df8c0e95e562bea72e875330095abdfba2a51b9b759280fd75",
       "size": 561782
     }
   ]
