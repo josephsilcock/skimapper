@@ -432,6 +432,8 @@ Accepted as they are:
 - [x] 6. A skier sees the manifest's credits in a bar below the map, and only there: back returns to the list alone.
 - [x] 7. A skier opening a resort whose part doesn't match its hash (Les 3 Vallées in E2E) sees "Couldn't load map"; one whose manifest needs a newer app (Espace San Bernardo) sees "Update SkiMapper to see this map".
 - [x] 8. Only the newest answer reaches the screen, nothing is kept between opens or launches, and the map takes no tilt and no taps.
+- [x] Gate fix 1. A skier sees a framed real resort without lift station dots crowding it; the dots appear from zoom 14.
+- [x] Gate fix 2. A skier opening a real resort sees basemap and shading right to the map's edges, around the framed resort.
 
 ## Decisions taken during implement
 
@@ -450,10 +452,10 @@ Accepted as they are:
 - **MapLibre's attribution button is pushed off the map** (`attributionButtonMargins: Point(-200, -200)`): the plugin (0.27) has no switch to hide it, and the credits bar carries the credits. Rejected: forking the plugin.
 - **No-resort-data-kept lives in `ScratchFolders`** (one per app): each fetch's folder is made after deleting every folder no live screen holds; a screen releases its folders when it goes; `ScratchCleanUp` clears the root at launch. Failed deletes are only logged.
 - **"Retry twice" can't happen through the UI** (Retry shows only in a failure state, never while loading), so the newest-answer rule is tested on the notifier directly with held answers.
+- **Demo-pack gate fixes:** station dots show from zoom 14 (real lift lines carry pylons as vertices); the build cuts basemap and terrain to `cutArea(bounds)`, a tenth of each span beyond each side, while the manifest still frames on the runs. Holding the camera to the resort is backlog F22 (PR #15, open: CI's toolchain action is refused by the repo's SHA-pinning rule).
 - **Selection rules (operating, downhill) landed with the real build (slice 3)** rather than the style slice: without them a resort's bounds take in nordic trails and proposed runs.
 
 ## Resume
 
-- **Closed:** slices 1–8 (see `git log`). Evidence: `test-results/tdd/F5/slice-0{1..8}-*.md`.
-- **Next:** hand-off — demo pack (delegated capture to `test-results/demo/F5/`, `RESORT_DATA=built` for the real-resort shots; build output rebuilt with lifts and credits), Artifact page `test-results/demo/F5/pack.html`, completion report and the visual-acceptance gate.
-- **E2E practice:** iOS `ENDPOINT_PORT=8797`, Android `ENDPOINT_PORT=8798`, never in parallel; iOS outcomes from the xcresult (`scratchpad/xcr.sh`). Miniflare tests, pmtiles and E2E run outside the sandbox.
+- **Closed:** slices 1–8 and gate fixes 1–2 (see `git log`). Evidence: `test-results/tdd/F5/slice-0{1..8}-*.md`, `slice-09a-*.md`, `slice-09b-*.md`. Demo pack accepted with fixes; shots 2 and 4 recaptured (https://claude.ai/artifact/LnNkmp9tuPSSpG9QSm2GvE).
+- **Next:** `/finish-feature specs/F5-resort-map-design.md`. Note: every PR's `fast` check currently fails in CI before any test runs (`actions/cache@v5`, used inside `subosito/flutter-action`, is refused by the repo rule that actions be SHA-pinned); the merge route waits on that.
