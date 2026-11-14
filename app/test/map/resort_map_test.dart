@@ -53,6 +53,39 @@ void main() {
   });
 
   testWidgets(
+    'the map pans, zooms and rotates with a compass, never tilts, and ignores taps',
+    (tester) async {
+      FakeNativeMap(tester);
+      await tester.pumpWidget(_resortMap());
+
+      final map = tester.widget<MapLibreMap>(find.byType(MapLibreMap));
+      expect(map.scrollGesturesEnabled, isTrue);
+      expect(map.zoomGesturesEnabled, isTrue);
+      expect(map.rotateGesturesEnabled, isTrue);
+      expect(map.compassEnabled, isTrue);
+      expect(map.tiltGesturesEnabled, isFalse);
+      expect(map.onMapClick, isNull);
+      expect(map.onMapLongClick, isNull);
+      expect(map.logoEnabled, isFalse);
+    },
+  );
+
+  testWidgets(
+    "MapLibre's own attribution button sits off the map: the credits bar credits it",
+    (tester) async {
+      FakeNativeMap(tester);
+      await tester.pumpWidget(_resortMap());
+
+      final margins = tester
+          .widget<MapLibreMap>(find.byType(MapLibreMap))
+          .attributionButtonMargins;
+      expect(margins, isNotNull);
+      expect(margins!.x, lessThanOrEqualTo(-100));
+      expect(margins.y, lessThanOrEqualTo(-100));
+    },
+  );
+
+  testWidgets(
     'removing the map before its native view exists raises no error',
     (tester) async {
       final nativeMap = FakeNativeMap(tester, holdViewCreation: true);

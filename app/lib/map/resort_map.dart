@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
@@ -46,6 +48,9 @@ class ResortMapState extends State<ResortMap> {
       target: _centre(widget.manifest.bounds),
       zoom: 13,
     ),
+    tiltGesturesEnabled: false,
+    // The plugin can't turn MapLibre's attribution button off; the credits bar credits the data.
+    attributionButtonMargins: const Point(-200, -200),
     onMapCreated: (created) => controller = created,
     onStyleLoadedCallback: _frameWholeResort,
   );

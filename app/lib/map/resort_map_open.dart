@@ -10,6 +10,7 @@ import '../resorts/resort_list_providers.dart';
 import 'map_assets.dart';
 import 'resort_manifest.dart';
 import 'resort_map_providers.dart';
+import 'scratch_folders.dart';
 
 /// What a resort's map screen shows.
 sealed class ResortMapView {
@@ -45,8 +46,22 @@ class ResortMapOpen extends Notifier<ResortMapView> {
 
   final Resort resort;
 
+  /// Fetches are numbered as they start; only the newest one's answer is shown, and only while
+  /// the screen is there.
+  var _fetchesStarted = 0;
+
+  /// The scratch folders this screen's fetches made, held until the screen goes.
+  final _folders = <Directory>[];
+  late final ScratchFolders _scratch;
+  var _gone = false;
+
   @override
   ResortMapView build() {
+    _scratch = ref.read(scratchFoldersProvider);
+    ref.onDispose(() {
+      _gone = true;
+      _folders.forEach(_scratch.release);
+    });
     Future.microtask(_open);
     return const MapLoading();
   }
@@ -57,40 +72,68 @@ class ResortMapOpen extends Notifier<ResortMapView> {
     return _open();
   }
 
-  EndpointClient get _endpoint => ref.read(endpointClientProvider);
-
   Future<void> _open() async {
-    switch (await _endpoint.fetchResortManifest(resort.id)) {
-      case Understood(value: final manifest):
-        state = switch ((await _fetchParts(manifest), await _mapAssets())) {
-          (final parts?, final assets?) => MapReady(manifest, parts, assets),
-          _ => const MapCouldNotLoad(),
-        };
-      case Incompatible():
-        state = const MapNeedsUpdate();
-      case Failed():
-        state = const MapCouldNotLoad();
-    }
+    final fetch = ++_fetchesStarted;
+    // Everything the fetch needs is read before its first wait: the screen may go meanwhile,
+    // and the fetch then runs to its end and is dropped.
+    final answer = await _Fetch(
+      endpoint: ref.read(endpointClientProvider),
+      newFolder: _newFolder,
+      mapAssets: ref.read(mapAssetsProvider),
+    ).of(resort);
+    if (fetch == _fetchesStarted && ref.mounted) state = answer;
   }
 
+  /// A folder for one fetch; one made after the screen went is released at once.
+  Future<Directory> _newFolder() async {
+    final folder = await _scratch.newFolder();
+    _gone ? _scratch.release(folder) : _folders.add(folder);
+    return folder;
+  }
+}
+
+/// One fetch of a resort's map data, and what the screen should show for it.
+class _Fetch {
+  const _Fetch({
+    required this.endpoint,
+    required this.newFolder,
+    required this.mapAssets,
+  });
+
+  final EndpointClient endpoint;
+  final Future<Directory> Function() newFolder;
+  final Future<MapAssets> mapAssets;
+
+  Future<ResortMapView> of(Resort resort) async =>
+      switch (await endpoint.fetchResortManifest(resort.id)) {
+        Understood(value: final manifest) => switch ((
+          await _parts(manifest),
+          await _assets(),
+        )) {
+          (final parts?, final assets?) => MapReady(manifest, parts, assets),
+          _ => const MapCouldNotLoad(),
+        },
+        Incompatible() => const MapNeedsUpdate(),
+        Failed() => const MapCouldNotLoad(),
+      };
+
   /// The glyphs and basemap layers; null if they couldn't be installed.
-  Future<MapAssets?> _mapAssets() async {
+  Future<MapAssets?> _assets() async {
     try {
-      return await ref.read(mapAssetsProvider);
+      return await mapAssets;
     } on FileSystemException catch (failure) {
       recordRun('map assets failed: $failure');
       return null;
     }
   }
 
-  /// Fetches every part the manifest pins, in parallel, into a scratch folder of this open's own;
-  /// null if any part failed.
-  Future<Map<PartRole, String>?> _fetchParts(ResortManifest manifest) async {
-    final root = await ref.read(scratchRootProvider);
-    final folder = await root.createTemp('open-');
+  /// Fetches every part the manifest pins, in parallel, into a scratch folder of this fetch's
+  /// own; null if any part failed.
+  Future<Map<PartRole, String>?> _parts(ResortManifest manifest) async {
+    final folder = await newFolder();
     final outcomes = await Future.wait([
       for (final part in manifest.parts)
-        _endpoint.fetchPart(
+        endpoint.fetchPart(
           sha256: part.sha256,
           size: part.size,
           directory: folder.path,

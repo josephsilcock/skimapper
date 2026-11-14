@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -154,6 +155,41 @@ void main() {
   );
 
   testWidgets(
+    "reopening a resort deletes the parts of the open whose screen has gone",
+    (tester) async {
+      FakeNativeMap(tester);
+      final navigator = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        _screen(
+          endpoint: _serving,
+          home: const SizedBox(),
+          navigator: navigator,
+        ),
+      );
+      Future<String> openParadiski() async {
+        unawaited(
+          navigator.currentState!.push(
+            MaterialPageRoute<void>(
+              builder: (_) => const ResortMapScreen(resort: _paradiski),
+            ),
+          ),
+        );
+        await pumpUntilFound(tester, find.byType(ResortMap));
+        final map = tester.widget<ResortMap>(find.byType(ResortMap));
+        return File(map.parts[PartRole.pistes]!).parent.path;
+      }
+
+      final firstOpen = await openParadiski();
+      navigator.currentState!.pop();
+      await tester.pumpAndSettle();
+      final secondOpen = await openParadiski();
+
+      expect(Directory(firstOpen).existsSync(), isFalse);
+      expect(Directory(secondOpen).existsSync(), isTrue);
+    },
+  );
+
+  testWidgets(
     'Retry fetches again, and shows the map once the data can be fetched',
     (tester) async {
       FakeNativeMap(tester);
@@ -205,6 +241,8 @@ Future<http.Response> _refusing(http.Request request) async =>
 Widget _screen({
   required MockClientHandler endpoint,
   Future<MapAssets>? assets,
+  Widget home = const ResortMapScreen(resort: _paradiski),
+  GlobalKey<NavigatorState>? navigator,
 }) {
   final scratch = Directory.systemTemp.createTempSync('resort-maps-');
   addTearDown(() => scratch.deleteSync(recursive: true));
@@ -220,7 +258,7 @@ Widget _screen({
       scratchRootProvider.overrideWithValue(Future.value(scratch)),
       mapAssetsProvider.overrideWithValue(assets ?? Future.value(_assets)),
     ],
-    child: const MaterialApp(home: ResortMapScreen(resort: _paradiski)),
+    child: MaterialApp(navigatorKey: navigator, home: home),
   );
 }
 

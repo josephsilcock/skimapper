@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'basemap_layers.dart';
 import 'glyphs.dart';
 import 'map_assets.dart';
+import 'scratch_folders.dart';
 
 /// The folder under which each open of a resort's map keeps its parts.
 final scratchRootProvider = Provider<Future<Directory>>(
@@ -26,4 +27,9 @@ final mapAssetsProvider = Provider<Future<MapAssets>>(
     ),
     basemap: await BasemapLayers.load(rootBundle),
   ),
+);
+
+/// The folders every open of a resort's map keeps its parts in, shared by all opens.
+final scratchFoldersProvider = Provider<ScratchFolders>(
+  (ref) => ScratchFolders(ref.watch(scratchRootProvider)),
 );
