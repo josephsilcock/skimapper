@@ -209,6 +209,8 @@ final _liftStations = {
   'id': liftStationLayerId,
   'type': 'circle',
   'source': 'pistes',
+  // A lift's vertices include its pylons; zoomed out, their dots would hide the runs.
+  'minzoom': 14,
   'filter': ['all', _isLift, _liftsOf(LiftStyle.aerial)],
   'paint': {
     'circle-color': _liftColour,

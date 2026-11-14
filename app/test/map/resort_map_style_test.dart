@@ -198,6 +198,10 @@ void main() {
     expect(stations['filter'], _layer(liftLayerId(LiftStyle.aerial))['filter']);
   });
 
+  test('station dots show only from zoom 14, where they no longer crowd a framed resort', () {
+    expect(_layer(liftStationLayerId)['minzoom'], 14);
+  });
+
   test('named lifts are labelled along their line', () {
     final label = _layer(liftLabelLayerId);
     expect(label['type'], 'symbol');
