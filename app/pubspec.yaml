@@ -26,6 +26,11 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/map/
+    - assets/glyphs/Noto Sans Regular/
+    - assets/glyphs/Noto Sans Medium/
+    - assets/glyphs/Noto Sans Italic/
 
 patrol:
   app_name: skimapper

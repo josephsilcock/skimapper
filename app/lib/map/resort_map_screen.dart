@@ -30,9 +30,10 @@ class _ResortMapScreenState extends ConsumerState<ResortMapScreen> {
       ),
     ),
     body: switch (ref.watch(_open)) {
-      MapReady(:final manifest, :final parts) => ResortMap(
+      MapReady(:final manifest, :final parts, :final assets) => ResortMap(
         manifest: manifest,
         parts: parts,
+        assets: assets,
       ),
       MapLoading() => const SizedBox.expand(),
     },

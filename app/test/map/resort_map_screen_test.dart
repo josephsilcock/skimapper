@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:skimapper/endpoint/endpoint_client.dart';
+import 'package:skimapper/map/basemap_layers.dart';
+import 'package:skimapper/map/map_assets.dart';
 import 'package:skimapper/map/resort_manifest.dart';
 import 'package:skimapper/map/resort_map.dart';
 import 'package:skimapper/map/resort_map_providers.dart';
@@ -34,6 +36,7 @@ void main() {
       north: 45.585,
     ));
     expect(File(map.parts[PartRole.pistes]!).readAsBytesSync(), _pistes);
+    expect(map.assets, same(_assets));
   });
 }
 
@@ -50,10 +53,16 @@ Widget _screen({required MockClientHandler endpoint}) {
         ),
       ),
       scratchRootProvider.overrideWithValue(Future.value(scratch)),
+      mapAssetsProvider.overrideWithValue(Future.value(_assets)),
     ],
     child: const MaterialApp(home: ResortMapScreen(resort: _paradiski)),
   );
 }
+
+const _assets = MapAssets(
+  glyphs: '/data/glyphs',
+  basemap: BasemapLayers(under: [], over: []),
+);
 
 const _paradiski = Resort(
   id: 'paradiski',

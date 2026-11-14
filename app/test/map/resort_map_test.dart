@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:skimapper/map/basemap_layers.dart';
+import 'package:skimapper/map/map_assets.dart';
 import 'package:skimapper/map/resort_manifest.dart';
 import 'package:skimapper/map/resort_map.dart';
 import 'package:skimapper/map/resort_map_style.dart';
@@ -8,17 +10,22 @@ import 'package:skimapper/map/resort_map_style.dart';
 import 'fake_native_map.dart';
 
 void main() {
-  testWidgets('draws the resort with the style of its local parts', (
-    tester,
-  ) async {
-    FakeNativeMap(tester);
-    await tester.pumpWidget(_resortMap());
+  testWidgets(
+    'draws the resort with the style of its local parts, glyphs and basemap',
+    (tester) async {
+      FakeNativeMap(tester);
+      await tester.pumpWidget(_resortMap());
 
-    expect(
-      tester.widget<MapLibreMap>(find.byType(MapLibreMap)).styleString,
-      resortMapStyle(parts: _parts),
-    );
-  });
+      expect(
+        tester.widget<MapLibreMap>(find.byType(MapLibreMap)).styleString,
+        resortMapStyle(
+          parts: _parts,
+          glyphs: _assets.glyphs,
+          basemap: _assets.basemap,
+        ),
+      );
+    },
+  );
 
   testWidgets(
     'removing the map before its native view exists raises no error',
@@ -56,7 +63,26 @@ final _bothTargets = TargetPlatformVariant({
   TargetPlatform.iOS,
 });
 
-const _parts = {PartRole.pistes: '/data/pistes.geojson'};
+const _parts = {
+  PartRole.pistes: '/data/pistes.geojson',
+  PartRole.basemap: '/data/basemap.pmtiles',
+  PartRole.terrain: '/data/terrain.pmtiles',
+};
+
+const _assets = MapAssets(
+  glyphs: '/data/glyphs',
+  basemap: BasemapLayers(
+    under: [
+      {
+        'id': 'earth',
+        'type': 'fill',
+        'source': 'basemap',
+        'source-layer': 'earth',
+      },
+    ],
+    over: [],
+  ),
+);
 
 Widget _resortMap() => const Directionality(
   textDirection: TextDirection.ltr,
@@ -67,5 +93,6 @@ Widget _resortMap() => const Directionality(
       parts: [],
     ),
     parts: _parts,
+    assets: _assets,
   ),
 );

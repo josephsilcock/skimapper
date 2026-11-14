@@ -4,6 +4,7 @@ import '../endpoint/contract_envelope.dart';
 import '../endpoint/endpoint_client.dart';
 import '../resorts/catalogue.dart';
 import '../resorts/resort_list_providers.dart';
+import 'map_assets.dart';
 import 'resort_manifest.dart';
 import 'resort_map_providers.dart';
 
@@ -17,12 +18,13 @@ class MapLoading extends ResortMapView {
 }
 
 class MapReady extends ResortMapView {
-  const MapReady(this.manifest, this.parts);
+  const MapReady(this.manifest, this.parts, this.assets);
 
   final ResortManifest manifest;
 
   /// Each part's verified local file.
   final Map<PartRole, String> parts;
+  final MapAssets assets;
 }
 
 /// One screen's open of a resort's map: the only writer of what that screen shows.
@@ -43,7 +45,11 @@ class ResortMapOpen extends Notifier<ResortMapView> {
     if (await _endpoint.fetchResortManifest(resort.id) case Understood(
       value: final manifest,
     )) {
-      state = MapReady(manifest, await _fetchParts(manifest));
+      state = MapReady(
+        manifest,
+        await _fetchParts(manifest),
+        await ref.read(mapAssetsProvider),
+      );
     }
   }
 
