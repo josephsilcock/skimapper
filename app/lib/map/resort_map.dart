@@ -47,6 +47,25 @@ class ResortMapState extends State<ResortMap> {
       zoom: 13,
     ),
     onMapCreated: (created) => controller = created,
+    onStyleLoadedCallback: _frameWholeResort,
+  );
+
+  /// "The whole resort" is the manifest's bounds, every run and lift inside them.
+  void _frameWholeResort() => controller?.moveCamera(
+    CameraUpdate.newLatLngBounds(
+      _latLngBounds(widget.manifest.bounds),
+      left: _framePadding,
+      top: _framePadding,
+      right: _framePadding,
+      bottom: _framePadding,
+    ),
+  );
+
+  static const _framePadding = 32.0;
+
+  static LatLngBounds _latLngBounds(Bounds bounds) => LatLngBounds(
+    southwest: LatLng(bounds.south, bounds.west),
+    northeast: LatLng(bounds.north, bounds.east),
   );
 
   static LatLng _centre(Bounds bounds) => LatLng(

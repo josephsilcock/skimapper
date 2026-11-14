@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -57,3 +58,43 @@ String? _name(Object? feature) => switch (feature) {
   {'properties': {'name': final String? name}} => name,
   _ => null,
 };
+
+/// The fixture resort's bounds (endpoint/fixtures/resort-bundle/manifest.json).
+const fixtureBounds = (west: 6.815, south: 45.573, east: 6.823, north: 45.581);
+
+/// Expects the whole of [bounds] in view, filling at least half the view's width or height, once
+/// the camera has settled (within 10 s).
+Future<void> expectFramedOn(
+  PatrolIntegrationTester $,
+  ({double west, double south, double east, double north}) bounds,
+) async {
+  final controller = await resortMapController($);
+  final deadline = DateTime.now().add(const Duration(seconds: 10));
+  while (true) {
+    final visible = await controller.getVisibleRegion();
+    final failure = _framingFailure(visible, bounds);
+    if (failure == null) return;
+    if (DateTime.now().isAfter(deadline)) fail(failure);
+    await $.pump(const Duration(milliseconds: 250));
+  }
+}
+
+String? _framingFailure(
+  LatLngBounds visible,
+  ({double west, double south, double east, double north}) bounds,
+) {
+  final inView =
+      visible.southwest.longitude <= bounds.west &&
+      visible.southwest.latitude <= bounds.south &&
+      visible.northeast.longitude >= bounds.east &&
+      visible.northeast.latitude >= bounds.north;
+  if (!inView) return 'the resort $bounds is not all in view $visible';
+  final widthShare =
+      (bounds.east - bounds.west) /
+      (visible.northeast.longitude - visible.southwest.longitude);
+  final heightShare =
+      (bounds.north - bounds.south) /
+      (visible.northeast.latitude - visible.southwest.latitude);
+  final share = max(widthShare, heightShare);
+  return share >= 0.5 ? null : 'the resort fills only $share of the view';
+}

@@ -10,4 +10,5 @@ export function boundsOf(resortPistes: Pistes): Bounds {
   return [Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)];
 }
 
-const positionsOf = ({ coordinates }: PistesGeometry): Position2D[] => coordinates as Position2D[];
+const positionsOf = ({ type, coordinates }: PistesGeometry): Position2D[] =>
+  type === "Polygon" ? (coordinates as Position2D[][]).flat() : (coordinates as Position2D[]);

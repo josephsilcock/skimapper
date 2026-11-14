@@ -12,7 +12,7 @@ import '../support/saved_catalogue.dart';
 
 void main() {
   patrolTest(
-    'tapping a resort opens its map under its name: the run labelled over the basemap, all drawn from local files (Wi-Fi and cellular are cut on Android only)',
+    'tapping a resort opens its map under its name, framed on the resort: the run labelled over the basemap, all drawn from local files (Wi-Fi and cellular are cut on Android only)',
     ($) async {
       await clearSavedCatalogue();
       await $.pumpWidget(const SkimapperApp());
@@ -32,6 +32,7 @@ void main() {
         contains('Fixture Blue'),
       );
       expect(await renderedNames($, [basemapLandLayerId]), isNotEmpty);
+      await expectFramedOn($, fixtureBounds);
 
       if (Platform.isAndroid) {
         await $.platform.mobile.disableWifi();

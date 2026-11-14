@@ -20,3 +20,60 @@ it("writes a resort's downhill operating run with its name, difficulty and 2D co
     ],
   });
 });
+
+it("leaves out runs that belong to none of the resort's ski areas", () => {
+  const pistes = selectPistes(
+    { runs: runs(run({ name: "Ours", skiAreaId: "area-1" }), run({ name: "Theirs", skiAreaId: "area-2" })), lifts: lifts() },
+    ["area-1"],
+  );
+
+  expect(pistes.features.map((feature) => feature.properties.name)).toEqual(["Ours"]);
+});
+
+it("writes a run area as a polygon with 2D rings", () => {
+  const ring = [[6.8, 45.5, 2000], [6.81, 45.5, 2000], [6.81, 45.51, 2000], [6.8, 45.5, 2000]];
+
+  const pistes = selectPistes(
+    { runs: runs(run({ name: "Bowl", geometryType: "Polygon", coordinates: [ring] })), lifts: lifts() },
+    ["area-1"],
+  );
+
+  expect(pistes.features[0].geometry).toEqual({
+    type: "Polygon",
+    coordinates: [[[6.8, 45.5], [6.81, 45.5], [6.81, 45.51], [6.8, 45.5]]],
+  });
+});
+
+it("leaves out nordic, ski-touring and sledging runs", () => {
+  const pistes = selectPistes(
+    {
+      runs: runs(
+        run({ name: "Downhill", uses: ["downhill"] }),
+        run({ name: "Nordic", uses: ["nordic"] }),
+        run({ name: "Touring", uses: ["skitour"] }),
+        run({ name: "Sledging", uses: ["sled"] }),
+        run({ name: "Shared", uses: ["downhill", "nordic"] }),
+      ),
+      lifts: lifts(),
+    },
+    ["area-1"],
+  );
+
+  expect(pistes.features.map((feature) => feature.properties.name)).toEqual(["Downhill", "Shared"]);
+});
+
+it("leaves out proposed, planned, under construction, disused and abandoned runs", () => {
+  const pistes = selectPistes(
+    {
+      runs: runs(
+        ...["operating", "proposed", "planned", "construction", "disused", "abandoned"].map((status) =>
+          run({ name: status, status }),
+        ),
+      ),
+      lifts: lifts(),
+    },
+    ["area-1"],
+  );
+
+  expect(pistes.features.map((feature) => feature.properties.name)).toEqual(["operating"]);
+});

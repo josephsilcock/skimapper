@@ -28,6 +28,12 @@ class FakeNativeMap {
   final WidgetTester _tester;
   int? _viewId;
   bool _waitForMapRequested = false;
+  final List<MethodCall> _cameraMoves = [];
+
+  /// The camera updates the map asked the native side for, in order.
+  List<Object?> get cameraMoves => [
+    for (final call in _cameraMoves) (call.arguments as Map)['cameraUpdate'],
+  ];
 
   bool get waitForMapRequested => _waitForMapRequested;
 
@@ -68,6 +74,9 @@ class FakeNativeMap {
       case 'map#waitForMap':
         _waitForMapRequested = true;
         return holdWaitForMap ? Completer<Object?>().future : null;
+      case 'camera#move':
+        _cameraMoves.add(call);
+        return true;
     }
     return null;
   }

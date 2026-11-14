@@ -27,6 +27,31 @@ void main() {
     },
   );
 
+  testWidgets('frames the camera on the whole resort once its style loads', (
+    tester,
+  ) async {
+    final nativeMap = FakeNativeMap(tester);
+    await tester.pumpWidget(_resortMap());
+    await tester.pump();
+
+    await nativeMap.sendToMap('map#onStyleLoaded');
+    await tester.pump();
+
+    expect(nativeMap.cameraMoves, [
+      [
+        'newLatLngBounds',
+        [
+          [closeTo(45.57, 1e-9), closeTo(6.81, 1e-9)],
+          [closeTo(45.585, 1e-9), closeTo(6.83, 1e-9)],
+        ],
+        32.0,
+        32.0,
+        32.0,
+        32.0,
+      ],
+    ]);
+  });
+
   testWidgets(
     'removing the map before its native view exists raises no error',
     (tester) async {
