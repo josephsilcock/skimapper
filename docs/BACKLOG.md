@@ -20,7 +20,7 @@ Re-ranked whenever an item lands (`/finish-feature` pops the head and tops the l
 below that gets picked up out of turn should say why in its spec.
 
 1. **F5** Resort map
-2. **F4** Open a resort from the list
+2. **F4** Reopen the last resort
 3. **F8** Choose route start and end
 4. **F11** Quickest route
 5. **F16** Resort data available offline
@@ -31,7 +31,7 @@ below that gets picked up out of turn should say why in its spec.
 
 - **F2** Skiers can sort the resort list from closest to furthest, with the distance to each resort shown. Their location is only used on the device to work out distances and never leaves it. Builds on the resort list (`docs/definitions/resorts.md`), which sorts by name and keeps each resort's centre point for this.
 - **F3** Skiers can mark resorts as favourites, and their favourites are remembered between visits to the app. This is the app's first user state, so it is where the drift database starts (migration 1, DECISIONS.md D5). Builds on the resort list; catalogue entries carry no id yet, so this adds one.
-- **F4** Opening a resort from the list takes the skier straight to its map, and the app remembers which resort was open, so it reopens there next time. Depends on F5. Once a resort opens its map, the resort list stands alone on its screen, so this also moves or retires the fixture-map proof that sits below the list today (with F5).
+- **F4** The app remembers which resort's map was open and reopens it there on the next launch. Opening a resort's map from the list is part of F5; this adds only the remembering. Depends on F5.
 - **F5** Each resort is shown on a full-screen map that's easy to read on the mountain: a muted background with shaded terrain, runs drawn in their difficulty colours and labelled with their names, and lifts drawn and labelled so they stand apart from the runs, with drag lifts marked differently from aerial lifts. The map frames the whole resort when it opens. The fixture-map proof (map, map line and attribution) pinned below the resort list today is a temporary arrangement: this moves it onto the resort's map screen or retires it, so the list is alone on its screen. Also confirms the OpenSkiMap licence (DECISIONS.md D2) before OpenSkiMap data ships, unless F20 does first.
 - **F6** The map shows which lifts and runs are open right now. Lifts and runs known to be closed fade back, the resort's name bar says how up to date the information is, and information that has become too old to trust is no longer shown rather than misleading the skier. Depends on F5.
 - **F7** Tapping a lift shows its name, its type and whether it's running, along with any message the resort has given about it, such as when it's due to open. Depends on F5.
