@@ -131,6 +131,8 @@ jobs:
       IOS_SIMULATOR: ${{ inputs.ios_simulator }}
       # The hosted macOS runner can take over 2 s to serve a request, which the 3 s default leaves no room for.
       ENDPOINT_TIMEOUT_MS: 10000
+      # Restarting wrangler there takes up to ~90 s.
+      E2E_ENDPOINT_CHANGE_TIMEOUT_S: 240
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/toolchains

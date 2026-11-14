@@ -8,6 +8,14 @@ import 'package:skimapper/resorts/catalogue_document.dart';
 /// The ski area tools/e2e's extra-area catalogue gains.
 const extraArea = String.fromEnvironment('E2E_EXTRA_AREA');
 
+/// How long a request waits for the endpoint to change (tools/dev.env).
+const _changeTimeout = Duration(
+  seconds: int.fromEnvironment(
+    'E2E_ENDPOINT_CHANGE_TIMEOUT_S',
+    defaultValue: 60,
+  ),
+);
+
 /// Asks tools/e2e to serve the curated catalogue, then waits until a fetch reads it.
 Future<void> requestCuratedCatalogue() => _request(
   'serve-catalogue curated',
@@ -41,10 +49,12 @@ Future<void> _request(
 }) async {
   debugPrint('[e2e-request] $request');
   final endpoint = devEndpointClient();
-  final deadline = DateTime.now().add(const Duration(seconds: 60));
+  final deadline = DateTime.now().add(_changeTimeout);
   while (!until(await endpoint.fetchCatalogue())) {
     if (DateTime.now().isAfter(deadline)) {
-      fail('the endpoint did not change within 60 s of "$request"');
+      fail(
+        'the endpoint did not change within ${_changeTimeout.inSeconds} s of "$request"',
+      );
     }
     await Future<void>.delayed(const Duration(milliseconds: 500));
   }

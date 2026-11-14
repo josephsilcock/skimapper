@@ -71,7 +71,8 @@ run_patrol() {
   : >"$patrol_output"
   (cd "$APP_DIR" && exec "$PATROL" test --device "$device" --show-flutter-logs "${targets[@]}" \
     $(endpoint_dart_defines) \
-    --dart-define "E2E_EXTRA_AREA=$EXTRA_AREA") >"$patrol_output" 2>&1 &
+    --dart-define "E2E_EXTRA_AREA=$EXTRA_AREA" \
+    --dart-define "E2E_ENDPOINT_CHANGE_TIMEOUT_S=$E2E_ENDPOINT_CHANGE_TIMEOUT_S") >"$patrol_output" 2>&1 &
   PATROL_PID=$!
   follow_patrol_output "$patrol_output"
   wait "$PATROL_PID" || patrol_status=$?
