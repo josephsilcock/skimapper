@@ -431,7 +431,7 @@ Accepted as they are:
 - [x] 5. A skier opens the fixture resort and sees every run difficulty in its colour, drag lifts dotted against aerial ones, all named.
 - [x] 6. A skier sees the manifest's credits in a bar below the map, and only there: back returns to the list alone.
 - [x] 7. A skier opening a resort whose part doesn't match its hash (Les 3 Vallées in E2E) sees "Couldn't load map"; one whose manifest needs a newer app (Espace San Bernardo) sees "Update SkiMapper to see this map".
-- [ ] 8. Only the newest answer reaches the screen, nothing is kept between opens or launches, and the map takes no tilt and no taps.
+- [x] 8. Only the newest answer reaches the screen, nothing is kept between opens or launches, and the map takes no tilt and no taps.
 
 ## Decisions taken during implement
 
@@ -447,12 +447,13 @@ Accepted as they are:
 - **Aerial lift stations are a circle layer over the lift lines**, which MapLibre draws at each vertex (a lift's vertices are its stations); no station points in the pistes format.
 - **Peaks are labelled by one added `peak_label` layer** in the generated background (Protomaps' `pois`, kind peak, grey italic): the grayscale flavour draws no points of interest, and the sketch keeps peak names.
 - **Run and lift labels are checked zoomed in, not at the framed zoom**: with every class in the fixture's 1.5 km, labels at the framing zoom collide, which the AC allows.
+- **MapLibre's attribution button is pushed off the map** (`attributionButtonMargins: Point(-200, -200)`): the plugin (0.27) has no switch to hide it, and the credits bar carries the credits. Rejected: forking the plugin.
+- **No-resort-data-kept lives in `ScratchFolders`** (one per app): each fetch's folder is made after deleting every folder no live screen holds; a screen releases its folders when it goes; `ScratchCleanUp` clears the root at launch. Failed deletes are only logged.
+- **"Retry twice" can't happen through the UI** (Retry shows only in a failure state, never while loading), so the newest-answer rule is tested on the notifier directly with held answers.
 - **Selection rules (operating, downhill) landed with the real build (slice 3)** rather than the style slice: without them a resort's bounds take in nordic trails and proposed runs.
 
 ## Resume
 
-- **Closed:** slices 1–7 (see `git log`). Evidence: `test-results/tdd/F5/slice-0{1..7}-*.md`.
-- **Next:** slice 8 — widget tests: only the newest answer applies (generation number per fetch; back-then-another-resort and Retry-twice with answers held on completers); each fetch gets its own scratch folder; app launch clears the scratch root; each new open deletes folders of opens whose screens are gone (never a live one); MapLibreMap settings: tilt off, rotate on, compass on, taps do nothing (no click handlers), MapLibre attribution button hidden (no API to turn off: margins off-screen or similar — decision).
-- **Seams as built:** `ResortMapView` = loading | ready | couldNotLoad | needsUpdate; `seededBundles` variants.
-- **Then:** hand-off — refactor check across the change, demo pack (DELEGATE brief), completion report.
-- **E2E practice:** iOS `ENDPOINT_PORT=8797`, Android `ENDPOINT_PORT=8798`, never in parallel; iOS outcomes from the xcresult (`scratchpad/xcr.sh`). Miniflare tests, pmtiles and E2E run outside the sandbox. Real-data look: `scratchpad/look.sh`.
+- **Closed:** slices 1–8 (see `git log`). Evidence: `test-results/tdd/F5/slice-0{1..8}-*.md`.
+- **Next:** hand-off — demo pack (delegated capture to `test-results/demo/F5/`, `RESORT_DATA=built` for the real-resort shots; build output rebuilt with lifts and credits), Artifact page `test-results/demo/F5/pack.html`, completion report and the visual-acceptance gate.
+- **E2E practice:** iOS `ENDPOINT_PORT=8797`, Android `ENDPOINT_PORT=8798`, never in parallel; iOS outcomes from the xcresult (`scratchpad/xcr.sh`). Miniflare tests, pmtiles and E2E run outside the sandbox.
