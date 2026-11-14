@@ -6,9 +6,16 @@ runs:
     - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         node-version-file: .nvmrc
-    - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
-      with:
-        flutter-version-file: app/pubspec.yaml
+    # Not subosito/flutter-action: it nests an unpinned actions/cache, which the repo's SHA-pinning policy rejects.
+    - name: Install Flutter
+      shell: bash
+      run: |
+        version=$(sed -n 's/^  flutter: *//p' app/pubspec.yaml)
+        root="$RUNNER_TEMP/flutter"
+        git clone --quiet --depth 1 --branch "$version" https://github.com/flutter/flutter.git "$root"
+        echo "FLUTTER_ROOT=$root" >> "$GITHUB_ENV"
+        { echo "$root/bin"; echo "$root/bin/cache/dart-sdk/bin"; echo "$HOME/.pub-cache/bin"; } >> "$GITHUB_PATH"
+        "$root/bin/flutter" --version
     - name: Install endpoint dependencies
       shell: bash
       run: npm ci
