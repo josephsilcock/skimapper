@@ -16,6 +16,9 @@ runs:
         echo "FLUTTER_ROOT=$root" >> "$GITHUB_ENV"
         { echo "$root/bin"; echo "$root/bin/cache/dart-sdk/bin"; echo "$HOME/.pub-cache/bin"; } >> "$GITHUB_PATH"
         "$root/bin/flutter" --version
+        # A git clone has no engine artifacts; downloaded lazily, their progress lines land in the stdout of
+        # Patrol's `flutter devices --machine` and break its JSON parse.
+        "$root/bin/flutter" precache
     - name: Install endpoint dependencies
       shell: bash
       run: npm ci
