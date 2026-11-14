@@ -38,9 +38,106 @@ void main() {
     expect(File(map.parts[PartRole.pistes]!).readAsBytesSync(), _pistes);
     expect(map.assets, same(_assets));
   });
+
+  testWidgets(
+    "a resort whose map data can't be fetched says its map couldn't be loaded, with Retry",
+    (tester) async {
+      FakeNativeMap(tester);
+      await tester.pumpWidget(_screen(endpoint: _refusing));
+      await pumpUntilFound(tester, find.text("Couldn't load map"));
+
+      expect(find.text("Couldn't load map"), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+      expect(find.byType(ResortMap), findsNothing);
+    },
+  );
+
+  testWidgets("a part that can't be fetched means the map couldn't be loaded", (
+    tester,
+  ) async {
+    FakeNativeMap(tester);
+    await tester.pumpWidget(_screen(endpoint: _servingManifestOnly));
+    await pumpUntilFound(tester, find.text("Couldn't load map"));
+
+    expect(find.text("Couldn't load map"), findsOneWidget);
+    expect(find.byType(ResortMap), findsNothing);
+  });
+
+  testWidgets(
+    "glyphs that can't be installed mean the map couldn't be loaded",
+    (tester) async {
+      FakeNativeMap(tester);
+      await tester.pumpWidget(
+        _screen(
+          endpoint: _serving,
+          // Ignored here so it's unhandled only where the open awaits it.
+          assets: Future<MapAssets>.error(
+            const FileSystemException('disk full'),
+          )..ignore(),
+        ),
+      );
+      await pumpUntilFound(tester, find.text("Couldn't load map"));
+
+      expect(find.text("Couldn't load map"), findsOneWidget);
+    },
+  );
+
+  testWidgets('while the map data is fetched, the screen shows it is loading', (
+    tester,
+  ) async {
+    FakeNativeMap(tester);
+    await tester.pumpWidget(_screen(endpoint: _serving));
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Paradiski'), findsOneWidget);
+    await pumpUntilFound(tester, find.byType(ResortMap));
+  });
+
+  testWidgets(
+    'Retry fetches again, and shows the map once the data can be fetched',
+    (tester) async {
+      FakeNativeMap(tester);
+      final serving = _flagFile();
+      await tester.pumpWidget(
+        _screen(endpoint: _servingOnceFlagged(serving.path)),
+      );
+      await pumpUntilFound(tester, find.text("Couldn't load map"));
+
+      serving.createSync();
+      await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
+      await pumpUntilFound(tester, find.byType(ResortMap));
+
+      expect(find.byType(ResortMap), findsOneWidget);
+      expect(find.text("Couldn't load map"), findsNothing);
+    },
+  );
 }
 
-Widget _screen({required MockClientHandler endpoint}) {
+/// A path for a test to create, to flag a change to the handlers in the fetching isolate.
+File _flagFile() {
+  final directory = Directory.systemTemp.createTempSync('flag-');
+  addTearDown(() => directory.deleteSync(recursive: true));
+  return File('${directory.path}/flag');
+}
+
+/// Refuses every request until the file at [flag] exists, then serves the resort.
+MockClientHandler _servingOnceFlagged(String flag) =>
+    (request) async =>
+        File(flag).existsSync() ? _serving(request) : _refusing(request);
+
+/// Serves the manifest, but answers every part as missing.
+Future<http.Response> _servingManifestOnly(http.Request request) async =>
+    request.url.path.startsWith('/v1/parts/')
+    ? http.Response('not found', 404)
+    : _serving(request);
+
+Future<http.Response> _refusing(http.Request request) async =>
+    throw http.ClientException('Connection refused');
+
+Widget _screen({
+  required MockClientHandler endpoint,
+  Future<MapAssets>? assets,
+}) {
   final scratch = Directory.systemTemp.createTempSync('resort-maps-');
   addTearDown(() => scratch.deleteSync(recursive: true));
   return ProviderScope(
@@ -53,7 +150,7 @@ Widget _screen({required MockClientHandler endpoint}) {
         ),
       ),
       scratchRootProvider.overrideWithValue(Future.value(scratch)),
-      mapAssetsProvider.overrideWithValue(Future.value(_assets)),
+      mapAssetsProvider.overrideWithValue(assets ?? Future.value(_assets)),
     ],
     child: const MaterialApp(home: ResortMapScreen(resort: _paradiski)),
   );

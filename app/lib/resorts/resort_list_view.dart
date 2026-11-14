@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../map/resort_map_screen.dart';
+import '../theme/full_area_message.dart';
 import 'catalogue.dart';
 import 'resort_list.dart';
 import 'resort_list_providers.dart';
@@ -132,17 +133,11 @@ class _FullAreaMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _FullArea(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 48, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(height: 12),
-        Text(heading, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
-        Text(detail, textAlign: TextAlign.center),
-        const SizedBox(height: 16),
-        FilledButton(onPressed: onRetry, child: const Text('Retry')),
-      ],
+    child: FullAreaMessage(
+      icon: icon,
+      heading: heading,
+      detail: detail,
+      onRetry: onRetry,
     ),
   );
 }

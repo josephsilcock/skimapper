@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../resorts/catalogue.dart';
+import '../theme/full_area_message.dart';
 import 'resort_map.dart';
 import 'resort_map_open.dart';
 
@@ -35,7 +36,18 @@ class _ResortMapScreenState extends ConsumerState<ResortMapScreen> {
         parts: parts,
         assets: assets,
       ),
-      MapLoading() => const SizedBox.expand(),
+      MapLoading() => const Center(child: CircularProgressIndicator()),
+      MapCouldNotLoad() => Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: FullAreaMessage(
+            icon: Icons.cloud_off_outlined,
+            heading: "Couldn't load map",
+            detail: 'Check your connection, then try again.',
+            onRetry: ref.read(_open.notifier).retry,
+          ),
+        ),
+      ),
     },
   );
 }

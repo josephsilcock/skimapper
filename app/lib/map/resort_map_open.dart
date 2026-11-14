@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../endpoint/contract_envelope.dart';
 import '../endpoint/endpoint_client.dart';
+import '../endpoint/run_record.dart';
 import '../resorts/catalogue.dart';
 import '../resorts/resort_list_providers.dart';
 import 'map_assets.dart';
@@ -27,6 +30,10 @@ class MapReady extends ResortMapView {
   final MapAssets assets;
 }
 
+class MapCouldNotLoad extends ResortMapView {
+  const MapCouldNotLoad();
+}
+
 /// One screen's open of a resort's map: the only writer of what that screen shows.
 class ResortMapOpen extends Notifier<ResortMapView> {
   ResortMapOpen(this.resort);
@@ -39,22 +46,39 @@ class ResortMapOpen extends Notifier<ResortMapView> {
     return const MapLoading();
   }
 
+  /// The skier's Retry: fetches everything again.
+  Future<void> retry() {
+    state = const MapLoading();
+    return _open();
+  }
+
   EndpointClient get _endpoint => ref.read(endpointClientProvider);
 
   Future<void> _open() async {
-    if (await _endpoint.fetchResortManifest(resort.id) case Understood(
-      value: final manifest,
-    )) {
-      state = MapReady(
-        manifest,
-        await _fetchParts(manifest),
-        await ref.read(mapAssetsProvider),
-      );
+    switch (await _endpoint.fetchResortManifest(resort.id)) {
+      case Understood(value: final manifest):
+        state = switch ((await _fetchParts(manifest), await _mapAssets())) {
+          (final parts?, final assets?) => MapReady(manifest, parts, assets),
+          _ => const MapCouldNotLoad(),
+        };
+      case Incompatible() || Failed():
+        state = const MapCouldNotLoad();
     }
   }
 
-  /// Fetches every part the manifest pins, in parallel, into a scratch folder of this open's own.
-  Future<Map<PartRole, String>> _fetchParts(ResortManifest manifest) async {
+  /// The glyphs and basemap layers; null if they couldn't be installed.
+  Future<MapAssets?> _mapAssets() async {
+    try {
+      return await ref.read(mapAssetsProvider);
+    } on FileSystemException catch (failure) {
+      recordRun('map assets failed: $failure');
+      return null;
+    }
+  }
+
+  /// Fetches every part the manifest pins, in parallel, into a scratch folder of this open's own;
+  /// null if any part failed.
+  Future<Map<PartRole, String>?> _fetchParts(ResortManifest manifest) async {
     final root = await ref.read(scratchRootProvider);
     final folder = await root.createTemp('open-');
     final outcomes = await Future.wait([
@@ -65,9 +89,10 @@ class ResortMapOpen extends Notifier<ResortMapView> {
           directory: folder.path,
         ),
     ]);
-    return {
+    final verified = {
       for (final (index, part) in manifest.parts.indexed)
-        part.role: (outcomes[index] as VerifiedPart).path,
+        if (outcomes[index] case VerifiedPart(:final path)) part.role: path,
     };
+    return verified.length == manifest.parts.length ? verified : null;
   }
 }

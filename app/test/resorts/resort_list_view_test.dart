@@ -41,7 +41,9 @@ void main() {
     await pumpUntilFound(tester, find.text('Paradiski'));
 
     await tester.tap(find.text('Paradiski'));
-    await tester.pumpAndSettle();
+    // The route's transition; the map screen's loading indicator never settles.
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.widgetWithText(AppBar, 'Paradiski'), findsOneWidget);
   });
