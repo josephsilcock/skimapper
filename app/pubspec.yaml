@@ -9,6 +9,7 @@ environment:
 
 dependencies:
   clock: ^1.1.3
+  crypto: ^3.0.7
   diacritic: ^0.1.6
   flutter:
     sdk: flutter
@@ -27,6 +28,9 @@ flutter:
   uses-material-design: true
   assets:
     - assets/map/
+    - assets/glyphs/Noto Sans Regular/
+    - assets/glyphs/Noto Sans Medium/
+    - assets/glyphs/Noto Sans Italic/
 
 patrol:
   app_name: skimapper

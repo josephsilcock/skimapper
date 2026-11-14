@@ -3,15 +3,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:skimapper/attribution/attribution_line.dart';
 
 void main() {
-  testWidgets('credits every source the map and resort data come from', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const MaterialApp(home: AttributionLine()));
+  testWidgets('credits each source it is given, in order', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: AttributionLine(
+          credits: ['© OpenStreetMap contributors', 'Mapterhorn'],
+        ),
+      ),
+    );
 
     expect(
-      find.text(
-        '© OpenStreetMap contributors · OpenSkiMap · Protomaps · Mapterhorn',
-      ),
+      find.text('© OpenStreetMap contributors · Mapterhorn'),
       findsOneWidget,
     );
   });

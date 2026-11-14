@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../map/resort_map_screen.dart';
+import '../theme/full_area_message.dart';
 import 'catalogue.dart';
 import 'resort_list.dart';
 import 'resort_list_providers.dart';
@@ -100,15 +102,21 @@ class _Resorts extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       itemCount: resorts.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (_, i) => Card(
+      itemBuilder: (context, i) => Card(
         child: ListTile(
           title: Text(resorts[i].name),
           subtitle: Text(resorts[i].countriesLabel),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => _open(context, resorts[i]),
         ),
       ),
     );
   }
 }
+
+void _open(BuildContext context, Resort resort) => Navigator.of(context).push(
+  MaterialPageRoute<void>(builder: (_) => ResortMapScreen(resort: resort)),
+);
 
 /// A message filling the list area, still pullable.
 class _FullAreaMessage extends StatelessWidget {
@@ -126,17 +134,11 @@ class _FullAreaMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _FullArea(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 48, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(height: 12),
-        Text(heading, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
-        Text(detail, textAlign: TextAlign.center),
-        const SizedBox(height: 16),
-        FilledButton(onPressed: onRetry, child: const Text('Retry')),
-      ],
+    child: FullAreaMessage(
+      icon: icon,
+      heading: heading,
+      detail: detail,
+      onRetry: onRetry,
     ),
   );
 }

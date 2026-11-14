@@ -4,7 +4,8 @@ import 'dart:convert';
 /// serves is `{kind, schemaVersion, dataVersion, data}`, and the app accepts only the schema
 /// versions it knows for each kind.
 const catalogueKind = 'catalogue';
-const _acceptedSchemaVersions = {catalogueKind: 1};
+const resortManifestKind = 'resort-manifest';
+const _acceptedSchemaVersions = {catalogueKind: 1, resortManifestKind: 1};
 
 /// What a document turned out to be (D8): the only three answers any fetch or saved copy gives.
 sealed class DocumentOutcome<T> {
@@ -24,7 +25,18 @@ class Incompatible<T> extends DocumentOutcome<T> {
   const Incompatible();
 }
 
-class Failed<T> extends DocumentOutcome<T> {
+/// What fetching a pinned part turned out to be: a file whose size and hash match, or failed.
+sealed class PartOutcome {
+  const PartOutcome();
+}
+
+class VerifiedPart extends PartOutcome {
+  const VerifiedPart(this.path);
+
+  final String path;
+}
+
+class Failed<T> extends DocumentOutcome<T> implements PartOutcome {
   const Failed(this.cause);
 
   /// Why, for the fetch log.

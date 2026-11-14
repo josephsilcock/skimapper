@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// Single home for the data credits (C4 design § 3). OpenStreetMap's ODbL requires the
-/// credit wherever its data is shown; Mapterhorn's terrain mixes open sources that ask the same.
+/// The credits for the sources a map's data came from, as its manifest lists them: the build
+/// owns the credit duty (OpenStreetMap's ODbL asks for it wherever its data is shown).
 class AttributionLine extends StatelessWidget {
-  const AttributionLine({super.key});
+  const AttributionLine({super.key, required this.credits});
 
-  static const _credits = [
-    '© OpenStreetMap contributors',
-    'OpenSkiMap',
-    'Protomaps',
-    'Mapterhorn',
-  ];
+  final List<String> credits;
 
   @override
   Widget build(BuildContext context) =>
-      Text(_credits.join(' · '), style: Theme.of(context).textTheme.bodySmall);
+      Text(credits.join(' · '), style: Theme.of(context).textTheme.bodySmall);
 }

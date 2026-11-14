@@ -34,6 +34,33 @@ void main() {
     expect(find.text('France'), findsOneWidget);
   });
 
+  testWidgets('each resort row shows it opens, with a chevron', (tester) async {
+    await tester.pumpWidget(_resortList(endpoint: _serving, store: store));
+    await pumpUntilFound(tester, find.text('Paradiski'));
+
+    expect(
+      find.descendant(
+        of: find.widgetWithText(ListTile, 'Paradiski'),
+        matching: find.byIcon(Icons.chevron_right),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('tapping a resort opens its map screen under its name', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_resortList(endpoint: _serving, store: store));
+    await pumpUntilFound(tester, find.text('Paradiski'));
+
+    await tester.tap(find.text('Paradiski'));
+    // The route's transition; the map screen's loading indicator never settles.
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.widgetWithText(AppBar, 'Paradiski'), findsOneWidget);
+  });
+
   testWidgets('lists resorts by name, ignoring accents and capitals', (
     tester,
   ) async {
@@ -594,8 +621,9 @@ Map<String, Object?> _catalogueOf(List<String> names) => {
   ..._catalogue,
   'data': {
     'resorts': [
-      for (final name in names)
+      for (final (index, name) in names.indexed)
         {
+          'id': 'resort-$index',
           'name': name,
           'countries': ['Switzerland'],
           'centre': {'lat': 46.0, 'lon': 7.5},
@@ -616,11 +644,13 @@ const _catalogue = {
   'data': {
     'resorts': [
       {
+        'id': 'paradiski',
         'name': 'Paradiski',
         'countries': ['France'],
         'centre': {'lat': 45.55, 'lon': 6.8},
       },
       {
+        'id': 'espace-san-bernardo',
         'name': 'Espace San Bernardo',
         'countries': ['France', 'Italy'],
         'centre': {'lat': 45.68, 'lon': 6.88},

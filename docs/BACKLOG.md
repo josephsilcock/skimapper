@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F22`, `B5`, `C11`.
+**Next free IDs**: `F22`, `B5`, `C13`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -19,22 +19,21 @@ The agreed order for roughly the next five items — a queue, where the rest of 
 Re-ranked whenever an item lands (`/finish-feature` pops the head and tops the list back up); an item
 below that gets picked up out of turn should say why in its spec.
 
-1. **F5** Resort map
-2. **F4** Open a resort from the list
-3. **F8** Choose route start and end
-4. **F11** Quickest route
-5. **F16** Resort data available offline
+1. **F4** Reopen the last resort
+2. **F8** Choose route start and end
+3. **F11** Quickest route
+4. **F16** Resort data available offline
+5. **F6** Lift and run status on the map
 
 ---
 
 ## Features
 
 - **F2** Skiers can sort the resort list from closest to furthest, with the distance to each resort shown. Their location is only used on the device to work out distances and never leaves it. Builds on the resort list (`docs/definitions/resorts.md`), which sorts by name and keeps each resort's centre point for this.
-- **F3** Skiers can mark resorts as favourites, and their favourites are remembered between visits to the app. This is the app's first user state, so it is where the drift database starts (migration 1, DECISIONS.md D5). Builds on the resort list; catalogue entries carry no id yet, so this adds one.
-- **F4** Opening a resort from the list takes the skier straight to its map, and the app remembers which resort was open, so it reopens there next time. Depends on F5. Once a resort opens its map, the resort list stands alone on its screen, so this also moves or retires the fixture-map proof that sits below the list today (with F5).
-- **F5** Each resort is shown on a full-screen map that's easy to read on the mountain: a muted background with shaded terrain, runs drawn in their difficulty colours and labelled with their names, and lifts drawn and labelled so they stand apart from the runs, with drag lifts marked differently from aerial lifts. The map frames the whole resort when it opens. The fixture-map proof (map, map line and attribution) pinned below the resort list today is a temporary arrangement: this moves it onto the resort's map screen or retires it, so the list is alone on its screen. Also confirms the OpenSkiMap licence (DECISIONS.md D2) before OpenSkiMap data ships, unless F20 does first.
-- **F6** The map shows which lifts and runs are open right now. Lifts and runs known to be closed fade back, the resort's name bar says how up to date the information is, and information that has become too old to trust is no longer shown rather than misleading the skier. Depends on F5.
-- **F7** Tapping a lift shows its name, its type and whether it's running, along with any message the resort has given about it, such as when it's due to open. Depends on F5.
+- **F3** Skiers can mark resorts as favourites, and their favourites are remembered between visits to the app. This is the app's first user state, so it is where the drift database starts (migration 1, DECISIONS.md D5). Builds on the resort list; it keys favourites on the catalogue entry's `id`.
+- **F4** The app remembers which resort's map was open and reopens it there on the next launch. Opening a resort's map from the list already works (`docs/definitions/resort-map.md`); this adds only the remembering.
+- **F6** The map shows which lifts and runs are open right now. Lifts and runs known to be closed fade back, the resort's name bar says how up to date the information is, and information that has become too old to trust is no longer shown rather than misleading the skier. Builds on the resort map (`docs/definitions/resort-map.md`).
+- **F7** Tapping a lift shows its name, its type and whether it's running, along with any message the resort has given about it, such as when it's due to open. Builds on the resort map (`docs/definitions/resort-map.md`).
 - **F8** Skiers can plan a route between two points in the resort by choosing a start and an end, either by tapping the map or by picking which point they're setting and then tapping where they want it. The chosen points are marked on the map.
 - **F9** Skiers can set a route's start or end by searching for a run or lift by name, ignoring accents and capitals, or by using their current location to start from wherever they are. Depends on F8.
 - **F10** Skiers can swap the start and end of a route to plan the way back, or clear both to start again. Depends on F8.
@@ -73,5 +72,7 @@ below that gets picked up out of turn should say why in its spec.
   - **Drill-down**: a developer can still open any test across all layers (fast and full sweep, all platforms) for its pass/fail, duration and failure output, filterable. This is a secondary view; the stakeholder view comes first.
   - **Open questions for the spec**: where the plain-language wording comes from (test names, Gherkin acceptance criteria, or an annotation on each test) and how it is kept from drifting; how "not covered" is worked out (acceptance criteria with no linked test is the obvious source); hosting (Cloudflare, alongside `endpoint/`, is the natural fit) and whether it needs access control; where run history is stored and how long it is kept (GitHub's uploaded artefacts expire, so they can't be the record).
   - Builds on C5's sweep reporting (`.github/workflows/push.yml`, `sweep.yml`).
+- **C11** Naming drift after F5: `seed_endpoint_catalogue` and `serve_catalogue` (`tools/lib/endpoint.sh`) now seed resort bundles as well as the catalogue; "unknown-version" means two things in `endpoint/scripts/seed-local.ts` (the catalogue flag and the bundle variant); two unrelated private `_Fetch` classes sit in `endpoint_client.dart` and `resort_map_open.dart`; the bare `resortAreas();` call made only for its check in `seed-local.ts` needs a name.
+- **C12** The resort build's pinned Protomaps daily build (`endpoint/scripts/build/sources.ts`) can disappear upstream, and `@protomaps/basemaps` is `^5.7.2`, so regenerating the app's basemap layers can drift from the pinned tile schema. Pin both together, or record how a bump is verified.
 - **C9** The sweep and CI report reject arguments they don't recognise: today `tools/full-sweep --layer app` or `--layers=app` is silently ignored and runs every layer, E2E included (about 90 minutes), because `layersFromArgs` (`tools/sweep/layers.ts`) only looks for the exact switch. Each entry point should accept only its own switch and value (plus `report.ts`'s results dir) and fail with one `error:` line. Build on `layersFromArgs` and the `tools/sweep/cli.ts` boundary.
 - **C10** The service is deployed for real: a Cloudflare account, the private R2 bucket and a deploy workflow, so the app works on a phone outside development, with D1's free-tier limits checked against the first deploy.
