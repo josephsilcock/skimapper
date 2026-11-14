@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'diagnostics/event_loop_lag.dart';
 import 'endpoint/run_record.dart';
 import 'home_screen.dart';
+import 'map/scratch_clean_up.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -41,6 +42,8 @@ class _SkimapperAppState extends State<SkimapperApp> {
 
   @override
   Widget build(BuildContext context) => ProviderScope(
-    child: MaterialApp(theme: appTheme(), home: const HomeScreen()),
+    child: ScratchCleanUp(
+      child: MaterialApp(theme: appTheme(), home: const HomeScreen()),
+    ),
   );
 }

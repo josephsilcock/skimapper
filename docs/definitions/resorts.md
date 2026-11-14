@@ -1,7 +1,7 @@
 # Resorts: the resort list
 
 The home screen of the app: the ski areas it supports, so a skier can find the one they're visiting.
-The list stands alone on its screen.
+The list stands alone on its screen; tapping a row opens that resort's map (`resort-map.md`).
 
 ## What is listed
 
@@ -11,8 +11,9 @@ The list stands alone on its screen.
 - Each row shows the resort's name, with its countries on a smaller line below, in English, in
   catalogue order and joined with " · " (for example "France · Italy").
 - The app sorts rows by name, ignoring accents and capitals, whatever order the catalogue arrives in.
-- Rows don't respond to taps and show no tap affordance.
-- Each entry also carries a centre point, which isn't shown.
+- Each row opens the resort's map and ends in a chevron.
+- Each entry also carries an id (a lower-case slug, unique in the list) and a centre point, neither
+  shown. An entry with a missing or malformed id makes the whole list not understood.
 
 ## Freshness
 
@@ -22,11 +23,12 @@ The list stands alone on its screen.
 - With nothing saved, a loading indicator shows while the first fetch runs.
 - Any understood response replaces the shown and saved list; there is no version comparison. A
   response to an earlier request never overwrites a later one.
-- A catalogue with no entries, or with an entry missing its name, countries or centre point, is not
+- A catalogue with no entries, or with an entry missing its id, name, countries or centre point, is not
   understood and replaces nothing.
 - Saving is all-or-nothing: a failed save leaves the previous saved list intact, and the new list is
   still shown.
-- A saved copy the app can't read (not text, corrupt, or an older or unknown schema) counts as
+- A saved copy the app can't read (not text, corrupt, an older or unknown schema, or entries without
+  ids) counts as
   nothing saved, and a fetch follows.
 - There is no "last updated" indicator.
 
@@ -60,8 +62,7 @@ standards belong to accessibility work):
   a leading info icon, not amber, so they read as information rather than a warning.
 - **Full-area state messages** sit on the ground with a large primary-coloured icon, a heading and the
   action button below.
-- **Snackbars float** with an inset, above anything in the bottom bar. The credits line sits in the
-  bottom bar.
+- **Snackbars float** with an inset, above anything in the bottom bar (the map screen's credits).
 
 ## Entry points (navigation aid)
 

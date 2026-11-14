@@ -17,10 +17,10 @@ The system's shape, where each part runs, its seams and principles. Why each cho
 
 ## System design
 
-Everything the backend serves is either an **enveloped JSON document** or a **binary file** that such a document pins by hash. Reasons for each choice are in [DECISIONS.md](DECISIONS.md).
+Everything the backend serves is either an **enveloped JSON document** (mutable *latest* keys, checked by `openDocument`) or a **part**: a content-addressed file that a manifest pins by hash and size. Parts are never enveloped, whatever their encoding; the pinning manifest's `schemaVersion` versions their format. Reasons for each choice are in [DECISIONS.md](DECISIONS.md).
 
 - **Catalogue**: one per deployment; lists every resort (id, name, country, centre point, current manifest version).
-- **Resort manifest**: one per resort, built daily; lists the resort's parts, each with its own `dataVersion`, hash and size. Parts are *data* (runs, lifts, pre-built routing graph, status key map; JSON), *basemap* (vector PMTiles) and *terrain* (elevation PMTiles).
+- **Resort manifest**: one per resort; carries the resort's `bounds` and `credits` and pins its parts, each by role, hash and size. Parts are *pistes* (runs and lifts as GeoJSON), *basemap* (vector PMTiles) and *terrain* (elevation PMTiles); the pre-built routing graph and the status key map will be further parts. Until the daily refresh exists, a developer-run build (`endpoint/scripts/build/`) cuts each curated resort's parts and publishes them.
 - **Status**: fetched live on request by the Worker, enveloped and stamped with a fetched-at time and the data-part `dataVersion` its key map came from.
 - The device saves a resort as one directory holding the manifest and its parts. User state and the index of saved resorts live in SQLite (`drift`).
 
@@ -46,7 +46,7 @@ flowchart LR
   EC --> ST --> MAP
 ```
 
-Built so far: the artefact handler serving the resort catalogue, `EndpointClient` + `openDocument` (the envelope's one reader), the saved catalogue file behind the resort list, and a local-file map proof. The refresh, live status handler, per-resort storage and routing are future features.
+Built so far: the artefact handlers serving the resort catalogue, each resort's manifest and its parts, `EndpointClient` (documents through `openDocument`, the envelope's one reader, and size-and-hash-verified parts), the saved catalogue file behind the resort list, the developer-run resort build, and the resort map drawn from local files, fetched afresh on every open. The refresh, live status handler, per-resort storage and routing are future features.
 
 ### Where things run
 
@@ -76,5 +76,5 @@ Built so far: the artefact handler serving the resort catalogue, `EndpointClient
 ### Repo layout
 
 - `app/`: Flutter app, with Patrol E2E tests in `app/patrol_test/<endpoint-state group>/`.
-- `endpoint/`: the Worker and its tests.
-- `tools/`: dev config, dev-app command, E2E runner, full sweep (`tools/sweep/`) and the fixture generator.
+- `endpoint/`: the Worker, its tests and the developer-run resort build (`scripts/`, `catalogue/`, `fixtures/`).
+- `tools/`: dev config, dev-app command, E2E runner and full sweep (`tools/sweep/`).

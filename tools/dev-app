@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Dev app: tools/dev-app <ios|android> — starts the local endpoint, boots the dev config's
 # device and runs the app on it. The endpoint keeps its data in endpoint/.wrangler/dev-state.
+# Resorts serve the committed fixture bundle; RESORT_DATA=built serves the build's output instead
+# (endpoint/scripts/build-resorts.ts), failing if any curated resort has none.
 source "$(dirname "$0")/lib/common.sh"
 source "$TOOLS_DIR/lib/devices.sh"
 source "$TOOLS_DIR/lib/endpoint.sh"
@@ -11,7 +13,7 @@ require_platform "$platform"
 
 dev_state="$ENDPOINT_DIR/.wrangler/dev-state"
 ensure_port_free
-seed_endpoint_catalogue "$dev_state"
+seed_endpoint_catalogue "$dev_state" --resort-data "${RESORT_DATA:-fixture}"
 start_endpoint "$dev_state" >"$dev_state/endpoint.log" \
   || { echo "endpoint output: $dev_state/endpoint.log" >&2; exit 1; }
 trap stop_endpoint EXIT

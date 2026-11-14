@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -15,7 +14,6 @@ class FakeNativeMap {
     this._tester, {
     this.holdViewCreation = false,
     this.holdWaitForMap = false,
-    this.fixtureNeverRenders = false,
   }) {
     _messenger.setMockMethodCallHandler(
       SystemChannels.platform_views,
@@ -27,25 +25,19 @@ class FakeNativeMap {
   final bool holdViewCreation;
   final bool holdWaitForMap;
 
-  /// Answers every fixture query at once without the fixture feature, instead of holding it.
-  final bool fixtureNeverRenders;
-
   final WidgetTester _tester;
   int? _viewId;
   bool _waitForMapRequested = false;
-  Completer<Object?>? _queryInFlight;
+  final List<MethodCall> _cameraMoves = [];
+
+  /// The camera updates the map asked the native side for, in order.
+  List<Object?> get cameraMoves => [
+    for (final call in _cameraMoves) (call.arguments as Map)['cameraUpdate'],
+  ];
 
   bool get waitForMapRequested => _waitForMapRequested;
 
   bool get viewCreationRequested => _viewId != null;
-
-  bool get queryInFlight => _queryInFlight != null;
-
-  /// Answers the fixture query in flight, as the native map would even once its view has gone.
-  void answerQuery({required bool found}) {
-    _queryInFlight!.complete(_queryReply(found: found));
-    _queryInFlight = null;
-  }
 
   /// Sends [method] to the map as the native side would, and says whether anything handled it.
   Future<bool> sendToMap(String method) async {
@@ -82,17 +74,12 @@ class FakeNativeMap {
       case 'map#waitForMap':
         _waitForMapRequested = true;
         return holdWaitForMap ? Completer<Object?>().future : null;
-      case 'map#queryRenderedFeatures':
-        if (fixtureNeverRenders) return _queryReply(found: false);
-        _queryInFlight = Completer<Object?>();
-        return _queryInFlight!.future;
+      case 'camera#move':
+        _cameraMoves.add(call);
+        return true;
     }
     return null;
   }
-
-  static Map<String, Object?> _queryReply({required bool found}) => {
-    'features': [if (found) jsonEncode(_fixtureFeature)],
-  };
 
   static Future<ByteData?> _notImplemented(ByteData? _) async => null;
 
@@ -106,8 +93,3 @@ class FakeNativeMap {
     }
   }
 }
-
-const _fixtureFeature = {
-  'type': 'Feature',
-  'properties': {'fixture': 'c4-skeleton'},
-};

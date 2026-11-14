@@ -3,3 +3,7 @@
 export const latestDocumentKey = (name: string): string => `latest/${name}.json`;
 
 export const catalogueKey = latestDocumentKey("catalogue");
+
+export const resortManifestKey = (resortId: string): string => latestDocumentKey(`resorts/${resortId}/manifest`);
+
+export const partKey = (sha256: string): string => `parts/${sha256}`;
