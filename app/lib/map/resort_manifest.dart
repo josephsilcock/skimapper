@@ -70,14 +70,23 @@ class ResortManifest {
           north: north.toDouble(),
         ),
         credits: credits.cast<String>(),
-        parts: [for (final part in parts) PinnedPart._parse(part)],
+        parts: _withEveryRole([
+          for (final part in parts) PinnedPart._parse(part),
+        ]),
       ),
     _ => throw const FormatException('malformed resort manifest'),
   };
-}
 
-DocumentOutcome<ResortManifest> openResortManifest(String body) =>
-    openDocument(body, kind: resortManifestKind, parse: ResortManifest.parse);
+  /// The map is drawn from one part of every role, so a manifest lacking one is not understood.
+  static List<PinnedPart> _withEveryRole(List<PinnedPart> parts) {
+    final roles = {for (final part in parts) part.role};
+    if (roles.length != PartRole.values.length ||
+        parts.length != roles.length) {
+      throw const FormatException('parts are not one of every role');
+    }
+    return parts;
+  }
+}
 
 /// The resort-manifest document, as the endpoint serves it.
 extension ResortManifestDocument on EndpointClient {

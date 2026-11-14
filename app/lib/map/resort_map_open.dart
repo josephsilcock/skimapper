@@ -66,8 +66,9 @@ class ResortMapOpen extends Notifier<ResortMapView> {
     return const MapLoading();
   }
 
-  /// The skier's Retry: fetches everything again.
+  /// The skier's Retry: fetches everything again, installing the map assets afresh.
   Future<void> retry() {
+    ref.invalidate(mapAssetsProvider);
     state = const MapLoading();
     return _open();
   }
@@ -76,12 +77,24 @@ class ResortMapOpen extends Notifier<ResortMapView> {
     final fetch = ++_fetchesStarted;
     // Everything the fetch needs is read before its first wait: the screen may go meanwhile,
     // and the fetch then runs to its end and is dropped.
-    final answer = await _Fetch(
+    final fetching = _Fetch(
       endpoint: ref.read(endpointClientProvider),
       newFolder: _newFolder,
       mapAssets: ref.read(mapAssetsProvider),
     ).of(resort);
+    final answer = await _orCouldNotLoad(fetching);
     if (fetch == _fetchesStarted && ref.mounted) state = answer;
+  }
+
+  /// Anything the fetch throws (a full disk, assets that won't install) leaves the skier on
+  /// Couldn't load map with Retry, not on the spinner.
+  Future<ResortMapView> _orCouldNotLoad(Future<ResortMapView> fetching) async {
+    try {
+      return await fetching;
+    } on Object catch (failure) {
+      recordRun('map open failed: $failure');
+      return const MapCouldNotLoad();
+    }
   }
 
   /// A folder for one fetch; one made after the screen went is released at once.
@@ -108,24 +121,14 @@ class _Fetch {
       switch (await endpoint.fetchResortManifest(resort.id)) {
         Understood(value: final manifest) => switch ((
           await _parts(manifest),
-          await _assets(),
+          await mapAssets,
         )) {
-          (final parts?, final assets?) => MapReady(manifest, parts, assets),
+          (final parts?, final assets) => MapReady(manifest, parts, assets),
           _ => const MapCouldNotLoad(),
         },
         Incompatible() => const MapNeedsUpdate(),
         Failed() => const MapCouldNotLoad(),
       };
-
-  /// The glyphs and basemap layers; null if they couldn't be installed.
-  Future<MapAssets?> _assets() async {
-    try {
-      return await mapAssets;
-    } on FileSystemException catch (failure) {
-      recordRun('map assets failed: $failure');
-      return null;
-    }
-  }
 
   /// Fetches every part the manifest pins, in parallel, into a scratch folder of this fetch's
   /// own; null if any part failed.

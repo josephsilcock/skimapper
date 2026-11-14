@@ -7,7 +7,7 @@ A ski resort map app for iOS and Android.
 | Path        | What                                                                                  |
 |-------------|---------------------------------------------------------------------------------------|
 | `app/`      | Flutter app (iOS + Android); unit tests in `app/test/`, Patrol E2E in `app/patrol_test/` |
-| `endpoint/` | Cloudflare Worker serving stored artefacts from R2, with its tests                    |
+| `endpoint/` | Cloudflare Worker serving stored artefacts from R2, its tests and the resort data build |
 | `tools/`    | Dev config (`dev.env`), dev-app, E2E runner and full sweep                            |
 | `docs/`     | All project documentation (see map below)                                             |
 | `specs/`    | In-flight feature specs only — transient; merged into the docs and deleted at finish  |
@@ -15,7 +15,10 @@ A ski resort map app for iOS and Android.
 ## Running locally
 
 `tools/dev-app <ios|android>` starts the local endpoint, boots the device and runs the app. Prerequisites and
-every other command are in [docs/PIPELINE.md](docs/PIPELINE.md).
+every other command are in [docs/PIPELINE.md](docs/PIPELINE.md). The app serves the committed fixture resort by
+default; `RESORT_DATA=built tools/dev-app <ios|android>` serves the real resorts instead, once
+`cd endpoint && node scripts/build-resorts.ts [--resort <id>]` has built them (needs the `pmtiles` command-line
+tool; output in `endpoint/build-output/`, not committed).
 
 ## Tests
 

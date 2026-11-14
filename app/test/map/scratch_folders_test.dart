@@ -35,4 +35,16 @@ void main() {
       expect(root.listSync(), isEmpty);
     },
   );
+
+  test(
+    "clearing never deletes the folder of a screen that is already open",
+    () async {
+      final folders = ScratchFolders(Future.value(root));
+      final live = await folders.newFolder();
+
+      await folders.clearAll();
+
+      expect(live.existsSync(), isTrue);
+    },
+  );
 }

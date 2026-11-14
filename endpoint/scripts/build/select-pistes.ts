@@ -31,7 +31,7 @@ export const belongsTo = (skiAreaIds: Set<string>) => (feature: OpenSkiMapFeatur
   );
 
 const asPistesRun = (feature: OpenSkiMapFeature) =>
-  pistesRun(flattened(feature.geometry), nameOf(feature), feature.properties.difficulty as string | null);
+  pistesRun(flattened(feature.geometry), nameOf(feature), (feature.properties.difficulty as string | null) ?? null);
 
 const asPistesLift = (feature: OpenSkiMapFeature) =>
   pistesLift(flattened(feature.geometry), nameOf(feature), (feature.properties.liftType as string | null) ?? null);
@@ -41,7 +41,7 @@ const nameOf = (feature: OpenSkiMapFeature): string | null => (feature.propertie
 function flattened({ type, coordinates }: OpenSkiMapFeature["geometry"]): PistesGeometry {
   if (type === "LineString") return { type, coordinates: (coordinates as number[][]).map(position2D) };
   if (type === "Polygon") return { type, coordinates: (coordinates as number[][][]).map((ring) => ring.map(position2D)) };
-  throw new Error(`unexpected run geometry ${type}`);
+  throw new Error(`unexpected piste geometry ${type}`);
 }
 
 const position2D = ([lon, lat]: number[]): Position2D => [lon, lat];

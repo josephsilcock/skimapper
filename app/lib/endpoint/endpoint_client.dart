@@ -185,7 +185,8 @@ class _PartFetch {
   }
 
   PartOutcome _verified(crypto.Digest digest, int length) {
-    if (length != size) return Failed('incomplete: $length of $size bytes');
+    if (length > size) return Failed('too long: more than $size bytes');
+    if (length < size) return Failed('incomplete: $length of $size bytes');
     if (digest.toString() != sha256) return const Failed('hash mismatch');
     return VerifiedPart(path);
   }
@@ -201,6 +202,7 @@ class _PartFetch {
     try {
       await for (final chunk in bytes) {
         length += chunk.length;
+        if (length > size) break;
         hashing.add(chunk);
         file.add(chunk);
       }

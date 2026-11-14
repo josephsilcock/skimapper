@@ -20,8 +20,8 @@ class ScratchFolders {
     return folder;
   }
 
-  /// At app launch, when no screen holds any folder.
-  Future<void> clearAll() async => _deleteAllBut(await _root, const {});
+  /// At app launch: deletes every folder an earlier launch left, never one a screen already holds.
+  Future<void> clearAll() async => _deleteAllBut(await _root, _live);
 
   /// The screen holding [folder] has gone.
   void release(Directory folder) => _live.remove(folder.path);

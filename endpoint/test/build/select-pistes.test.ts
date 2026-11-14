@@ -108,3 +108,12 @@ it("leaves out proposed, planned, under construction, disused and abandoned lift
 
   expect(pistes.features.map((feature) => feature.properties.name)).toEqual(["operating"]);
 });
+
+it("writes a run whose difficulty OpenSkiMap omits with a null difficulty", () => {
+  const unrated = run({ name: "Unrated" });
+  delete unrated.properties.difficulty;
+
+  const pistes = selectPistes({ runs: runs(unrated), lifts: lifts() }, ["area-1"]);
+
+  expect(pistes.features[0].properties).toEqual({ kind: "run", name: "Unrated", difficulty: null });
+});

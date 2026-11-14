@@ -11,7 +11,7 @@ area docs at [definitions/](definitions/README.md)** (linked per section below).
 ## Features
 
 - **F1** Skiers browse the supported ski areas by name and country, refresh by pulling down, and keep the list without a signal — `done`
-- **F5** Skiers open a resort from the list onto its full-screen map: runs in difficulty colours and named, lifts apart from runs, drag lifts apart from aerial lifts — `in progress`
+- **F5** Skiers open a resort from the list onto its full-screen map: runs in difficulty colours and named, lifts apart from runs, drag lifts apart from aerial lifts — `done`
 
 ## Code
 

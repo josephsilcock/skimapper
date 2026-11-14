@@ -6,7 +6,7 @@ import 'package:skimapper/map/resort_manifest.dart';
 
 void main() {
   test('a resort manifest is understood, with its bounds, credits and pinned parts', () {
-    final outcome = openResortManifest(jsonEncode(_manifest));
+    final outcome = _open(jsonEncode(_manifest));
 
     expect(
       outcome,
@@ -21,11 +21,29 @@ void main() {
             '© OpenStreetMap contributors',
           ])
           .having((it) => it.value.parts, 'parts', [
-            PinnedPart(role: PartRole.pistes, sha256: 'a' * 64, size: 243),
+            for (final role in PartRole.values)
+              PinnedPart(role: role, sha256: 'a' * 64, size: 243),
           ]),
     );
   });
+
+  test('a manifest missing a part role is rejected', () {
+    final withoutTerrain = _manifestWithParts([
+      for (final role in [PartRole.pistes, PartRole.basemap])
+        {'role': role.name, 'sha256': 'a' * 64, 'size': 243},
+    ]);
+
+    expect(_open(jsonEncode(withoutTerrain)), isA<Failed>());
+  });
 }
+
+DocumentOutcome<ResortManifest> _open(String body) =>
+    openDocument(body, kind: resortManifestKind, parse: ResortManifest.parse);
+
+Map<String, Object?> _manifestWithParts(List<Object?> parts) => {
+  ..._manifest,
+  'data': {...(_manifest['data'] as Map<String, Object?>), 'parts': parts},
+};
 
 final _manifest = {
   'kind': 'resort-manifest',
@@ -35,7 +53,8 @@ final _manifest = {
     'bounds': [6.81, 45.57, 6.83, 45.585],
     'credits': ['© OpenStreetMap contributors'],
     'parts': [
-      {'role': 'pistes', 'sha256': 'a' * 64, 'size': 243},
+      for (final role in PartRole.values)
+        {'role': role.name, 'sha256': 'a' * 64, 'size': 243},
     ],
   },
 };

@@ -22,7 +22,7 @@ export type ResortBuild = {
 // Protomaps' deepest zoom.
 const allZooms: Zooms = { basemapMaxzoom: 15 };
 
-// One resort's bundle: its pistes, then its basemap and terrain cut to the pistes' bounds.
+// One resort's bundle: its pistes, then its basemap and terrain cut to a margin beyond the pistes' bounds.
 export function buildResort({ resortId, skiAreaIds, exports, output, zooms = allZooms, cut = cutTiles }: ResortBuild): void {
   const pistes = selectPistes(exports, skiAreaIds);
   if (pistes.features.length === 0) throw new Error(`${resortId}: no runs or lifts in its ski areas`);

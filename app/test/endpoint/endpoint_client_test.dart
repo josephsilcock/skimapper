@@ -233,6 +233,33 @@ void main() {
     });
 
     test(
+      'a part longer than its declared size has failed as too long',
+      () async {
+        final client = _clientFor(
+          MockClient(
+            (request) async =>
+                http.Response.bytes([..._partBytes, ..._partBytes], 200),
+          ),
+        );
+
+        final outcome = await client.fetchPart(
+          sha256: _partSha256,
+          size: _partBytes.length,
+          directory: _temporaryDirectory(),
+        );
+
+        expect(
+          outcome,
+          isA<Failed<void>>().having(
+            (failed) => failed.cause,
+            'cause',
+            'too long: more than ${_partBytes.length} bytes',
+          ),
+        );
+      },
+    );
+
+    test(
       'a part whose bytes do not match its hash has failed, naming why',
       () async {
         final client = _clientFor(

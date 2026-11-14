@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -83,6 +84,47 @@ void main() {
       expect(find.text("Couldn't load map"), findsOneWidget);
     },
   );
+
+  testWidgets(
+    "assets that fail to load in any way mean the map couldn't be loaded",
+    (tester) async {
+      FakeNativeMap(tester);
+      await tester.pumpWidget(
+        _screen(
+          endpoint: _serving,
+          assets: Future<MapAssets>.error(const FormatException('bad layers'))
+            ..ignore(),
+        ),
+      );
+      await pumpUntilFound(tester, find.text("Couldn't load map"));
+
+      expect(find.text("Couldn't load map"), findsOneWidget);
+    },
+  );
+
+  testWidgets("Retry installs the assets again after they failed", (
+    tester,
+  ) async {
+    FakeNativeMap(tester);
+    var installs = 0;
+    await tester.pumpWidget(
+      _screen(
+        endpoint: _serving,
+        mapAssets: mapAssetsProvider.overrideWith(
+          (ref) => ++installs == 1
+              ? (Future<MapAssets>.error(const FileSystemException('disk full'))
+                  ..ignore())
+              : Future.value(_assets),
+        ),
+      ),
+    );
+    await pumpUntilFound(tester, find.text("Couldn't load map"));
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
+    await pumpUntilFound(tester, find.byType(ResortMap));
+
+    expect(find.byType(ResortMap), findsOneWidget);
+  });
 
   testWidgets('while the map data is fetched, the screen shows it is loading', (
     tester,
@@ -241,6 +283,7 @@ Future<http.Response> _refusing(http.Request request) async =>
 Widget _screen({
   required MockClientHandler endpoint,
   Future<MapAssets>? assets,
+  Override? mapAssets,
   Widget home = const ResortMapScreen(resort: _paradiski),
   GlobalKey<NavigatorState>? navigator,
 }) {
@@ -256,7 +299,8 @@ Widget _screen({
         ),
       ),
       scratchRootProvider.overrideWithValue(Future.value(scratch)),
-      mapAssetsProvider.overrideWithValue(assets ?? Future.value(_assets)),
+      mapAssets ??
+          mapAssetsProvider.overrideWithValue(assets ?? Future.value(_assets)),
     ],
     child: MaterialApp(navigatorKey: navigator, home: home),
   );
@@ -288,11 +332,12 @@ Future<http.Response> _serving(http.Request request) async =>
             'bounds': [6.81, 45.57, 6.83, 45.585],
             'credits': ['© OpenStreetMap contributors', 'Mapterhorn'],
             'parts': [
-              {
-                'role': 'pistes',
-                'sha256': _pistesSha256,
-                'size': _pistes.length,
-              },
+              for (final role in PartRole.values)
+                {
+                  'role': role.name,
+                  'sha256': _pistesSha256,
+                  'size': _pistes.length,
+                },
             ],
           },
         }),
