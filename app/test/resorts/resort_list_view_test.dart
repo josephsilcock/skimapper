@@ -34,6 +34,19 @@ void main() {
     expect(find.text('France'), findsOneWidget);
   });
 
+  testWidgets('each resort row shows it opens, with a chevron', (tester) async {
+    await tester.pumpWidget(_resortList(endpoint: _serving, store: store));
+    await pumpUntilFound(tester, find.text('Paradiski'));
+
+    expect(
+      find.descendant(
+        of: find.widgetWithText(ListTile, 'Paradiski'),
+        matching: find.byIcon(Icons.chevron_right),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('tapping a resort opens its map screen under its name', (
     tester,
   ) async {

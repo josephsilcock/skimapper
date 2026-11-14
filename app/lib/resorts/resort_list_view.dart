@@ -106,6 +106,7 @@ class _Resorts extends StatelessWidget {
         child: ListTile(
           title: Text(resorts[i].name),
           subtitle: Text(resorts[i].countriesLabel),
+          trailing: const Icon(Icons.chevron_right),
           onTap: () => _open(context, resorts[i]),
         ),
       ),

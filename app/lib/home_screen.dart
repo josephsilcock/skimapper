@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'attribution/attribution_line.dart';
 import 'resorts/resort_list_view.dart';
 
 /// The home screen: the resort list.
@@ -24,13 +23,6 @@ class HomeScreen extends StatelessWidget {
             const Expanded(child: ResortListView()),
           ],
         ),
-      ),
-    ),
-    // A floating snackbar sits above the bottom bar, so the credits stay visible under it.
-    bottomNavigationBar: const SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: AttributionLine(),
       ),
     ),
   );

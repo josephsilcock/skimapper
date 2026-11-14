@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:skimapper/attribution/attribution_line.dart';
 import 'package:skimapper/endpoint/endpoint_client.dart';
 import 'package:skimapper/map/basemap_layers.dart';
 import 'package:skimapper/map/map_assets.dart';
@@ -91,6 +92,49 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.widgetWithText(AppBar, 'Paradiski'), findsOneWidget);
     await pumpUntilFound(tester, find.byType(ResortMap));
+  });
+
+  testWidgets(
+    "a resort's map shows its manifest's credits below it, and only with the map",
+    (tester) async {
+      FakeNativeMap(tester);
+      await tester.pumpWidget(_screen(endpoint: _serving));
+      expect(find.byType(AttributionLine), findsNothing, reason: 'loading');
+      await pumpUntilFound(tester, find.byType(ResortMap));
+
+      expect(
+        find.text('© OpenStreetMap contributors · Mapterhorn'),
+        findsOneWidget,
+      );
+      expect(
+        tester.getTopLeft(find.byType(AttributionLine)).dy,
+        greaterThanOrEqualTo(tester.getBottomLeft(find.byType(ResortMap)).dy),
+      );
+    },
+  );
+
+  testWidgets('a snackbar over a resort map leaves its credits uncovered', (
+    tester,
+  ) async {
+    FakeNativeMap(tester);
+    await tester.pumpWidget(_screen(endpoint: _serving));
+    await pumpUntilFound(tester, find.byType(AttributionLine));
+
+    ScaffoldMessenger.of(tester.element(find.byType(AttributionLine)))
+        .showSnackBar(const SnackBar(content: Text('a message')));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final snackBar = tester.getRect(
+      find.descendant(
+        of: find.byType(SnackBar),
+        matching: find.byType(Material),
+      ),
+    );
+    expect(
+      snackBar.overlaps(tester.getRect(find.byType(AttributionLine))),
+      isFalse,
+    );
   });
 
   testWidgets(
@@ -180,7 +224,7 @@ Future<http.Response> _serving(http.Request request) async =>
           'dataVersion': '2026-11-14',
           'data': {
             'bounds': [6.81, 45.57, 6.83, 45.585],
-            'credits': <String>[],
+            'credits': ['© OpenStreetMap contributors', 'Mapterhorn'],
             'parts': [
               {
                 'role': 'pistes',
