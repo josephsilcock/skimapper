@@ -428,9 +428,9 @@ Accepted as they are:
 - [x] 2. A skier opening Paradiski sees the run labelled over a grey basemap with hillshade: basemap and terrain parts cut by the build, glyphs installed locally, every file read from `file://` on iOS and Android.
 - [x] 3. A developer runs the build for Les 3 Vallées and starts the app with `RESORT_DATA=built`; a skier taps Les 3 Vallées, sees the whole real resort framed, and pans across it smoothly.
 - [x] 4. A skier opens a resort while the endpoint is down and sees "Couldn't load map"; once it is back, they tap Retry and see the map.
-- [ ] 5. A skier opens the fixture resort and sees every run difficulty in its colour, drag lifts dotted against aerial ones, all named, with the manifest's credits below the map; back returns to the list alone.
-- [ ] 6. A skier opens a resort whose part doesn't match its hash (Les 3 Vallées in E2E) and sees "Couldn't load map".
-- [ ] 7. A skier opens a resort whose manifest needs a newer app (Espace San Bernardo in E2E) and sees "Update SkiMapper to see this map".
+- [x] 5. A skier opens the fixture resort and sees every run difficulty in its colour, drag lifts dotted against aerial ones, all named.
+- [ ] 6. A skier sees the manifest's credits in a bar below the map, and only there: back returns to the list alone.
+- [ ] 7. A skier opening a resort whose part doesn't match its hash (Les 3 Vallées in E2E) sees "Couldn't load map"; one whose manifest needs a newer app (Espace San Bernardo) sees "Update SkiMapper to see this map".
 - [ ] 8. Only the newest answer reaches the screen, nothing is kept between opens or launches, and the map takes no tilt and no taps.
 
 ## Decisions taken during implement
@@ -443,12 +443,16 @@ Accepted as they are:
 - **The build streams OpenSkiMap's exports line by line**, keeping only features of the resorts being built through the selection's own `belongsTo`: `runs.geojson` is 848 MB uncompressed, past V8's string limit.
 - **The fixture cuts only z11–13 (basemap) and z11–12 (terrain)**, so the committed parts stay at 82 KB and 284 KB; real resorts cut every zoom (≤ 15 and ≤ 12).
 - **The full-area message is one shared widget** (`lib/theme/full_area_message.dart`: icon, heading, detail, Retry), used by the resort list (inside its pullable area) and the map screen, so the two states can't drift apart in look.
+- **Slices re-cut at 5:** credits and back became slice 6, and hash mismatch merged with update-the-app as slice 7 (one E2E seeding change), holding the list at 8.
+- **Aerial lift stations are a circle layer over the lift lines**, which MapLibre draws at each vertex (a lift's vertices are its stations); no station points in the pistes format.
+- **Peaks are labelled by one added `peak_label` layer** in the generated background (Protomaps' `pois`, kind peak, grey italic): the grayscale flavour draws no points of interest, and the sketch keeps peak names.
+- **Run and lift labels are checked zoomed in, not at the framed zoom**: with every class in the fixture's 1.5 km, labels at the framing zoom collide, which the AC allows.
 - **Selection rules (operating, downhill) landed with the real build (slice 3)** rather than the style slice: without them a resort's bounds take in nordic trails and proposed runs.
 
 ## Resume
 
-- **Closed:** slices 1–4 (see `git log`). Evidence: `test-results/tdd/F5/slice-0{1..4}-*.md`.
-- **Next:** slice 5 — styles: lifts in pistes (build: operating lifts with `liftType`; app: casing + core, aerial solid + station dots, `drag_lift` dotted, labels), every difficulty colour (green novice, blue easy, red intermediate, black advanced/expert, dashed dark freeride/extreme, grey none), run-area faint fill, credits from the manifest in a bottom bar on the map screen only (build writes credits; home screen loses `AttributionLine`; `attribution_test` and the snackbar check move to the map screen), back returns to the list alone; peak labels; hillshade lighter. Sample gains one feature per class; fixture regenerated.
-- **Seams as built:** `ResortMapView` = `MapLoading` | `MapReady(manifest, parts, assets)` | `MapCouldNotLoad`; `ResortMapOpen.retry()`; `FullAreaMessage`.
-- **Not yet:** update-the-app state (incompatible manifest currently shows couldn't load), hash-mismatch E2E, generation numbers and scratch clean-up, interaction settings, hiding MapLibre's (i).
+- **Closed:** slices 1–5 (see `git log`). Evidence: `test-results/tdd/F5/slice-0{1..5}-*.md`.
+- **Next:** slice 6 — `AttributionLine` renders the manifest's credits in a bottom bar on the map screen (only with a map); the home screen loses its bottom bar; `attribution_test` E2E moves to the map screen with the new credits string ("© OpenStreetMap contributors · OpenSkiMap · Skimap.org · Protomaps · Mapterhorn"); the snackbar-over-credits check (`home_screen_test`) moves to the map screen; E2E: back returns to the list with no map and no credits.
+- **Seams as built:** style table in `resort_map_style.dart` (`_runLooks`, `_dragLiftTypes`, `RunStyle`/`LiftStyle` layer ids); lifts in pistes `{kind: lift, name, liftType}`; manifest `credits` from `sources.ts`.
+- **Not yet:** credits on the map, update-the-app state, hash-mismatch E2E, generation numbers and scratch clean-up, interaction settings, hiding MapLibre's (i).
 - **E2E practice:** iOS `ENDPOINT_PORT=8797`, Android `ENDPOINT_PORT=8798`, never in parallel; iOS outcomes from the xcresult (`scratchpad/xcr.sh`). Miniflare tests, pmtiles and E2E run outside the sandbox. Real-data look: `scratchpad/look.sh`.
