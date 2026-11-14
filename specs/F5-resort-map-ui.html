@@ -1,0 +1,179 @@
+<title>F5 Resort Map Sketch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Roboto+Mono:wght@400&display=swap">
+<style>
+/* Layout: a column of 480px phone frames, each with a short note on the choice it settles. Phone colours copy the app's glacier-teal theme and stay light (F21 owns dark mode); the page around them follows the viewer's theme. */
+:root {
+  --page: #eef3f4; --ink: #1b2a2e; --muted: #5a6b70; --rule: #cfdadd;
+  --teal: #00687a; --ground: #edf2f3; --card: #ffffff; --onteal-c: #001f26; --teal-c: #b1ecfb;
+  --green: #1f9a2b; --blue: #0060a8; --red: #ef2b31; --black: #111; --grey: #8a8a8a;
+  --lift: #2e2a3a;
+  --body: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Roboto Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #12191b; --ink: #e2ecee; --muted: #9db0b5; --rule: #2b3a3e; color-scheme: dark } }
+:root[data-theme="dark"] { --page: #12191b; --ink: #e2ecee; --muted: #9db0b5; --rule: #2b3a3e; color-scheme: dark }
+body { background: var(--page); color: var(--ink); font-family: var(--body); }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 28px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 40px; }
+header h1 { font-size: 1.6rem; font-weight: 500; margin: 0 0 6px; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 65ch; line-height: 1.5; }
+section { display: grid; grid-template-columns: minmax(0, 480px) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 860px) { section { grid-template-columns: minmax(0, 1fr); } }
+.note h2 { font-size: 1.05rem; font-weight: 500; margin: 0 0 8px; }
+.note p, .note li { color: var(--muted); line-height: 1.5; max-width: 60ch; }
+.note .ask { color: var(--ink); border-left: 3px solid var(--teal); padding-left: 10px; }
+.label { font: 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+
+/* the phone: fixed light theme, like the app */
+.phone { width: 100%; max-width: 480px; background: var(--ground); color: #1b2a2e; border: 1px solid var(--rule); border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; color-scheme: light; }
+.status { height: 26px; font: 12px var(--body); display: flex; align-items: center; justify-content: space-between; padding: 0 18px; color: #1b2a2e; }
+.appbar { height: 56px; display: flex; align-items: center; gap: 8px; padding: 0 6px; background: var(--ground); }
+.appbar .back { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; }
+.appbar .title { font-size: 22px; color: var(--teal); }
+.list { padding: 8px 16px 16px; display: grid; gap: 8px; }
+.list .h { font-size: 28px; color: var(--teal); margin: 8px 0 8px; }
+.row { background: var(--card); border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.18); display: flex; align-items: center; padding: 12px 8px 12px 16px; }
+.row .t { flex: 1; } .row .n { font-size: 16px; } .row .c { font-size: 14px; color: #3f484b; margin-top: 2px; }
+.row svg { flex: none; }
+.map { position: relative; height: 560px; background: #f2f2f0; overflow: hidden; }
+.map svg.terrain { position: absolute; inset: 0; width: 100%; height: 100%; }
+.compass { position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.92); box-shadow: 0 1px 3px rgba(0,0,0,.25); display: grid; place-items: center; }
+.credits { background: var(--ground); font-size: 12px; color: #3f484b; padding: 8px 16px 18px; border-top: 1px solid #dbe4e6; }
+.state { height: 560px; display: grid; place-items: center; text-align: center; padding: 0 32px; }
+.state h3 { font-size: 22px; font-weight: 400; margin: 12px 0 8px; }
+.state p { margin: 0 0 16px; color: #3f484b; }
+.btn { display: inline-block; background: var(--teal); color: #fff; border-radius: 20px; padding: 10px 24px; font-weight: 500; font-size: 14px; }
+.legend { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; margin-top: 10px; font-size: 13px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+<header>
+  <h1>F5 resort map: UI sketch</h1>
+  <p>Sketch at the demo pack's 480px width, using the app's glacier-teal theme. Map content is drawn to show the style, not real geometry. Responsive intent: the map fills whatever space is below the name bar and above the credits, on any size of phone.</p>
+</header>
+
+<section>
+  <div>
+    <div class="label">1 · Resort list, rows now tappable</div>
+    <div class="phone">
+      <div class="status"><span>09:41</span><span>●●● ▮</span></div>
+      <div class="list">
+        <div class="h">SkiMapper</div>
+        <div class="row"><div class="t"><div class="n">Espace San Bernardo</div><div class="c">France · Italy</div></div>
+          <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="#5a6b70" stroke-width="2"/></svg></div>
+        <div class="row"><div class="t"><div class="n">Les 3 Vallées</div><div class="c">France</div></div>
+          <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="#5a6b70" stroke-width="2"/></svg></div>
+        <div class="row"><div class="t"><div class="n">Paradiski</div><div class="c">France</div></div>
+          <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="#5a6b70" stroke-width="2"/></svg></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <h2>Tap affordance: a trailing chevron</h2>
+    <p>Each card gets a trailing chevron and the standard ink ripple on tap. The credits line is no longer in the list screen's bottom bar, so the list stands alone.</p>
+    <p class="ask">Rule on: is the chevron the right affordance? The alternative is the ripple alone, with no visible cue.</p>
+  </div>
+</section>
+
+<section>
+  <div>
+    <div class="label">2 · Resort map, loaded and framed on the whole resort</div>
+    <div class="phone">
+      <div class="status"><span>09:41</span><span>●●● ▮</span></div>
+      <div class="appbar">
+        <div class="back"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H5m6-7l-7 7 7 7" fill="none" stroke="#1b2a2e" stroke-width="2"/></svg></div>
+        <div class="title">Paradiski</div>
+      </div>
+      <div class="map">
+        <svg class="terrain" viewBox="0 0 480 560" preserveAspectRatio="xMidYMid slice" aria-label="Sketch of a muted map with runs and lifts">
+          <defs>
+            <linearGradient id="shade" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".0"/><stop offset="1" stop-color="#6d6d6d" stop-opacity=".35"/></linearGradient>
+            <radialGradient id="ridge1" cx=".3" cy=".25" r=".5"><stop offset="0" stop-color="#ffffff" stop-opacity=".7"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+            <radialGradient id="ridge2" cx=".75" cy=".55" r=".45"><stop offset="0" stop-color="#ffffff" stop-opacity=".6"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+          </defs>
+          <rect width="480" height="560" fill="#eeeeec"/>
+          <path d="M0 470 C120 430 220 520 480 450 L480 560 L0 560Z" fill="#e2e4e1"/>
+          <path d="M-20 120 L90 40 L160 110 L250 20 L340 120 L420 60 L520 140 L520 560 L-20 560Z" fill="url(#shade)"/>
+          <rect width="480" height="560" fill="url(#ridge1)"/><rect width="480" height="560" fill="url(#ridge2)"/>
+          <path d="M0 520 C80 505 140 515 200 498 S330 480 480 500" fill="none" stroke="#ffffff" stroke-width="3"/>
+          <path d="M0 520 C80 505 140 515 200 498 S330 480 480 500" fill="none" stroke="#c9c9c6" stroke-width="1"/>
+          <text x="36" y="488" font-size="11" fill="#7a7a7a" font-family="Roboto, sans-serif">Bourg-Saint-Maurice</text>
+          <text x="286" y="64" font-size="10" fill="#8a8a8a" font-family="Roboto, sans-serif" font-style="italic">▲ Aiguille Rouge 3226</text>
+          <!-- run areas: faint fill -->
+          <path d="M120 300 q40 -20 80 0 q10 40 -30 60 q-50 0 -50 -60Z" fill="#0060a8" fill-opacity=".12"/>
+          <!-- runs -->
+          <path d="M300 80 C280 160 300 220 260 320 S220 420 230 470" fill="none" stroke="#111" stroke-width="2.6"/>
+          <path d="M330 120 C350 200 330 280 350 360 S330 430 320 470" fill="none" stroke="#ef2b31" stroke-width="2.6"/>
+          <path d="M140 160 C160 220 150 260 170 320 S200 400 210 470" fill="none" stroke="#0060a8" stroke-width="2.6"/>
+          <path d="M60 330 C90 360 110 400 130 460" fill="none" stroke="#1f9a2b" stroke-width="2.6"/>
+          <path d="M400 150 C410 220 380 280 400 360" fill="none" stroke="#2b2b2b" stroke-width="2" stroke-dasharray="6 4"/>
+          <path d="M220 200 C230 240 220 260 236 300" fill="none" stroke="#8a8a8a" stroke-width="2.2"/>
+          <!-- run labels -->
+          <text font-size="11" fill="#111" font-family="Roboto, sans-serif" font-weight="500"><textPath href="#lbl-black" startOffset="20%">Aiguille Rouge</textPath></text>
+          <path id="lbl-black" d="M300 80 C280 160 300 220 260 320" fill="none"/>
+          <text font-size="11" fill="#c8161c" font-family="Roboto, sans-serif" font-weight="500"><textPath href="#lbl-red" startOffset="30%">Malgovert</textPath></text>
+          <path id="lbl-red" d="M330 120 C350 200 330 280 350 360" fill="none"/>
+          <text font-size="11" fill="#0060a8" font-family="Roboto, sans-serif" font-weight="500"><textPath href="#lbl-blue" startOffset="30%">Belvédère</textPath></text>
+          <path id="lbl-blue" d="M140 160 C160 220 150 260 170 320" fill="none"/>
+          <!-- aerial lift: dark core with white casing, station dots -->
+          <path d="M230 470 L300 80" stroke="#ffffff" stroke-width="5"/>
+          <path d="M230 470 L300 80" stroke="#2e2a3a" stroke-width="2"/>
+          <circle cx="230" cy="470" r="4" fill="#2e2a3a" stroke="#fff" stroke-width="1.5"/><circle cx="300" cy="80" r="4" fill="#2e2a3a" stroke="#fff" stroke-width="1.5"/>
+          <text x="238" y="300" font-size="11" fill="#2e2a3a" font-family="Roboto, sans-serif" font-weight="500" transform="rotate(-80 238 300)">Transarc 2</text>
+          <path d="M210 470 L140 160" stroke="#ffffff" stroke-width="5"/>
+          <path d="M210 470 L140 160" stroke="#2e2a3a" stroke-width="2"/>
+          <circle cx="210" cy="470" r="4" fill="#2e2a3a" stroke="#fff" stroke-width="1.5"/><circle cx="140" cy="160" r="4" fill="#2e2a3a" stroke="#fff" stroke-width="1.5"/>
+          <!-- drag lift: same casing, dotted core, no station dots -->
+          <path d="M60 330 L120 450" stroke="#ffffff" stroke-width="5"/>
+          <path d="M60 330 L120 450" stroke="#2e2a3a" stroke-width="2.2" stroke-dasharray="1 4" stroke-linecap="round"/>
+          <text x="96" y="386" font-size="10" fill="#2e2a3a" font-family="Roboto, sans-serif" transform="rotate(63 96 386)">Téléski Plan</text>
+        </svg>
+        <div class="compass" title="Compass, shown only when rotated; tap resets to north">
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l4 10h-8z" fill="#c8161c"/><path d="M12 22l-4-10h8z" fill="#5a6b70"/></svg>
+        </div>
+      </div>
+      <div class="credits">© OpenStreetMap contributors · OpenSkiMap · Skimap.org · Protomaps · Mapterhorn</div>
+    </div>
+  </div>
+  <div class="note">
+    <h2>Name bar, map, credits below the map</h2>
+    <p>The name bar is a plain app bar on the teal-grey ground: a back arrow and the resort name in the primary colour, matching the list screen's title. The map fills the space between the name bar and the credits. The credits sit in the bottom bar, outside the map, where the list screen has them today. MapLibre's own logo and attribution button are off. The compass shows only when the map is rotated, and tapping it turns the map back to north.</p>
+    <div class="legend">
+      <svg width="40" height="10"><path d="M2 5h36" stroke="#1f9a2b" stroke-width="2.6"/></svg><span>novice: green</span>
+      <svg width="40" height="10"><path d="M2 5h36" stroke="#0060a8" stroke-width="2.6"/></svg><span>easy: blue</span>
+      <svg width="40" height="10"><path d="M2 5h36" stroke="#ef2b31" stroke-width="2.6"/></svg><span>intermediate: red</span>
+      <svg width="40" height="10"><path d="M2 5h36" stroke="#111" stroke-width="2.6"/></svg><span>advanced, expert: black</span>
+      <svg width="40" height="10"><path d="M2 5h36" stroke="#2b2b2b" stroke-width="2" stroke-dasharray="6 4"/></svg><span>freeride, extreme: dashed dark</span>
+      <svg width="40" height="10"><path d="M2 5h36" stroke="#8a8a8a" stroke-width="2.2"/></svg><span>no difficulty: grey</span>
+      <svg width="40" height="10"><path d="M2 5h36" stroke="#fff" stroke-width="5"/><path d="M2 5h36" stroke="#2e2a3a" stroke-width="2"/></svg><span>aerial lift: dark core in a white casing, with station dots</span>
+      <svg width="40" height="10"><path d="M2 5h36" stroke="#fff" stroke-width="5"/><path d="M2 5h36" stroke="#2e2a3a" stroke-width="2.2" stroke-dasharray="1 4" stroke-linecap="round"/></svg><span>drag lift: dotted core in the same casing</span>
+    </div>
+    <p>Background: Protomaps' grayscale flavour with points of interest removed. Only town, village and peak names are kept, in grey. The terrain is hillshaded in neutral greys over the land cover and under the roads and labels.</p>
+    <p class="ask">Rule on: (a) lifts set apart from runs by a white casing, which no run has, with drag lifts dotted; (b) credits in a bar below the map rather than over the map's bottom edge; (c) town and peak names kept on the background.</p>
+  </div>
+</section>
+
+<section>
+  <div>
+    <div class="label">3 · Couldn't load map, under the same name bar</div>
+    <div class="phone">
+      <div class="status"><span>09:41</span><span>●●● ▮</span></div>
+      <div class="appbar">
+        <div class="back"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H5m6-7l-7 7 7 7" fill="none" stroke="#1b2a2e" stroke-width="2"/></svg></div>
+        <div class="title">Les 3 Vallées</div>
+      </div>
+      <div class="state"><div>
+        <svg width="48" height="48" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M7 18h10a4 4 0 001.2-7.8A6 6 0 008.3 7.5M5.5 9.6A4.5 4.5 0 007 18" fill="none" stroke="#00687a" stroke-width="1.8"/></svg>
+        <h3>Couldn't load map</h3>
+        <p>Check your connection, then try again.</p>
+        <span class="btn">Retry</span>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <h2>Full-area states replace the map, the name bar stays</h2>
+    <p>These follow the list's full-area state style. The name bar and back control stay, so the skier always knows which resort they opened and can leave. There are no credits while no map data is shown.</p>
+    <p>The other two states differ only in their contents. <strong>Loading</strong> is a centred progress indicator. <strong>"Update the app"</strong> uses the system-update icon, the heading "Update SkiMapper to see this map", the detail "This version can't read this resort's map.", and the same Retry button.</p>
+  </div>
+</section>
+</div>
