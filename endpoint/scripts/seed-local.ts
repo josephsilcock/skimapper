@@ -1,9 +1,10 @@
 // Seeds local (Miniflare) R2 with the curated catalogue (or an E2E variant of it) and resort bundles.
-//   node scripts/seed-local.ts --persist-to <dir>                        (the fixture resort under paradiski)
+//   node scripts/seed-local.ts --persist-to <dir>                        (the fixture, and its broken variants)
 //   node scripts/seed-local.ts --persist-to <dir> --resort-data built    (each resort's build output)
 //   node scripts/seed-local.ts --persist-to <dir> --extra-area <name>  (the catalogue gains an area)
 //   node scripts/seed-local.ts --persist-to <dir> --unknown-version    (a schema version no app knows)
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,9 +12,9 @@ import { parseArgs } from "node:util";
 
 import { catalogueKey, partKey, resortManifestKey } from "../src/artefact-layout.ts";
 import { buildEnvelope } from "../src/envelope.ts";
-import { partPath, readManifest } from "./build/bundle.ts";
+import { partPath, readManifest, type Manifest } from "./build/bundle.ts";
 import { curatedCatalogue, resortAreas } from "./build/curated.ts";
-import { seededBundles, type ResortData } from "./build/seeded-bundles.ts";
+import { seededBundles, type ResortData, type SeededBundle } from "./build/seeded-bundles.ts";
 
 const endpointDir = join(import.meta.dirname, "..");
 
@@ -29,7 +30,7 @@ const persistTo = required(values["persist-to"], "--persist-to");
 
 put(catalogueKey, buildEnvelope("catalogue", values["unknown-version"] ? 999 : 1, catalogue()));
 resortAreas();
-for (const { resortId, bundleDir } of seededBundles(resortData(values["resort-data"]))) publishBundle(resortId, bundleDir);
+for (const bundle of seededBundles(resortData(values["resort-data"]))) publishBundle(bundle);
 
 // The curated catalogue, or an E2E variant derived from it.
 function catalogue(): { resorts: unknown[] } {
@@ -40,12 +41,22 @@ function catalogue(): { resorts: unknown[] } {
 }
 
 // Parts before the manifest that pins them, so a published manifest never names a missing part.
-function publishBundle(resortId: string, bundleDir: string): void {
+function publishBundle({ resortId, bundleDir, variant }: SeededBundle): void {
   const manifest = readManifest(bundleDir);
-  for (const { sha256 } of manifest.parts) {
-    putFile(partKey(sha256), partPath(bundleDir, sha256), "application/octet-stream");
-  }
-  put(resortManifestKey(resortId), buildEnvelope("resort-manifest", 1, manifest));
+  const pins = variant === "hash-mismatch" ? withMismatchedPistes(manifest) : manifest;
+  manifest.parts.forEach(({ sha256 }, i) => {
+    putFile(partKey(pins.parts[i].sha256), partPath(bundleDir, sha256), "application/octet-stream");
+  });
+  put(resortManifestKey(resortId), buildEnvelope("resort-manifest", variant === "unknown-version" ? 999 : 1, pins));
+}
+
+// The pistes part served under a hash its bytes don't have, at their own size.
+function withMismatchedPistes(manifest: Manifest): Manifest {
+  const mismatched = createHash("sha256").update("not the pistes part").digest("hex");
+  return {
+    ...manifest,
+    parts: manifest.parts.map((part) => (part.role === "pistes" ? { ...part, sha256: mismatched } : part)),
+  };
 }
 
 function put(key: string, document: unknown): void {

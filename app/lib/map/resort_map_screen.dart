@@ -49,18 +49,33 @@ class _ResortMapScreenState extends ConsumerState<ResortMapScreen> {
       assets: assets,
     ),
     MapLoading() => const Center(child: CircularProgressIndicator()),
-    MapCouldNotLoad() => Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: FullAreaMessage(
-          icon: Icons.cloud_off_outlined,
-          heading: "Couldn't load map",
-          detail: 'Check your connection, then try again.',
-          onRetry: ref.read(_open.notifier).retry,
-        ),
-      ),
+    MapCouldNotLoad() => _message(
+      icon: Icons.cloud_off_outlined,
+      heading: "Couldn't load map",
+      detail: 'Check your connection, then try again.',
+    ),
+    MapNeedsUpdate() => _message(
+      icon: Icons.system_update_outlined,
+      heading: 'Update SkiMapper to see this map',
+      detail: "This version can't read this resort's map.",
     ),
   };
+
+  Widget _message({
+    required IconData icon,
+    required String heading,
+    required String detail,
+  }) => Center(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: FullAreaMessage(
+        icon: icon,
+        heading: heading,
+        detail: detail,
+        onRetry: ref.read(_open.notifier).retry,
+      ),
+    ),
+  );
 }
 
 class _CreditsBar extends StatelessWidget {

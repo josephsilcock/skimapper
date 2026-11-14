@@ -42,6 +42,8 @@ void main() {
         expect(await renderedNames($, [layer]), names, reason: layer);
       }
 
+      // The map frames itself once its style loads; zoom only after, so it doesn't undo the zoom.
+      await expectFramedOn($, fixtureBounds);
       final controller = await resortMapController($);
       // Zoomed in on one run, then one lift (their middles: test/build/sample).
       await controller.moveCamera(

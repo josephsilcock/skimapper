@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { curatedResortIds } from "./curated.ts";
 import { fixtureBundleDir } from "./fixture.ts";
 
-export type SeededBundle = { resortId: string; bundleDir: string };
+// A bundle as seeded: as built, or broken the way an E2E test needs it.
+export type SeededBundle = { resortId: string; bundleDir: string; variant?: "hash-mismatch" | "unknown-version" };
 
 // With RESORT_DATA=built every curated resort serves its build output; there is no silent
 // fallback to the fixture.
@@ -24,5 +25,9 @@ const buildOutputDir = join(import.meta.dirname, "..", "..", "build-output");
 // Single home for which bundle the local endpoint serves under which resort id.
 export function seededBundles(resortData: ResortData): SeededBundle[] {
   if (resortData === "built") return builtBundles(curatedResortIds(), buildOutputDir);
-  return [{ resortId: "paradiski", bundleDir: fixtureBundleDir }];
+  return [
+    { resortId: "paradiski", bundleDir: fixtureBundleDir },
+    { resortId: "les-3-vallees", bundleDir: fixtureBundleDir, variant: "hash-mismatch" },
+    { resortId: "espace-san-bernardo", bundleDir: fixtureBundleDir, variant: "unknown-version" },
+  ];
 }

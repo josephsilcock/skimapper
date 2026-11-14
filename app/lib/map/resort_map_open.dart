@@ -34,6 +34,11 @@ class MapCouldNotLoad extends ResortMapView {
   const MapCouldNotLoad();
 }
 
+/// The endpoint serves this resort's map data in a form only a newer app reads.
+class MapNeedsUpdate extends ResortMapView {
+  const MapNeedsUpdate();
+}
+
 /// One screen's open of a resort's map: the only writer of what that screen shows.
 class ResortMapOpen extends Notifier<ResortMapView> {
   ResortMapOpen(this.resort);
@@ -61,7 +66,9 @@ class ResortMapOpen extends Notifier<ResortMapView> {
           (final parts?, final assets?) => MapReady(manifest, parts, assets),
           _ => const MapCouldNotLoad(),
         };
-      case Incompatible() || Failed():
+      case Incompatible():
+        state = const MapNeedsUpdate();
+      case Failed():
         state = const MapCouldNotLoad();
     }
   }

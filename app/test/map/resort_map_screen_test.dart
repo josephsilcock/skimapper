@@ -138,6 +138,22 @@ void main() {
   });
 
   testWidgets(
+    'a manifest this app version cannot read asks for an app update, with Retry',
+    (tester) async {
+      FakeNativeMap(tester);
+      await tester.pumpWidget(_screen(endpoint: _servingUnknownVersion));
+      await pumpUntilFound(
+        tester,
+        find.text('Update SkiMapper to see this map'),
+      );
+
+      expect(find.text('Update SkiMapper to see this map'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+      expect(find.text("Couldn't load map"), findsNothing);
+    },
+  );
+
+  testWidgets(
     'Retry fetches again, and shows the map once the data can be fetched',
     (tester) async {
       FakeNativeMap(tester);
@@ -174,6 +190,14 @@ Future<http.Response> _servingManifestOnly(http.Request request) async =>
     request.url.path.startsWith('/v1/parts/')
     ? http.Response('not found', 404)
     : _serving(request);
+
+/// Serves the manifest at a schema version no app knows.
+Future<http.Response> _servingUnknownVersion(http.Request request) async {
+  final served = await _serving(request);
+  if (!request.url.path.endsWith('/manifest')) return served;
+  final envelope = jsonDecode(served.body) as Map<String, Object?>;
+  return http.Response(jsonEncode({...envelope, 'schemaVersion': 999}), 200);
+}
 
 Future<http.Response> _refusing(http.Request request) async =>
     throw http.ClientException('Connection refused');

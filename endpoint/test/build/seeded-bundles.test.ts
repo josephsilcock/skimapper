@@ -32,6 +32,10 @@ it("fails naming every curated resort that has no build output", () => {
   );
 });
 
-it("by default seeds the fixture resort under Paradiski", () => {
-  expect(seededBundles("fixture")).toEqual([{ resortId: "paradiski", bundleDir: fixtureBundleDir }]);
+it("by default seeds the fixture under Paradiski, and the broken variants E2E needs under the others", () => {
+  expect(seededBundles("fixture")).toEqual([
+    { resortId: "paradiski", bundleDir: fixtureBundleDir },
+    { resortId: "les-3-vallees", bundleDir: fixtureBundleDir, variant: "hash-mismatch" },
+    { resortId: "espace-san-bernardo", bundleDir: fixtureBundleDir, variant: "unknown-version" },
+  ]);
 });
