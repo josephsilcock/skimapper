@@ -430,7 +430,7 @@ Accepted as they are:
 - [x] 4. A skier opens a resort while the endpoint is down and sees "Couldn't load map"; once it is back, they tap Retry and see the map.
 - [x] 5. A skier opens the fixture resort and sees every run difficulty in its colour, drag lifts dotted against aerial ones, all named.
 - [x] 6. A skier sees the manifest's credits in a bar below the map, and only there: back returns to the list alone.
-- [ ] 7. A skier opening a resort whose part doesn't match its hash (Les 3 Vallées in E2E) sees "Couldn't load map"; one whose manifest needs a newer app (Espace San Bernardo) sees "Update SkiMapper to see this map".
+- [x] 7. A skier opening a resort whose part doesn't match its hash (Les 3 Vallées in E2E) sees "Couldn't load map"; one whose manifest needs a newer app (Espace San Bernardo) sees "Update SkiMapper to see this map".
 - [ ] 8. Only the newest answer reaches the screen, nothing is kept between opens or launches, and the map takes no tilt and no taps.
 
 ## Decisions taken during implement
@@ -451,8 +451,8 @@ Accepted as they are:
 
 ## Resume
 
-- **Closed:** slices 1–6 (see `git log`). Evidence: `test-results/tdd/F5/slice-0{1..6}-*.md`.
-- **Next:** slice 7 — `seededBundles("fixture")` gains a hash-mismatch bundle under `les-3-vallees` (manifest pins a sha the served bytes don't match, same size) and an unknown-version (v999) manifest under `espace-san-bernardo`; seed-local publishes variants; E2E in `catalogue_serving` (both) ; app: `MapNeedsUpdate` view for *incompatible* ("Update SkiMapper to see this map", Retry).
-- **Seams as built:** `AttributionLine(credits:)`; map screen `bottomNavigationBar` = `_CreditsBar` when ready; home screen has no bottom bar.
-- **Not yet:** update-the-app state, hash-mismatch E2E, generation numbers and scratch clean-up, interaction settings, hiding MapLibre's (i).
+- **Closed:** slices 1–7 (see `git log`). Evidence: `test-results/tdd/F5/slice-0{1..7}-*.md`.
+- **Next:** slice 8 — widget tests: only the newest answer applies (generation number per fetch; back-then-another-resort and Retry-twice with answers held on completers); each fetch gets its own scratch folder; app launch clears the scratch root; each new open deletes folders of opens whose screens are gone (never a live one); MapLibreMap settings: tilt off, rotate on, compass on, taps do nothing (no click handlers), MapLibre attribution button hidden (no API to turn off: margins off-screen or similar — decision).
+- **Seams as built:** `ResortMapView` = loading | ready | couldNotLoad | needsUpdate; `seededBundles` variants.
+- **Then:** hand-off — refactor check across the change, demo pack (DELEGATE brief), completion report.
 - **E2E practice:** iOS `ENDPOINT_PORT=8797`, Android `ENDPOINT_PORT=8798`, never in parallel; iOS outcomes from the xcresult (`scratchpad/xcr.sh`). Miniflare tests, pmtiles and E2E run outside the sandbox. Real-data look: `scratchpad/look.sh`.
