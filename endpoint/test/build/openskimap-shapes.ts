@@ -44,3 +44,25 @@ export const lifts = (...features: OpenSkiMapFeature[]): GeoJSONFeatureCollectio
   type: "FeatureCollection",
   features,
 });
+
+type LiftOptions = { name?: string | null; liftType?: string | null; skiAreaId?: string; status?: string; coordinates?: unknown };
+
+export const lift = ({
+  name = "A lift",
+  liftType = "chair_lift",
+  skiAreaId = "area-1",
+  status = "operating",
+  coordinates = [[6.81, 45.49, 1900], [6.8, 45.5, 2000]],
+}: LiftOptions = {}): OpenSkiMapFeature => ({
+  type: "Feature",
+  geometry: { type: "LineString", coordinates },
+  properties: {
+    id: `lift-${name}`,
+    type: "lift",
+    name,
+    liftType,
+    status,
+    ref: null,
+    skiAreas: [{ type: "Feature", properties: { id: skiAreaId, name: "Area", type: "skiArea" } }],
+  },
+});

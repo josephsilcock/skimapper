@@ -10813,6 +10813,35 @@
     "text-halo-color": "#cccccc",
     "text-halo-width": 1
    }
+  },
+  {
+   "id": "peak_label",
+   "type": "symbol",
+   "source": "basemap",
+   "source-layer": "pois",
+   "filter": [
+    "==",
+    [
+     "get",
+     "kind"
+    ],
+    "peak"
+   ],
+   "layout": {
+    "text-field": [
+     "get",
+     "name"
+    ],
+    "text-font": [
+     "Noto Sans Italic"
+    ],
+    "text-size": 11
+   },
+   "paint": {
+    "text-color": "#7a7a7a",
+    "text-halo-color": "#ffffff",
+    "text-halo-width": 1
+   }
   }
  ]
 }

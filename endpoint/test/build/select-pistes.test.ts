@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
 import { selectPistes } from "../../scripts/build/select-pistes.ts";
-import { lifts, run, runs } from "./openskimap-shapes.ts";
+import { lift, lifts, run, runs } from "./openskimap-shapes.ts";
 
 it("writes a resort's downhill operating run with its name, difficulty and 2D coordinates", () => {
   const pistes = selectPistes(
@@ -71,6 +71,37 @@ it("leaves out proposed, planned, under construction, disused and abandoned runs
         ),
       ),
       lifts: lifts(),
+    },
+    ["area-1"],
+  );
+
+  expect(pistes.features.map((feature) => feature.properties.name)).toEqual(["operating"]);
+});
+
+it("writes a resort's operating lift with its name, lift type and 2D coordinates", () => {
+  const pistes = selectPistes(
+    { runs: runs(), lifts: lifts(lift({ name: "Chair", liftType: "chair_lift", coordinates: [[6.81, 45.49, 1900], [6.8, 45.5, 2000]] })) },
+    ["area-1"],
+  );
+
+  expect(pistes.features).toEqual([
+    {
+      type: "Feature",
+      geometry: { type: "LineString", coordinates: [[6.81, 45.49], [6.8, 45.5]] },
+      properties: { kind: "lift", name: "Chair", liftType: "chair_lift" },
+    },
+  ]);
+});
+
+it("leaves out proposed, planned, under construction, disused and abandoned lifts", () => {
+  const pistes = selectPistes(
+    {
+      runs: runs(),
+      lifts: lifts(
+        ...["operating", "proposed", "planned", "construction", "disused", "abandoned"].map((status) =>
+          lift({ name: status, status }),
+        ),
+      ),
     },
     ["area-1"],
   );

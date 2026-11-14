@@ -8,7 +8,7 @@ import { readManifest, partPath } from "../../scripts/build/bundle.ts";
 import type { Cut } from "../../scripts/build/cut-tiles.ts";
 import { lifts, run, runs } from "./openskimap-shapes.ts";
 
-it("builds a resort's bundle: its pistes, with basemap and terrain cut to the pistes' bounds", () => {
+it("builds a resort's bundle: its pistes, with basemap and terrain cut to the pistes' bounds, crediting every source", () => {
   const output = mkdtempSync(join(tmpdir(), "build-resort-"));
   const cuts: Cut[] = [];
   const cut = (request: Cut) => {
@@ -27,6 +27,7 @@ it("builds a resort's bundle: its pistes, with basemap and terrain cut to the pi
   const manifest = readManifest(output);
   expect(manifest.bounds).toEqual([6.8, 45.5, 6.9, 45.6]);
   expect(manifest.parts.map((part) => part.role)).toEqual(["pistes", "basemap", "terrain"]);
+  expect(manifest.credits).toEqual(["© OpenStreetMap contributors", "OpenSkiMap", "Skimap.org", "Protomaps", "Mapterhorn"]);
   expect(cuts.map(({ bounds }) => bounds)).toEqual([[6.8, 45.5, 6.9, 45.6], [6.8, 45.5, 6.9, 45.6]]);
   const terrain = manifest.parts.find((part) => part.role === "terrain")!;
   expect(readFileSync(partPath(output, terrain.sha256), "utf8")).toBe("tiles from https://download.mapterhorn.com/planet.pmtiles");

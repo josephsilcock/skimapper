@@ -1,26 +1,32 @@
 {
   "bounds": [
-    6.815,
-    45.573,
-    6.823,
-    45.581
+    6.811,
+    45.5705,
+    6.8299,
+    45.584
   ],
-  "credits": [],
+  "credits": [
+    "© OpenStreetMap contributors",
+    "OpenSkiMap",
+    "Skimap.org",
+    "Protomaps",
+    "Mapterhorn"
+  ],
   "parts": [
     {
       "role": "pistes",
-      "sha256": "8dc24994312cbee0a01706f938430554439e2c9776c03c553889473886d81016",
-      "size": 243
+      "sha256": "bf4213962b71bfdba6cead679846e3bc813c274a8e977cf99150676ff0afc588",
+      "size": 3178
     },
     {
       "role": "basemap",
-      "sha256": "37d3a74150a181824a90788151ddaa9e973cb40f784637f4e6447cf5656097b6",
-      "size": 82241
+      "sha256": "744a5ddb390d272d4b67846b15d490fb407380cce1093960122f712a03cdb2d3",
+      "size": 233912
     },
     {
       "role": "terrain",
-      "sha256": "312e57af343175b5e917b820b473b754c7412f1bf0737c037af9d7e68e749afc",
-      "size": 284423
+      "sha256": "5636546960e0a5b6fefac64d340bafc97f95246aae3883c7c478d663500810d0",
+      "size": 561782
     }
   ]
 }

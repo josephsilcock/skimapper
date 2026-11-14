@@ -5,7 +5,9 @@ export type Position2D = [number, number];
 export type PistesFeature = {
   type: "Feature";
   geometry: PistesGeometry;
-  properties: { kind: "run"; name: string | null; difficulty: string | null };
+  properties:
+    | { kind: "run"; name: string | null; difficulty: string | null }
+    | { kind: "lift"; name: string | null; liftType: string | null };
 };
 
 export const pistes = (features: PistesFeature[]): Pistes => ({ type: "FeatureCollection", features });
@@ -14,6 +16,12 @@ export const pistesRun = (geometry: PistesGeometry, name: string | null, difficu
   type: "Feature",
   geometry,
   properties: { kind: "run", name, difficulty },
+});
+
+export const pistesLift = (geometry: PistesGeometry, name: string | null, liftType: string | null): PistesFeature => ({
+  type: "Feature",
+  geometry,
+  properties: { kind: "lift", name, liftType },
 });
 
 export const pistesPartBytes = (part: Pistes): Uint8Array => new TextEncoder().encode(JSON.stringify(part));

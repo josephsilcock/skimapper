@@ -60,7 +60,12 @@ String? _name(Object? feature) => switch (feature) {
 };
 
 /// The fixture resort's bounds (endpoint/fixtures/resort-bundle/manifest.json).
-const fixtureBounds = (west: 6.815, south: 45.573, east: 6.823, north: 45.581);
+const fixtureBounds = (
+  west: 6.811,
+  south: 45.5705,
+  east: 6.8299,
+  north: 45.584,
+);
 
 /// Expects the whole of [bounds] in view, filling at least half the view's width or height, once
 /// the camera has settled (within 10 s).

@@ -7,7 +7,7 @@ import { writeBundle, type Bounds, type BundleContents } from "./bundle.ts";
 import { cutTiles, type Cut } from "./cut-tiles.ts";
 import { pistesPartBytes } from "./pistes-format.ts";
 import { selectPistes, type OpenSkiMapExports } from "./select-pistes.ts";
-import { mapterhornPlanet, protomapsBuild, terrainMaxzoom } from "./sources.ts";
+import { credits, mapterhornPlanet, protomapsBuild, terrainMaxzoom } from "./sources.ts";
 
 export type Zooms = { minzoom?: number; basemapMaxzoom: number };
 export type ResortBuild = {
@@ -29,7 +29,7 @@ export function buildResort({ resortId, skiAreaIds, exports, output, zooms = all
   const bounds = boundsOf(pistes);
   writeBundle(output, {
     bounds,
-    credits: [],
+    credits,
     parts: [{ role: "pistes", bytes: pistesPartBytes(pistes) }, ...cutBasemapAndTerrain(bounds, zooms, cut)],
   });
 }
