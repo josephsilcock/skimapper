@@ -424,7 +424,7 @@ Accepted as they are:
 
 ## Slices
 
-- [ ] 1. A skier taps "Paradiski" and sees a full-screen map under a "Paradiski" name bar, drawing the fixture's blue run from a pistes part fetched through the manifest and verified against its hash; the fixture map and its "map:" line are gone. *(in progress)*
+- [x] 1. A skier taps "Paradiski" and sees a full-screen map under a "Paradiski" name bar, drawing the fixture's blue run from a pistes part fetched through the manifest and verified against its hash; the fixture map and its "map:" line are gone.
 - [ ] 2. A skier opening Paradiski sees the run labelled over a grey basemap with hillshade: basemap and terrain parts cut by the build, glyphs installed locally, every file read from `file://` on iOS and Android.
 - [ ] 3. A developer runs the build for Les 3 Vallées and starts the app with `RESORT_DATA=built`; a skier taps Les 3 Vallées, sees the whole real resort framed, and pans across it smoothly.
 - [ ] 4. A skier opens a resort while the endpoint is down and sees "Couldn't load map"; once it is back, they tap Retry and see the map.
@@ -434,4 +434,17 @@ Accepted as they are:
 - [ ] 8. Only the newest answer reaches the screen, nothing is kept between opens or launches, and the map takes no tilt and no taps.
 
 ## Decisions taken during implement
+
+- **Part outcomes share `Failed` by implementing a sealed `PartOutcome`** (`VerifiedPart` | `Failed`), declared beside `DocumentOutcome` in `contract_envelope.dart`, so one `Failed` class carries every fetch failure and both switches stay exhaustive. Rejected: wrapping a part in `DocumentOutcome<File>` (its `Understood` carries a body string a part doesn't have).
+- **The build's Vitest tests run as a second Vitest project** (`build`, Node) beside the Worker's (`worker`, Miniflare), because the build uses `node:fs` and `child_process`, which workerd can't run.
+- **A bundle on disk is `manifest.json` (the manifest's data exactly) plus `parts/<sha256>`** (`endpoint/scripts/build/bundle.ts`), the one shape the build writes and seed-local publishes; the committed fixture lives at `endpoint/fixtures/resort-bundle/`.
+- **E2E rendered-feature queries cover exactly the map's area**: on iOS a rect larger than the map finds nothing.
+
+## Resume
+
+- **Closed:** slice 1 (`5dc4683`). Evidence: `test-results/tdd/F5/slice-01-skeleton.md`.
+- **Next:** slice 2 — basemap and terrain parts cut by the build (tiny real cut around the sample, lon 6.81–6.83 / lat 45.57–45.585), grayscale layers asset generated from `@protomaps/basemaps`, Noto Sans glyphs as an app asset installed to app support, hillshade, the run labelled.
+- **Seams as built:** `EndpointClient.fetchPart({sha256, size, directory})` → `PartOutcome`; `ResortMapOpen` notifier (made per screen) → `ResortMapView` (`MapLoading` | `MapReady(manifest, parts)`); `resortMapStyle({parts})`; `ResortMap(manifest, parts)` exposes `controller` for E2E (`patrol_test/support/rendered_map.dart`). Build: `scripts/build/{pistes-format,select-pistes,bundle,fixture}.ts`, `scripts/build-fixture.ts`; seed-local always publishes the fixture under `paradiski`.
+- **Not yet:** failure states (a failed part throws on the `as VerifiedPart` cast), loading spinner, framing to bounds (camera is the bounds' centre at z13), generation numbers and scratch clean-up, resort-areas file and the real build.
+- **E2E practice:** iOS `ENDPOINT_PORT=8797`, Android `ENDPOINT_PORT=8798`, never in parallel; iOS outcomes from the xcresult (`xcrun xcresulttool get test-results tests --path <xcresult>`). Miniflare tests and E2E run outside the sandbox.
 
