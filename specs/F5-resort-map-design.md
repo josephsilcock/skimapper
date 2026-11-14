@@ -429,7 +429,7 @@ Accepted as they are:
 - [x] 3. A developer runs the build for Les 3 Vallées and starts the app with `RESORT_DATA=built`; a skier taps Les 3 Vallées, sees the whole real resort framed, and pans across it smoothly.
 - [x] 4. A skier opens a resort while the endpoint is down and sees "Couldn't load map"; once it is back, they tap Retry and see the map.
 - [x] 5. A skier opens the fixture resort and sees every run difficulty in its colour, drag lifts dotted against aerial ones, all named.
-- [ ] 6. A skier sees the manifest's credits in a bar below the map, and only there: back returns to the list alone.
+- [x] 6. A skier sees the manifest's credits in a bar below the map, and only there: back returns to the list alone.
 - [ ] 7. A skier opening a resort whose part doesn't match its hash (Les 3 Vallées in E2E) sees "Couldn't load map"; one whose manifest needs a newer app (Espace San Bernardo) sees "Update SkiMapper to see this map".
 - [ ] 8. Only the newest answer reaches the screen, nothing is kept between opens or launches, and the map takes no tilt and no taps.
 
@@ -451,8 +451,8 @@ Accepted as they are:
 
 ## Resume
 
-- **Closed:** slices 1–5 (see `git log`). Evidence: `test-results/tdd/F5/slice-0{1..5}-*.md`.
-- **Next:** slice 6 — `AttributionLine` renders the manifest's credits in a bottom bar on the map screen (only with a map); the home screen loses its bottom bar; `attribution_test` E2E moves to the map screen with the new credits string ("© OpenStreetMap contributors · OpenSkiMap · Skimap.org · Protomaps · Mapterhorn"); the snackbar-over-credits check (`home_screen_test`) moves to the map screen; E2E: back returns to the list with no map and no credits.
-- **Seams as built:** style table in `resort_map_style.dart` (`_runLooks`, `_dragLiftTypes`, `RunStyle`/`LiftStyle` layer ids); lifts in pistes `{kind: lift, name, liftType}`; manifest `credits` from `sources.ts`.
-- **Not yet:** credits on the map, update-the-app state, hash-mismatch E2E, generation numbers and scratch clean-up, interaction settings, hiding MapLibre's (i).
+- **Closed:** slices 1–6 (see `git log`). Evidence: `test-results/tdd/F5/slice-0{1..6}-*.md`.
+- **Next:** slice 7 — `seededBundles("fixture")` gains a hash-mismatch bundle under `les-3-vallees` (manifest pins a sha the served bytes don't match, same size) and an unknown-version (v999) manifest under `espace-san-bernardo`; seed-local publishes variants; E2E in `catalogue_serving` (both) ; app: `MapNeedsUpdate` view for *incompatible* ("Update SkiMapper to see this map", Retry).
+- **Seams as built:** `AttributionLine(credits:)`; map screen `bottomNavigationBar` = `_CreditsBar` when ready; home screen has no bottom bar.
+- **Not yet:** update-the-app state, hash-mismatch E2E, generation numbers and scratch clean-up, interaction settings, hiding MapLibre's (i).
 - **E2E practice:** iOS `ENDPOINT_PORT=8797`, Android `ENDPOINT_PORT=8798`, never in parallel; iOS outcomes from the xcresult (`scratchpad/xcr.sh`). Miniflare tests, pmtiles and E2E run outside the sandbox. Real-data look: `scratchpad/look.sh`.
