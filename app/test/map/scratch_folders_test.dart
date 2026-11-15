@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -47,4 +48,63 @@ void main() {
       expect(live.existsSync(), isTrue);
     },
   );
+
+  test("a new folder waits for a launch clean-up under way, which can't then delete it", () async {
+    final held = _FirstListingHeld(root);
+    final folders = ScratchFolders(Future.value(held));
+    final clearing = folders.clearAll();
+    var made = false;
+    final making = folders.newFolder().then((_) => made = true);
+    await pumpEventQueue();
+
+    expect(made, isFalse);
+
+    held.release();
+    await clearing;
+    await making;
+    expect(made, isTrue);
+  });
+
+  test("a launch clean-up that failed doesn't stop a new folder", () async {
+    final failing = _FirstListingHeld(root);
+    final folders = ScratchFolders(Future.value(failing));
+    final clearing = folders.clearAll();
+    await pumpEventQueue();
+    failing.fail();
+    await expectLater(clearing, throwsA(isA<FileSystemException>()));
+
+    expect((await folders.newFolder()).existsSync(), isTrue);
+  });
+}
+
+/// A root whose first listing waits until [release] (or throws once told to [fail]); everything else is the real directory.
+class _FirstListingHeld implements Directory {
+  _FirstListingHeld(this._real);
+
+  final Directory _real;
+  final _released = Completer<void>();
+  var _listings = 0;
+
+  void release() => _released.complete();
+
+  void fail() =>
+      _released.completeError(const FileSystemException('unlistable'));
+
+  @override
+  String get path => _real.path;
+
+  @override
+  Stream<FileSystemEntity> list({
+    bool recursive = false,
+    bool followLinks = true,
+  }) async* {
+    if (_listings++ == 0) await _released.future;
+    yield* _real.list(recursive: recursive, followLinks: followLinks);
+  }
+
+  @override
+  Future<Directory> createTemp([String? prefix]) => _real.createTemp(prefix);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

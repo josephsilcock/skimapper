@@ -3,6 +3,7 @@ import 'package:patrol/patrol.dart';
 import 'package:skimapper/main.dart';
 
 import '../support/endpoint_requests.dart';
+import '../support/default_resort.dart';
 import '../support/saved_catalogue.dart';
 
 // A relaunch pair: the second test continues the first. The numbers keep that order on iOS,
@@ -11,8 +12,9 @@ void main() {
   patrolTest(
     'relaunch 1 of 2: loads the resort list while the endpoint serves',
     ($) async {
-      // Preconditions: nothing saved; the endpoint serves the curated catalogue.
+      // Preconditions: nothing saved; no default resort; the endpoint serves the curated catalogue.
       await clearSavedCatalogue();
+      await clearDefaultResort();
       await requestCuratedCatalogue();
 
       await $.pumpWidget(const SkimapperApp());

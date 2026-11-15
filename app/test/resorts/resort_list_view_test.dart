@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -7,19 +8,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:skimapper/endpoint/endpoint_client.dart';
-import 'package:skimapper/resorts/catalogue_store.dart';
+import 'package:skimapper/map/map_assets.dart';
+import 'package:skimapper/map/resort_map_providers.dart';
+import 'package:skimapper/resorts/choose_resort.dart';
 import 'package:skimapper/resorts/resort_list_providers.dart';
 import 'package:skimapper/resorts/resort_list_view.dart';
+import 'package:skimapper/storage/app_support_file.dart';
 
 import '../support/pump_until_found.dart';
 
 void main() {
-  late CatalogueStore store;
+  late AppSupportFile store;
 
   setUp(() {
     final directory = Directory.systemTemp.createTempSync('resort-list-');
     addTearDown(() => directory.deleteSync(recursive: true));
-    store = CatalogueStore(() async => directory);
+    store = AppSupportFile('catalogue.json', () async => directory);
+    _defaultResort = AppSupportFile('default-resort', () async => directory);
+    _scratchRoot = Directory('${directory.path}/resort-maps')..createSync();
   });
 
   testWidgets('lists each served resort by name, with its countries', (
@@ -59,6 +65,19 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.widgetWithText(AppBar, 'Paradiski'), findsOneWidget);
+  });
+
+  testWidgets('tapping a resort makes it the default resort', (tester) async {
+    await tester.pumpWidget(_resortList(endpoint: _serving, store: store));
+    await pumpUntilFound(tester, find.text('Paradiski'));
+
+    await tester.tap(find.text('Paradiski'));
+    await tester.pump();
+
+    expect(
+      await _savedCopyOnceItIs('paradiski', tester, _defaultResort),
+      'paradiski',
+    );
   });
 
   testWidgets('lists resorts by name, ignoring accents and capitals', (
@@ -440,7 +459,7 @@ void main() {
     await tester.pumpWidget(
       _resortList(
         endpoint: _serving,
-        store: CatalogueStore(() async => directory),
+        store: AppSupportFile('catalogue.json', () async => directory),
       ),
     );
     await pumpUntilFound(tester, find.text('Espace San Bernardo'));
@@ -451,7 +470,8 @@ void main() {
   testWidgets(
     'a save that fails still shows the new list, and reports the failure',
     (tester) async {
-      final unwritable = CatalogueStore(
+      final unwritable = AppSupportFile(
+        'catalogue.json',
         () async => Directory(
           '${Directory.systemTemp.path}/no-such-dir-${DateTime.now().microsecondsSinceEpoch}',
         ),
@@ -474,7 +494,7 @@ void main() {
 
 Widget _resortList({
   required MockClientHandler endpoint,
-  required CatalogueStore store,
+  required AppSupportFile store,
   Duration timeout = const Duration(milliseconds: 100),
 }) => ProviderScope(
   overrides: [
@@ -485,10 +505,18 @@ Widget _resortList({
         newHttpClient: () => MockClient(endpoint),
       ),
     ),
-    catalogueStoreProvider.overrideWithValue(store),
+    catalogueFileProvider.overrideWithValue(store),
+    defaultResortFileProvider.overrideWithValue(_defaultResort),
+    // An opened map stays loading, off the device's own folders.
+    scratchRootProvider.overrideWithValue(Future.value(_scratchRoot)),
+    mapAssetsProvider.overrideWithValue(Completer<MapAssets>().future),
   ],
   child: const MaterialApp(home: Scaffold(body: ResortListView())),
 );
+
+/// Where choosing a resort saves it, in the test's directory.
+late AppSupportFile _defaultResort;
+late Directory _scratchRoot;
 
 /// A file for a test to serve from, and change between requests; removed when the test ends.
 File _servedFile() {
@@ -502,7 +530,7 @@ File _servedFile() {
 Future<String?> _savedCopyOnceItIs(
   String expected,
   WidgetTester tester,
-  CatalogueStore store,
+  AppSupportFile store,
 ) async {
   String? saved;
   for (var tries = 0; tries < 50 && saved != expected; tries++) {
@@ -532,8 +560,9 @@ MockClientHandler _answering(String body) =>
     (request) async => http.Response(body, 200);
 
 /// A store whose reads take a second.
-class _SlowRead extends CatalogueStore {
-  _SlowRead(super.directory);
+class _SlowRead extends AppSupportFile {
+  _SlowRead(Future<Directory> Function() directory)
+    : super('catalogue.json', directory);
 
   @override
   Future<String?> read() async {
@@ -543,8 +572,9 @@ class _SlowRead extends CatalogueStore {
 }
 
 /// A store whose first save takes a second longer than the rest.
-class _SlowFirstWrite extends CatalogueStore {
-  _SlowFirstWrite(super.directory);
+class _SlowFirstWrite extends AppSupportFile {
+  _SlowFirstWrite(Future<Directory> Function() directory)
+    : super('catalogue.json', directory);
 
   var _writes = 0;
 

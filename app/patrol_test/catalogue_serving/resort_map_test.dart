@@ -8,6 +8,7 @@ import 'package:skimapper/main.dart';
 import 'package:skimapper/map/resort_map_style.dart';
 
 import '../support/rendered_map.dart';
+import '../support/default_resort.dart';
 import '../support/saved_catalogue.dart';
 
 void main() {
@@ -15,6 +16,7 @@ void main() {
     'tapping a resort opens its map under its name, framed on the resort: its runs over the basemap, all drawn from local files (Wi-Fi and cellular are cut on Android only)',
     ($) async {
       await clearSavedCatalogue();
+      await clearDefaultResort();
       await $.pumpWidget(const SkimapperApp());
 
       await $('Paradiski')

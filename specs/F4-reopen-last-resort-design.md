@@ -194,3 +194,24 @@ Accepted at this scale:
 - A skier whose default isn't in the saved list, or who has no readable saved list, launches and sees the list as today.
 
 Surface-less work rides inside these slices, with unit or widget tests, because none of it changes what the skier sees: write ordering, failed-write reporting, frame release on throw or dispose, and the scratch clean-up wait.
+
+## Slices
+
+- [x] 1 A skier opens Paradiski's map from the list, relaunches, and sees Paradiski's map; Back shows the list, and the next relaunch shows Paradiski again (E2E chain in `catalogue_serving`)
+- [ ] 2 A skier who opens Espace San Bernardo over a Paradiski default relaunches and sees Espace San Bernardo's map (E2E chain in `catalogue_serving`)
+- [ ] 3 A skier whose default isn't in the saved list, or who has no readable saved list, launches and sees the list as today; once the default is back in the saved list a later launch reopens it (E2E in `endpoint_scripted`)
+- [ ] 4 A skier whose default resort's map can't load at launch sees "Couldn't load map" with Retry, and Back shows the saved list (E2E in `endpoint_scripted`)
+
+## Decisions taken during implement
+
+- The design's first two indicative slices (reopen; Back keeps the default) are one slice: Back adds no code, only a third step to the same E2E chain (`reopen 1..3 of 3`).
+- `CatalogueStore` is renamed `AppSupportFile` (`lib/storage/app_support_file.dart`), named per file; `savedCatalogueFile()` and `defaultResortFile()` own the two file names, and the E2E helpers go through them.
+- The default-resort file is `default-resort` in app support; `chooseResort`, `resortMapRoute` and `defaultResortFileProvider` live in `lib/resorts/choose_resort.dart`; the shared launch read is `savedCatalogueAtLaunchProvider` beside the other resort-list providers.
+- `MaterialApp` takes the home route from `onGenerateRoute`, because `home` and `onGenerateInitialRoutes` are exclusive and without `home`/`routes`/`onGenerateRoute` it builds no Navigator.
+- `ScratchFolders.newFolder` waits for the launch clean-up with its error dropped: otherwise one failed clean-up would fail every later map open (its own test).
+- The launch decision's run-record lines are `launch: reopens <id>` and `launch: shows the list`; E2E reads them by wrapping `debugPrint` around `pumpWidget` (`launchApp`).
+
+
+## Resume
+
+Slice 1 in progress: behaviours 1–11 are green and logged in `test-results/tdd/F4/slice-01-reopen-on-launch.md`. The E2E chain `app/patrol_test/catalogue_serving/reopen_last_resort_test.dart` and the "no default" precondition (`patrol_test/support/default_resort.dart`) are written; a `catalogue_serving` run on both platforms is pending, held back by another worktree's E2E on port 8787. Nothing is committed yet. Next: get E2E green, commit slice 1, then slice 2 (the named file takes over write ordering and reporting from `ResortList`).

@@ -4,6 +4,7 @@ import 'package:patrol/patrol.dart';
 import 'package:skimapper/main.dart';
 import 'package:skimapper/map/resort_map.dart';
 
+import '../support/default_resort.dart';
 import '../support/saved_catalogue.dart';
 
 // tools/e2e seeds Les 3 Vallées with a part that doesn't match its hash, and Espace San Bernardo
@@ -13,6 +14,7 @@ void main() {
     "a part that doesn't match its manifest's hash isn't shown: the map couldn't be loaded",
     ($) async {
       await clearSavedCatalogue();
+      await clearDefaultResort();
       await $.pumpWidget(const SkimapperApp());
       await $('Les 3 Vallées')
           .waitUntilVisible(timeout: const Duration(seconds: 10));
@@ -30,6 +32,7 @@ void main() {
     'a map this app version cannot read asks for an app update, with Retry',
     ($) async {
       await clearSavedCatalogue();
+      await clearDefaultResort();
       await $.pumpWidget(const SkimapperApp());
       await $('Espace San Bernardo')
           .waitUntilVisible(timeout: const Duration(seconds: 10));

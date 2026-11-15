@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:skimapper/resorts/catalogue_store.dart';
+import 'package:skimapper/resorts/resort_list_providers.dart';
 
 /// Precondition: nothing saved on the device.
-Future<void> clearSavedCatalogue() => CatalogueStore.appSupport().clear();
+Future<void> clearSavedCatalogue() => savedCatalogueFile().clear();
 
 /// Waits until the app has saved a catalogue, so a relaunch can rely on it.
 Future<void> awaitSavedCatalogue() async {
-  final store = CatalogueStore.appSupport();
+  final store = savedCatalogueFile();
   final deadline = DateTime.now().add(const Duration(seconds: 10));
   while (await store.read() == null) {
     if (DateTime.now().isAfter(deadline)) {

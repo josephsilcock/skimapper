@@ -9,10 +9,12 @@ class ScratchFolders {
 
   final Future<Directory> _root;
   final _live = <String>{};
+  Future<void> _clearing = Future.value();
 
   /// A folder for one fetch, made after deleting every folder no live screen holds; a map still
   /// tearing down from a live screen's folder keeps it.
   Future<Directory> newFolder() async {
+    await _clearing;
     final root = await _root;
     await _deleteAllBut(root, _live);
     final folder = await root.createTemp('open-');
@@ -21,7 +23,12 @@ class ScratchFolders {
   }
 
   /// At app launch: deletes every folder an earlier launch left, never one a screen already holds.
-  Future<void> clearAll() async => _deleteAllBut(await _root, _live);
+  /// A new folder waits for it, failed or not, so it can't be deleted between being made and held.
+  Future<void> clearAll() {
+    final clearing = _root.then((root) => _deleteAllBut(root, _live));
+    _clearing = clearing.then((_) {}, onError: (_) {});
+    return clearing;
+  }
 
   /// The screen holding [folder] has gone.
   void release(Directory folder) => _live.remove(folder.path);

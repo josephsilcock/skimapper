@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../endpoint/contract_envelope.dart';
 import '../endpoint/run_record.dart';
+import '../storage/app_support_file.dart';
 import 'catalogue.dart';
 import 'catalogue_document.dart';
-import 'catalogue_store.dart';
 import 'resort_list_providers.dart';
 
 /// How the first load is going while no list is shown.
@@ -69,11 +69,11 @@ class ResortList extends Notifier<ResortListState> {
   Future<void> refresh() async =>
       _accept(await _fetch(), trigger: _Trigger.skier);
 
-  CatalogueStore get _store => ref.read(catalogueStoreProvider);
+  AppSupportFile get _store => ref.read(catalogueFileProvider);
 
   Future<void> _launch() async {
     final fetched = _fetch();
-    _showSaved(await _store.read());
+    _showSaved(await ref.read(savedCatalogueAtLaunchProvider.future));
     await _accept(await fetched, trigger: _Trigger.quietLaunch);
   }
 
@@ -85,13 +85,10 @@ class ResortList extends Notifier<ResortListState> {
     );
   }
 
-  /// A saved copy this app can't read counts as nothing saved, and one that arrives after a
-  /// fetch's answer was applied is older than it.
-  void _showSaved(String? saved) {
+  /// A saved list that arrives after a fetch's answer was applied is older than it.
+  void _showSaved(Catalogue? saved) {
     if (saved == null || _newestApplied > 0) return;
-    if (openCatalogue(saved) case Understood(:final value)) {
-      state = state.showing(value);
-    }
+    state = state.showing(saved);
   }
 
   /// The apply step: what the skier sees for an answer, given who asked and whether a list is

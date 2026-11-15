@@ -1,15 +1,15 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:skimapper/resorts/catalogue_store.dart';
+import 'package:skimapper/storage/app_support_file.dart';
 
 void main() {
   late Directory directory;
-  late CatalogueStore store;
+  late AppSupportFile store;
 
   setUp(() {
-    directory = Directory.systemTemp.createTempSync('catalogue-store-');
-    store = CatalogueStore(() async => directory);
+    directory = Directory.systemTemp.createTempSync('app-support-file-');
+    store = AppSupportFile('catalogue.json', () async => directory);
   });
   tearDown(() => directory.deleteSync(recursive: true));
 

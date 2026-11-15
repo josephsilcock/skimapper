@@ -4,14 +4,16 @@ import 'package:skimapper/main.dart';
 
 import '../support/endpoint_requests.dart';
 import '../support/list_order.dart';
+import '../support/default_resort.dart';
 import '../support/saved_catalogue.dart';
 
 void main() {
   patrolTest(
     'pulling the list down shows a ski area the catalogue has since gained, in its sorted place',
     ($) async {
-      // Preconditions: nothing saved; the endpoint serves the curated catalogue.
+      // Preconditions: nothing saved; no default resort; the endpoint serves the curated catalogue.
       await clearSavedCatalogue();
+      await clearDefaultResort();
       await requestCuratedCatalogue();
       await $.pumpWidget(const SkimapperApp());
       await $('Espace San Bernardo')

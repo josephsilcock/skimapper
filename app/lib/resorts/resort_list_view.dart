@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../map/resort_map_screen.dart';
 import '../theme/full_area_message.dart';
 import 'catalogue.dart';
+import 'choose_resort.dart';
 import 'resort_list.dart';
 import 'resort_list_providers.dart';
 
@@ -88,13 +88,13 @@ class _UpdateBanner extends StatelessWidget {
   }
 }
 
-class _Resorts extends StatelessWidget {
+class _Resorts extends ConsumerWidget {
   const _Resorts(this.catalogue);
 
   final Catalogue catalogue;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final resorts = catalogue.byName;
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -107,16 +107,12 @@ class _Resorts extends StatelessWidget {
           title: Text(resorts[i].name),
           subtitle: Text(resorts[i].countriesLabel),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () => _open(context, resorts[i]),
+          onTap: () => chooseResort(context, ref, resorts[i]),
         ),
       ),
     );
   }
 }
-
-void _open(BuildContext context, Resort resort) => Navigator.of(context).push(
-  MaterialPageRoute<void>(builder: (_) => ResortMapScreen(resort: resort)),
-);
 
 /// A message filling the list area, still pullable.
 class _FullAreaMessage extends StatelessWidget {
