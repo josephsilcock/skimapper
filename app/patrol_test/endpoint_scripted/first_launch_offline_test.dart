@@ -2,14 +2,16 @@ import 'package:patrol/patrol.dart';
 import 'package:skimapper/main.dart';
 
 import '../support/endpoint_requests.dart';
+import '../support/default_resort.dart';
 import '../support/saved_catalogue.dart';
 
 void main() {
   patrolTest(
     'a first launch with no signal says the resorts could not be loaded, and Retry loads them once the service is back',
     ($) async {
-      // Preconditions: nothing saved; the endpoint is stopped.
+      // Preconditions: nothing saved; no default resort; the endpoint is stopped.
       await clearSavedCatalogue();
+      await clearDefaultResort();
       await requestEndpointStopped();
       await $.pumpWidget(const SkimapperApp());
 

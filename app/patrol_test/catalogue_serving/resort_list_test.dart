@@ -3,6 +3,7 @@ import 'package:patrol/patrol.dart';
 import 'package:skimapper/main.dart';
 
 import '../support/list_order.dart';
+import '../support/default_resort.dart';
 import '../support/saved_catalogue.dart';
 
 void main() {
@@ -10,6 +11,7 @@ void main() {
     'lists the curated ski areas sorted by name, each with its countries',
     ($) async {
       await clearSavedCatalogue();
+      await clearDefaultResort();
       await $.pumpWidget(const SkimapperApp());
 
       await $('Espace San Bernardo')

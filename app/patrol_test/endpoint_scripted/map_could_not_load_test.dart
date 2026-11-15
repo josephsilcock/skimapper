@@ -5,14 +5,16 @@ import 'package:skimapper/main.dart';
 import 'package:skimapper/map/resort_map.dart';
 
 import '../support/endpoint_requests.dart';
+import '../support/default_resort.dart';
 import '../support/saved_catalogue.dart';
 
 void main() {
   patrolTest(
     "a resort opened while the service is down says its map couldn't be loaded, and Retry loads it once the service is back",
     ($) async {
-      // Preconditions: nothing saved; the endpoint serves the curated catalogue, then stops.
+      // Preconditions: nothing saved; no default resort; the endpoint serves the curated catalogue, then stops.
       await clearSavedCatalogue();
+      await clearDefaultResort();
       await requestCuratedCatalogue();
       await $.pumpWidget(const SkimapperApp());
       await $('Paradiski')
