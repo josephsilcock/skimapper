@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F24`, `B6`, `C15`.
+**Next free IDs**: `F24`, `B7`, `C15`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -55,6 +55,7 @@ below that gets picked up out of turn should say why in its spec.
 
 - **B4** The unreachable-endpoint E2E (now the first-launch test in `endpoint_scripted`, formerly `endpoint_stopped`) passed on CI by coincidence before B2's fix: its "unreachable" line appeared because the first fetch hit the same first-launch UI freeze, not because a closed port was refused. Its pass is now real, but CI's first launch still has thin headroom (app-side fetch measured 4.4-8.0 s, endpoint-side 0.6-2.4 s, on the first launch after each install); watch for a recurrence. A second symptom of the same cold-start stall: on a freshly booted emulator `catalogue_serving` on Android once aborted with "Expected 3 tests, received 2" (the app's event loop 14-25 s late, and `resort_list_test` never requested by the native side); a rerun on the warm emulator is the check. **Recurred 2026-10-24** on main's sweep (run 40105890900, iOS), before F1 retired the group: `endpoint_malformed`'s first fetch logged `event loop late by 4889 ms` then `unreachable (timeout after 3000 ms) in 4514 ms` against a ready endpoint. To be fixed later.
 - **B5** A launch read that throws a non-format I/O error stalls the resort list: the launch gate shows the list, but `ResortList._launch` throws on the same saved-catalogue read before it accepts the quiet fetch, so the list stays in its initial state and the error surfaces only as an uncaught microtask error. Inherited from F1's identical read; very unlikely. Found at F4's review.
+- **B6** On iOS, a quiet catalogue fetch made just after the local endpoint restarts can fail with a raw "Connection reset by peer" `OSError`, instead of being handled as a failed fetch. It was seen once in F4's full sweep (2026-11-15), in `endpoint_scripted/unreadable_saved_list_test`. Android passed, the rerun was green, and the test had passed at F4's slice close. Two things to check: whether the endpoint client lets a `SocketException`/`OSError` escape unhandled (a real bug: the fetch should stay quiet or show "could not be reached"), and whether the E2E restart leaves too little headroom (compare B4).
 
 ---
 
