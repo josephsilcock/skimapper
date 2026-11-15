@@ -23,6 +23,8 @@ void main() {
       await $('Espace San Bernardo')
           .waitUntilVisible(timeout: const Duration(seconds: 10));
       await awaitSavedCatalogue();
+      expect(find.byType(SnackBar), findsNothing);
+      expect(find.byType(MaterialBanner), findsNothing);
       expect(await readDefaultResort(), 'extra-area');
     },
   );

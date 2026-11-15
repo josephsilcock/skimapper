@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skimapper/storage/app_support_file.dart';
 
+import '../support/run_record_capture.dart';
+
 void main() {
   late Directory directory;
   late AppSupportFile store;
@@ -74,8 +76,16 @@ void main() {
     addTearDown(() => FlutterError.onError = originalOnError);
 
     await failingOnce.write('paradiski');
-    await failingOnce.write('espace-san-bernardo');
+    final logged = await runRecordDuring(
+      () => failingOnce.write('espace-san-bernardo'),
+    );
 
+    expect(
+      logged,
+      contains(
+        contains('default-resort write failed: Bad state: no app support'),
+      ),
+    );
     expect(reported.single.exception, isA<StateError>());
     expect(await failingOnce.read(), 'paradiski');
 

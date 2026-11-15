@@ -220,4 +220,4 @@ Surface-less work rides inside these slices, with unit or widget tests, because 
 
 ## Resume
 
-/implement is complete: 4 slices (db66f0a, 219f203, ba8342a, 105747c), logs in `test-results/tdd/F4/`, demo pack in `test-results/demo/F4/` (page `pack.html`, published at https://claude.ai/artifact/8bv3RMuP4keifGXNQKhzgp). Next: /finish-feature on this design doc.
+/implement is complete: 4 slices (2545a4f, 62fb4db, e8b52cf, 8bf9790), logs in `test-results/tdd/F4/`, demo pack in `test-results/demo/F4/` (page `pack.html`, published at https://claude.ai/artifact/8bv3RMuP4keifGXNQKhzgp). Next: /finish-feature on this design doc.
