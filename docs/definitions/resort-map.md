@@ -8,7 +8,9 @@ read on the mountain. Resort data is light only; dark mode belongs to accessibil
 - Every row in the resort list opens that resort's map under a name bar: the resort's name in the
   primary colour and a back control. The bar shows in every state below.
 - The map opens framed so every run and lift of the resort is in view.
-- Back returns to the resort list, which stands alone on its screen: no map, no credits line.
+- At launch the map can open on the default resort (`resorts.md`), with the resort list beneath it.
+- Back returns to the resort list, which stands alone on its screen: no map, no credits line. This
+  holds whether the map was opened from the list or at launch.
 
 ## What is drawn
 

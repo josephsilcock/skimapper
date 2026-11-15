@@ -1,7 +1,8 @@
 # Resorts: the resort list
 
 The home screen of the app: the ski areas it supports, so a skier can find the one they're visiting.
-The list stands alone on its screen; tapping a row opens that resort's map (`resort-map.md`).
+The list stands alone on its screen; tapping a row opens that resort's map (`resort-map.md`) and makes
+that resort the default resort (below).
 
 ## What is listed
 
@@ -14,6 +15,20 @@ The list stands alone on its screen; tapping a row opens that resort's map (`res
 - Each row opens the resort's map and ends in a chevron.
 - Each entry also carries an id (a lower-case slug, unique in the list) and a centre point, neither
   shown. An entry with a missing or malformed id makes the whole list not understood.
+
+## Default resort
+
+- Tapping a row makes that resort the default, replacing any earlier one, whether or not its map then
+  loads. The map opens at once; the choice is stored without waiting.
+- At launch, if the default is in the saved list, the app opens that resort's map straight away, with
+  the list beneath it. The list never shows first, and launch never waits on the network.
+- If there is no default, or the default isn't in the saved list, or the saved list is missing or
+  unreadable, the list shows as before, with no message. The default is neither cleared nor
+  corrected: it takes effect again once the saved list has that resort.
+- Only choosing a resort changes the default. Launch, Back and the reopened map never do.
+- The default is one file in app support storage holding the resort's catalogue id, written to a
+  pending file, flushed, then renamed into place. A failed store leaves the previous default and is
+  reported in the debug run record; the skier sees nothing.
 
 ## Freshness
 
@@ -66,7 +81,10 @@ standards belong to accessibility work):
 
 ## Entry points (navigation aid)
 
-- `app/lib/resorts/` — the catalogue and its parse, saved copy, list state and view.
+- `app/lib/resorts/` — the catalogue and its parse, saved copy, list state and view; `choose_resort.dart`
+  (choosing a resort and opening its map).
+- `app/lib/launch/` — the launch decision and the gate that holds the first frame until it is made.
+- `app/lib/storage/app_support_file.dart` — the named app-support file behind the saved list and the default.
 - `app/lib/theme/app_theme.dart` — the theme.
 - `app/lib/endpoint/contract_envelope.dart` — `openDocument`, the one reader of served and saved bytes.
 - `endpoint/catalogue/curated.json` — the curated list.

@@ -22,7 +22,7 @@ Everything the backend serves is either an **enveloped JSON document** (mutable 
 - **Catalogue**: one per deployment; lists every resort (id, name, country, centre point, current manifest version).
 - **Resort manifest**: one per resort; carries the resort's `bounds` and `credits` and pins its parts, each by role, hash and size. Parts are *pistes* (runs and lifts as GeoJSON), *basemap* (vector PMTiles) and *terrain* (elevation PMTiles); the pre-built routing graph and the status key map will be further parts. Until the daily refresh exists, a developer-run build (`endpoint/scripts/build/`) cuts each curated resort's parts and publishes them.
 - **Status**: fetched live on request by the Worker, enveloped and stamped with a fetched-at time and the data-part `dataVersion` its key map came from.
-- The device saves a resort as one directory holding the manifest and its parts. User state and the index of saved resorts live in SQLite (`drift`).
+- The device saves a resort as one directory holding the manifest and its parts. Single-value user state (the default resort) is an atomically written app-support file; other user state and the index of saved resorts live in SQLite (`drift`).
 
 ```mermaid
 flowchart LR
@@ -46,7 +46,7 @@ flowchart LR
   EC --> ST --> MAP
 ```
 
-Built so far: the artefact handlers serving the resort catalogue, each resort's manifest and its parts, `EndpointClient` (documents through `openDocument`, the envelope's one reader, and size-and-hash-verified parts), the saved catalogue file behind the resort list, the developer-run resort build, and the resort map drawn from local files, fetched afresh on every open. The refresh, live status handler, per-resort storage and routing are future features.
+Built so far: the artefact handlers serving the resort catalogue, each resort's manifest and its parts, `EndpointClient` (documents through `openDocument`, the envelope's one reader, and size-and-hash-verified parts), the saved catalogue file behind the resort list, the default resort (the last one picked, reopened at launch), the developer-run resort build, and the resort map drawn from local files, fetched afresh on every open. The refresh, live status handler, per-resort storage and routing are future features.
 
 ### Where things run
 

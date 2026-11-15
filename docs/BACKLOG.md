@@ -19,19 +19,17 @@ The agreed order for roughly the next five items — a queue, where the rest of 
 Re-ranked whenever an item lands (`/finish-feature` pops the head and tops the list back up); an item
 below that gets picked up out of turn should say why in its spec.
 
-1. **F4** Reopen the last resort
-2. **F8** Choose route start and end
-3. **F11** Quickest route
-4. **F16** Resort data available offline
-5. **F6** Lift and run status on the map
+1. **F8** Choose route start and end
+2. **F11** Quickest route
+3. **F16** Resort data available offline
+4. **F6** Lift and run status on the map
 
 ---
 
 ## Features
 
 - **F2** Skiers can sort the resort list from closest to furthest, with the distance to each resort shown. Their location is only used on the device to work out distances and never leaves it. Builds on the resort list (`docs/definitions/resorts.md`), which sorts by name and keeps each resort's centre point for this.
-- **F3** Skiers can mark resorts as favourites, and their favourites are remembered between visits to the app. It stores user state on the device the way F4 set up (DECISIONS.md D5). Builds on the resort list; it keys favourites on the catalogue entry's `id`.
-- **F4** The app remembers which resort's map was open and reopens it there on the next launch. Opening a resort's map from the list already works (`docs/definitions/resort-map.md`); this adds only the remembering.
+- **F3** Skiers can mark resorts as favourites, and their favourites are remembered between visits to the app. It is the first multi-value user state, so it chooses between an enveloped JSON file read through `openDocument` and drift (DECISIONS.md D5, which F4 settled for single values). Builds on the resort list; it keys favourites on the catalogue entry's `id`.
 - **F6** The map shows which lifts and runs are open right now. Lifts and runs known to be closed fade back, the resort's name bar says how up to date the information is, and information that has become too old to trust is no longer shown rather than misleading the skier. Builds on the resort map (`docs/definitions/resort-map.md`).
 - **F7** Tapping a lift shows its name, its type and whether it's running, along with any message the resort has given about it, such as when it's due to open. Builds on the resort map (`docs/definitions/resort-map.md`).
 - **F8** Skiers can plan a route between two points in the resort by choosing a start and an end, either by tapping the map or by picking which point they're setting and then tapping where they want it. The chosen points are marked on the map.
