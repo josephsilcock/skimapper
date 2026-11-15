@@ -204,6 +204,9 @@ Surface-less work rides inside these slices, with unit or widget tests, because 
 
 ## Decisions taken during implement
 
+*Implement gate:* the user accepted the demo pack visually; the decisions below were accepted on recommendation (auto).
+
+
 - The design's first two indicative slices (reopen; Back keeps the default) are one slice: Back adds no code, only a third step to the same E2E chain (`reopen 1..3 of 3`).
 - `CatalogueStore` is renamed `AppSupportFile` (`lib/storage/app_support_file.dart`), named per file; `savedCatalogueFile()` and `defaultResortFile()` own the two file names, and the E2E helpers go through them.
 - The default-resort file is `default-resort` in app support; `chooseResort`, `resortMapRoute` and `defaultResortFileProvider` live in `lib/resorts/choose_resort.dart`; the shared launch read is `savedCatalogueAtLaunchProvider` beside the other resort-list providers.
