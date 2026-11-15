@@ -211,9 +211,10 @@ Surface-less work rides inside these slices, with unit or widget tests, because 
 - `ScratchFolders.newFolder` waits for the launch clean-up with its error dropped: otherwise one failed clean-up would fail every later map open (its own test).
 - Write ordering is tested once, at `AppSupportFile`. `resort_list_view_test`'s slow-first-save test and subclass are removed because `ResortList` no longer orders writes.
 - The launch read and the launch decision are never retried (`retry: (_, _) => null`). Riverpod 3 retries failed providers by default, which would hold the launch screen instead of failing visibly to the list.
+- Demo pack: the app is native, so each shot gets reach-it steps instead of a live link. Shot 03 (pick another) shows Espace San Bernardo's "Update SkiMapper" screen, because the dev data seeds that resort's map at an unknown version on purpose; the reopen is what the shot shows.
 - The launch decision's run-record lines are `launch: reopens <id>`, `launch: shows the list` and `launch: decision failed, shows the list: <error>`; E2E reads them by wrapping `debugPrint` around `pumpWidget` (`launchApp`).
 
 
 ## Resume
 
-All four slices are closed (db66f0a, 219f203, ba8342a, 105747c; logs in `test-results/tdd/F4/`). What's left in /implement is the hand-off: confirm the refactor pass, capture the demo pack (a `DELEGATE` handback under /run-pipeline), publish it as `test-results/demo/F4/pack.html`, then the completion report. Every E2E group ran green on both platforms at its slice close: `catalogue_serving` 11/11, `endpoint_scripted` 10/10, `catalogue_unknown_version` 1/1.
+/implement is complete: 4 slices (db66f0a, 219f203, ba8342a, 105747c), logs in `test-results/tdd/F4/`, demo pack in `test-results/demo/F4/` (page `pack.html`, published at https://claude.ai/artifact/8bv3RMuP4keifGXNQKhzgp). Next: /finish-feature on this design doc.
