@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F23`, `B5`, `C13`.
+**Next free IDs**: `F24`, `B5`, `C13`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -48,6 +48,7 @@ below that gets picked up out of turn should say why in its spec.
 - **F19** The app keeps resort information up to date without slowing skiers down: it checks for changes at most twice a day, and when a resort's map or routes change, it updates the copies saved on the device. Depends on F16 and F20.
 - **F20** Resort maps, routes and live status stay current without the app needing an update: resort information is refreshed every day, new resorts can be added and sources fixed behind the scenes, and a problem with one resort's information doesn't stop the others refreshing.
 - **F22** The resort map's camera stays on the resort: today panning or zooming out can leave the area the basemap and terrain were cut to (F5 cuts them a tenth beyond the runs' bounds), showing blank map. Hold the camera to the cut area (`MapLibreMap.cameraTargetBounds` and a minimum zoom, from the manifest). Raised at F5's demo-pack gate. Depends on F5.
+- **F23** A resort whose map crashes the app natively can't trap the skier on launch. F4 reopens the default resort's map at every launch, and the default changes only when another resort is picked, so a native MapLibre crash on that map (faults the app can't see: D8's first-draw shader compile, F5's silent style errors) would recur on every launch, escapable only by going offline (map fails to load, then Back) or reinstalling. Accepted at F4's design gate for this scale; revisit at public release. Mitigations F4 rejected: writing the default only after the map first renders (breaks F4's "choosing counts whether or not the map loads"); a "previous reopen didn't render" guard (a third piece of state for an unobserved failure). Depends on F4.
 - **F21** The app follows the device's light or dark setting, with a consistent look throughout and text that meets accessibility contrast standards.
 
 ---

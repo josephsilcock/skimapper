@@ -34,20 +34,16 @@ void main() {
     await tester.pumpWidget(_resortMap());
     await tester.pump();
 
-    await nativeMap.sendToMap('map#onStyleLoaded');
+    await nativeMap.sendToMap('mapOnStyleLoaded');
     await tester.pump();
 
     expect(nativeMap.cameraMoves, [
       [
-        'newLatLngBounds',
         [
           [closeTo(45.57, 1e-9), closeTo(6.81, 1e-9)],
           [closeTo(45.585, 1e-9), closeTo(6.83, 1e-9)],
         ],
-        32.0,
-        32.0,
-        32.0,
-        32.0,
+        [32.0, 32.0, 32.0, 32.0],
       ],
     ]);
   });
@@ -58,12 +54,12 @@ void main() {
       final nativeMap = FakeNativeMap(tester);
       await tester.pumpWidget(_resortMap());
       await tester.pump();
-      final callsBeforeStyle = nativeMap.mapCalls.length;
+      final callsBeforeStyle = nativeMap.hostCallsMade.length;
 
-      await nativeMap.sendToMap('map#onStyleLoaded');
+      await nativeMap.sendToMap('mapOnStyleLoaded');
       await tester.pump();
 
-      expect(nativeMap.mapCalls.skip(callsBeforeStyle), ['camera#move']);
+      expect(nativeMap.hostCallsMade.skip(callsBeforeStyle), ['cameraMove']);
     },
   );
 
@@ -125,7 +121,7 @@ void main() {
 
       await tester.pumpWidget(const SizedBox());
 
-      expect(await nativeMap.sendToMap('map#onStyleLoaded'), isFalse);
+      expect(await nativeMap.sendToMap('mapOnStyleLoaded'), isFalse);
     },
     variant: _bothTargets,
   );

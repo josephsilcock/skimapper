@@ -5,10 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Stands in for the native side of the map plugin at its channel boundary, so the real
-/// `MapLibreMap` and its method-channel platform run against it.
+/// `MapLibreMap` and its Pigeon-based platform run against it.
 ///
-/// Like a device, it serves the per-map channel only while the native view exists; once the view
-/// is disposed, a call on that channel is answered as not implemented.
+/// Like a device, it serves the map's host calls only while the native view exists; once the view
+/// is disposed, a host call goes unanswered.
 class FakeNativeMap {
   FakeNativeMap(
     this._tester, {
@@ -28,73 +28,112 @@ class FakeNativeMap {
   final WidgetTester _tester;
   int? _viewId;
   bool _waitForMapRequested = false;
-  final List<MethodCall> _cameraMoves = [];
-  final List<String> _mapCalls = [];
+  final List<Object?> _cameraMoves = [];
+  final List<String> _hostCallsMade = [];
 
-  /// The camera updates the map asked the native side for, in order.
-  List<Object?> get cameraMoves => [
-    for (final call in _cameraMoves) (call.arguments as Map)['cameraUpdate'],
-  ];
+  /// The camera updates the map asked the native side for, in order, each as the fields Pigeon
+  /// sends it with, nested types included.
+  List<Object?> get cameraMoves => List.unmodifiable(_cameraMoves);
 
-  /// The methods the map called on the native side, in order.
-  List<String> get mapCalls => List.unmodifiable(_mapCalls);
+  /// The host calls the map made on the native side, in order.
+  List<String> get hostCallsMade => List.unmodifiable(_hostCallsMade);
 
   bool get waitForMapRequested => _waitForMapRequested;
 
   bool get viewCreationRequested => _viewId != null;
 
-  /// Sends [method] to the map as the native side would, and says whether anything handled it.
-  Future<bool> sendToMap(String method) async {
+  /// Sends the map event [event] as the native side would, and says whether anything handled it.
+  Future<bool> sendToMap(String event) async {
     final reply = Completer<ByteData?>();
     await _messenger.handlePlatformMessage(
-      _mapChannel.name,
-      _mapChannel.codec.encodeMethodCall(MethodCall(method)),
+      '$_flutterApi.$event.$_viewId',
+      _codec.encodeMessage(null),
       reply.complete,
     );
     return await reply.future != null;
   }
 
+  static const _hostApi = 'dev.flutter.pigeon.maplibre_gl.MapLibreMapHostApi';
+  static const _flutterApi =
+      'dev.flutter.pigeon.maplibre_gl.MapLibreMapFlutterApi';
+  static const _codec = _PigeonFieldsCodec();
+
   TestDefaultBinaryMessenger get _messenger =>
       _tester.binding.defaultBinaryMessenger;
 
-  MethodChannel get _mapChannel =>
-      MethodChannel('plugins.flutter.io/maplibre_gl_$_viewId');
+  late final Map<String, Future<Object?> Function(List<Object?> args)>
+  _hostCalls = {
+    'mapWaitForMap': (_) async {
+      _waitForMapRequested = true;
+      if (holdWaitForMap) await Completer<void>().future;
+      return null;
+    },
+    'cameraMove': (args) async {
+      _cameraMoves.add(args.single);
+      return true;
+    },
+    // The plugin's annotation managers add their sources and layers on every style load.
+    for (final method in const [
+      'sourceAddGeoJson',
+      'fillLayerAdd',
+      'lineLayerAdd',
+      'circleLayerAdd',
+      'symbolLayerAdd',
+    ])
+      method: (_) async => null,
+  };
+
+  String _hostChannel(String method) => '$_hostApi.$method.$_viewId';
 
   Future<Object?> _handlePlatformViewCall(MethodCall call) async {
     switch (call.method) {
       case 'create':
         _viewId = (call.arguments as Map)['id'] as int;
         if (holdViewCreation) return Completer<Object?>().future;
-        _messenger.setMockMethodCallHandler(_mapChannel, _handleMapCall);
+        _serveHostCalls();
         return _textureIdForTarget();
       case 'dispose':
-        _messenger.setMockMessageHandler(_mapChannel.name, _notImplemented);
+        _stopServingHostCalls();
     }
     return null;
   }
 
-  Future<Object?> _handleMapCall(MethodCall call) async {
-    _mapCalls.add(call.method);
-    switch (call.method) {
-      case 'map#waitForMap':
-        _waitForMapRequested = true;
-        return holdWaitForMap ? Completer<Object?>().future : null;
-      case 'camera#move':
-        _cameraMoves.add(call);
-        return true;
+  void _serveHostCalls() {
+    for (final MapEntry(key: method, value: answer) in _hostCalls.entries) {
+      _messenger.setMockMessageHandler(_hostChannel(method), (message) async {
+        _hostCallsMade.add(method);
+        // A call without arguments sends none, not an empty list.
+        final args = _codec.decodeMessage(message) as List<Object?>? ?? [];
+        return _codec.encodeMessage([await answer(args)]);
+      });
     }
-    return null;
   }
 
-  static Future<ByteData?> _notImplemented(ByteData? _) async => null;
+  void _stopServingHostCalls() {
+    for (final method in _hostCalls.keys) {
+      _messenger.setMockMessageHandler(_hostChannel(method), null);
+    }
+  }
 
   int? _textureIdForTarget() =>
       defaultTargetPlatform == TargetPlatform.android ? 0 : null;
 
   void _closeEverything() {
     _messenger.setMockMethodCallHandler(SystemChannels.platform_views, null);
-    if (viewCreationRequested) {
-      _messenger.setMockMessageHandler(_mapChannel.name, null);
-    }
+    if (viewCreationRequested) _stopServingHostCalls();
   }
+}
+
+/// Pigeon's codec as seen from the native side, reading each of its own types as the list of
+/// fields it is sent as.
+class _PigeonFieldsCodec extends StandardMessageCodec {
+  const _PigeonFieldsCodec();
+
+  static const _firstPigeonType = 129;
+
+  @override
+  Object? readValueOfType(int type, ReadBuffer buffer) =>
+      type >= _firstPigeonType
+      ? readValue(buffer)
+      : super.readValueOfType(type, buffer);
 }

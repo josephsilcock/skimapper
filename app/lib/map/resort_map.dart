@@ -6,7 +6,6 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'map_assets.dart';
 import 'resort_manifest.dart';
 import 'resort_map_style.dart';
-import 'start_up_safe_map_platform.dart';
 
 /// The only place a `MapLibreMap` is built: a resort's map, drawn from its verified local parts.
 class ResortMap extends StatefulWidget {
@@ -30,12 +29,6 @@ class ResortMap extends StatefulWidget {
 class ResortMapState extends State<ResortMap> {
   /// Once the map exists; E2E tests query what it rendered through it.
   MapLibreMapController? controller;
-
-  @override
-  void initState() {
-    super.initState();
-    installStartUpSafeMapPlatform();
-  }
 
   @override
   Widget build(BuildContext context) => MapLibreMap(
