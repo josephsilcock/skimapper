@@ -199,7 +199,7 @@ Surface-less work rides inside these slices, with unit or widget tests, because 
 
 - [x] 1 A skier opens Paradiski's map from the list, relaunches, and sees Paradiski's map; Back shows the list, and the next relaunch shows Paradiski again (E2E chain in `catalogue_serving`)
 - [x] 2 A skier who opens Espace San Bernardo over a Paradiski default relaunches and sees Espace San Bernardo's map (E2E chain in `catalogue_serving`)
-- [ ] 3 A skier whose default isn't in the saved list, or who has no readable saved list, launches and sees the list as today; once the default is back in the saved list a later launch reopens it (E2E in `endpoint_scripted`)
+- [ ] 3 (in progress) A skier whose default isn't in the saved list, or who has no readable saved list, launches and sees the list as today; once the default is back in the saved list a later launch reopens it (E2E in `endpoint_scripted`)
 - [ ] 4 A skier whose default resort's map can't load at launch sees "Couldn't load map" with Retry, and Back shows the saved list (E2E in `endpoint_scripted`)
 
 ## Decisions taken during implement
@@ -215,4 +215,4 @@ Surface-less work rides inside these slices, with unit or widget tests, because 
 
 ## Resume
 
-Slice 1 is closed (db66f0a; log `test-results/tdd/F4/slice-01-reopen-on-launch.md`). Next is slice 2: *a skier who opens Espace San Bernardo over a Paradiski default relaunches and sees Espace San Bernardo's map*. It also moves the write chain and failure reporting from `ResortList._save/_write` into `AppSupportFile.write` (any error is caught, reported through `recordRun` and `FlutterError.reportError`, and writes land in call order), so `chooseResort`'s unawaited write is safe. Seams: `resortToReopen`/`resortToReopenProvider` (lib/launch/launch_decision.dart), `LaunchGate` (lib/launch/launch_gate.dart), `chooseResort`/`resortMapRoute`/`defaultResortFileProvider` (lib/resorts/choose_resort.dart), `savedCatalogueAtLaunchProvider`/`catalogueFileProvider` (lib/resorts/resort_list_providers.dart). Still to do: the gate's release on throw and dispose (slice 3/4), and running the `endpoint_scripted` and `catalogue_unknown_version` groups.
+Slices 1–2 are closed (db66f0a, 219f203; logs in `test-results/tdd/F4/`). Slice 3 is in progress: *a skier whose default isn't in the saved list, or who has no readable saved list, launches and sees the list as today; once the default is back in the saved list a later launch reopens it*. Its new code is the gate's handling of a failed decision (show the list, record it, release the frame). The decision's lookup already misses safely (slice 1, behaviour 11), so the E2E chains in `endpoint_scripted` lead this slice. The extra-area catalogue entry has id `extra-area`. Remaining after slice 3: slice 4 (map can't load at launch, plus releasing the frame on dispose) and the `catalogue_unknown_version` group run.
