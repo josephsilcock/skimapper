@@ -27,10 +27,18 @@ const { values } = parseArgs({
   },
 });
 const persistTo = required(values["persist-to"], "--persist-to");
+const scratch = mkdtempSync(join(tmpdir(), "seed-"));
+
+// Wrangler costs seconds to start, so the objects are queued and written in two bulk puts.
+const parts: BulkEntry[] = [];
+const documents: BulkEntry[] = [];
 
 put(catalogueKey, buildEnvelope("catalogue", values["unknown-version"] ? 999 : 1, catalogue()));
 resortAreas();
 for (const bundle of seededBundles(resortData(values["resort-data"]))) publishBundle(bundle);
+// Parts before the documents that pin them, so a published manifest never names a missing part.
+bulkPut(parts, "application/octet-stream");
+bulkPut(documents, "application/json");
 
 // The curated catalogue, or an E2E variant derived from it.
 function catalogue(): { resorts: unknown[] } {
@@ -40,12 +48,11 @@ function catalogue(): { resorts: unknown[] } {
   return { resorts: [...curated.resorts, { id: "extra-area", name: extraArea, countries: ["France"], centre: { lat: 45.9, lon: 6.87 } }] };
 }
 
-// Parts before the manifest that pins them, so a published manifest never names a missing part.
 function publishBundle({ resortId, bundleDir, variant }: SeededBundle): void {
   const manifest = readManifest(bundleDir);
   const pins = variant === "hash-mismatch" ? withMismatchedPistes(manifest) : manifest;
   manifest.parts.forEach(({ sha256 }, i) => {
-    putFile(partKey(pins.parts[i].sha256), partPath(bundleDir, sha256), "application/octet-stream");
+    parts.push({ key: partKey(pins.parts[i].sha256), file: partPath(bundleDir, sha256) });
   });
   put(resortManifestKey(resortId), buildEnvelope("resort-manifest", variant === "unknown-version" ? 999 : 1, pins));
 }
@@ -59,17 +66,22 @@ function withMismatchedPistes(manifest: Manifest): Manifest {
   };
 }
 
+type BulkEntry = { key: string; file: string };
+
 function put(key: string, document: unknown): void {
-  const file = join(mkdtempSync(join(tmpdir(), "seed-")), "document.json");
+  const file = join(scratch, `document-${documents.length}.json`);
   writeFileSync(file, JSON.stringify(document));
-  putFile(key, file, "application/json");
+  documents.push({ key, file });
 }
 
-function putFile(key: string, file: string, contentType: string): void {
+function bulkPut(entries: BulkEntry[], contentType: string): void {
+  if (entries.length === 0) return;
+  const list = join(scratch, `bulk-${contentType.replace("/", "-")}.json`);
+  writeFileSync(list, JSON.stringify(entries));
   execFileSync(
     "npx",
-    ["wrangler", "r2", "object", "put", `skimapper-artefacts/${key}`,
-      "--local", "--persist-to", persistTo, "--file", file, "--content-type", contentType],
+    ["wrangler", "r2", "bulk", "put", "skimapper-artefacts",
+      "--local", "--persist-to", persistTo, "--filename", list, "--content-type", contentType],
     { stdio: ["ignore", "ignore", "inherit"], cwd: endpointDir },
   );
 }
