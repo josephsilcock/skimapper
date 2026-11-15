@@ -113,6 +113,31 @@ void main() {
       ]);
     },
   );
+
+  testWidgets(
+    'an app gone before launch decides still releases the first frame',
+    (tester) async {
+      final decision = Completer<Resort?>();
+      tester.binding.resetFirstFrameSent();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            resortToReopenProvider.overrideWith((ref) => decision.future),
+          ],
+          child: const SkimapperApp(),
+        ),
+      );
+
+      await tester.pumpWidget(const SizedBox());
+
+      expect(tester.binding.sendFramesToEngine, isTrue);
+
+      // The decision landing afterwards releases nothing twice.
+      decision.complete(null);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 Widget _appReopening(Resort? resort) => ProviderScope(

@@ -17,6 +17,7 @@ class LaunchGate extends ConsumerStatefulWidget {
 
 class _LaunchGateState extends ConsumerState<LaunchGate> {
   ({Resort? reopened})? _decision;
+  var _holdingFirstFrame = true;
 
   @override
   void initState() {
@@ -34,8 +35,21 @@ class _LaunchGateState extends ConsumerState<LaunchGate> {
       recordRun('launch: decision failed, shows the list: $failure');
       _show(null);
     } finally {
-      WidgetsBinding.instance.allowFirstFrame();
+      _releaseFirstFrame();
     }
+  }
+
+  @override
+  void dispose() {
+    _releaseFirstFrame();
+    super.dispose();
+  }
+
+  /// Once only: the gate may go before its decision lands.
+  void _releaseFirstFrame() {
+    if (!_holdingFirstFrame) return;
+    _holdingFirstFrame = false;
+    WidgetsBinding.instance.allowFirstFrame();
   }
 
   void _show(Resort? reopened) {

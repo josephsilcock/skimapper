@@ -200,7 +200,7 @@ Surface-less work rides inside these slices, with unit or widget tests, because 
 - [x] 1 A skier opens Paradiski's map from the list, relaunches, and sees Paradiski's map; Back shows the list, and the next relaunch shows Paradiski again (E2E chain in `catalogue_serving`)
 - [x] 2 A skier who opens Espace San Bernardo over a Paradiski default relaunches and sees Espace San Bernardo's map (E2E chain in `catalogue_serving`)
 - [x] 3 A skier whose default isn't in the saved list, or who has no readable saved list, launches and sees the list as today; once the default is back in the saved list a later launch reopens it (E2E in `endpoint_scripted`)
-- [ ] 4 (in progress) A skier whose default resort's map can't load at launch sees "Couldn't load map" with Retry, and Back shows the saved list (E2E in `endpoint_scripted`)
+- [x] 4 A skier whose default resort's map can't load at launch sees "Couldn't load map" with Retry, and Back shows the saved list (E2E in `endpoint_scripted`)
 
 ## Decisions taken during implement
 
@@ -216,4 +216,4 @@ Surface-less work rides inside these slices, with unit or widget tests, because 
 
 ## Resume
 
-Slices 1–3 are closed (db66f0a, 219f203, ba8342a; logs in `test-results/tdd/F4/`). Slice 4 is in progress: *a skier whose default resort's map can't load at launch sees "Couldn't load map" with Retry, and Back shows the saved list*. Its new code is the gate releasing the first frame when it is disposed before deciding, released exactly once. E2E goes in `endpoint_scripted`. The `catalogue_unknown_version` group (precondition edit only) still has to run. After slice 4: hand-off (refactor confirmation, demo pack via a `DELEGATE` handback, completion report). Another worktree (`run-pipeline-eca796`) sometimes runs E2E on the same port and devices, so wait until it is idle before running E2E.
+All four slices are closed (db66f0a, 219f203, ba8342a, plus slice 4; logs in `test-results/tdd/F4/`). What's left in /implement is the hand-off: confirm the refactor pass, capture the demo pack (a `DELEGATE` handback under /run-pipeline), publish it as `test-results/demo/F4/pack.html`, then the completion report. Every E2E group ran green on both platforms at its slice close: `catalogue_serving` 11/11, `endpoint_scripted` 10/10, `catalogue_unknown_version` 1/1.

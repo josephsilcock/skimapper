@@ -59,3 +59,10 @@ Future<void> _request(
     await Future<void>.delayed(const Duration(milliseconds: 500));
   }
 }
+
+/// The catalogue the endpoint serves now, exactly as served.
+Future<String> servedCatalogue() async =>
+    switch (await devEndpointClient().fetchCatalogue()) {
+      Understood(:final body) => body,
+      final outcome => fail('the endpoint served no catalogue: $outcome'),
+    };
