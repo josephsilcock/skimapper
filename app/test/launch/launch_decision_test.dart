@@ -48,6 +48,32 @@ void main() {
       expect(await container.read(resortToReopenProvider.future), _paradiski);
     },
   );
+
+  test(
+    'a saved list that cannot be read at launch fails the decision at once',
+    () async {
+      final unreadable = AppSupportFile(
+        'catalogue.json',
+        () async => throw const FileSystemException('unreadable'),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          catalogueFileProvider.overrideWithValue(unreadable),
+          defaultResortFileProvider.overrideWithValue(
+            AppSupportFile('default-resort', () async => Directory.systemTemp),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container
+            .read(resortToReopenProvider.future)
+            .timeout(const Duration(seconds: 2)),
+        throwsA(isA<FileSystemException>()),
+      );
+    },
+  );
 }
 
 const _savedEnvelope = {

@@ -199,7 +199,7 @@ Surface-less work rides inside these slices, with unit or widget tests, because 
 
 - [x] 1 A skier opens Paradiski's map from the list, relaunches, and sees Paradiski's map; Back shows the list, and the next relaunch shows Paradiski again (E2E chain in `catalogue_serving`)
 - [x] 2 A skier who opens Espace San Bernardo over a Paradiski default relaunches and sees Espace San Bernardo's map (E2E chain in `catalogue_serving`)
-- [ ] 3 (in progress) A skier whose default isn't in the saved list, or who has no readable saved list, launches and sees the list as today; once the default is back in the saved list a later launch reopens it (E2E in `endpoint_scripted`)
+- [x] 3 A skier whose default isn't in the saved list, or who has no readable saved list, launches and sees the list as today; once the default is back in the saved list a later launch reopens it (E2E in `endpoint_scripted`)
 - [ ] 4 A skier whose default resort's map can't load at launch sees "Couldn't load map" with Retry, and Back shows the saved list (E2E in `endpoint_scripted`)
 
 ## Decisions taken during implement
@@ -210,7 +210,8 @@ Surface-less work rides inside these slices, with unit or widget tests, because 
 - `MaterialApp` takes the home route from `onGenerateRoute`, because `home` and `onGenerateInitialRoutes` are exclusive and without `home`/`routes`/`onGenerateRoute` it builds no Navigator.
 - `ScratchFolders.newFolder` waits for the launch clean-up with its error dropped: otherwise one failed clean-up would fail every later map open (its own test).
 - Write ordering is tested once, at `AppSupportFile`. `resort_list_view_test`'s slow-first-save test and subclass are removed because `ResortList` no longer orders writes.
-- The launch decision's run-record lines are `launch: reopens <id>` and `launch: shows the list`; E2E reads them by wrapping `debugPrint` around `pumpWidget` (`launchApp`).
+- The launch read and the launch decision are never retried (`retry: (_, _) => null`). Riverpod 3 retries failed providers by default, which would hold the launch screen instead of failing visibly to the list.
+- The launch decision's run-record lines are `launch: reopens <id>`, `launch: shows the list` and `launch: decision failed, shows the list: <error>`; E2E reads them by wrapping `debugPrint` around `pumpWidget` (`launchApp`).
 
 
 ## Resume

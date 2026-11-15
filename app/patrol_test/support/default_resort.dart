@@ -12,6 +12,9 @@ Future<void> clearDefaultResort() => defaultResortFile().clear();
 /// Precondition: [id] is the default resort.
 Future<void> setDefaultResort(String id) => defaultResortFile().write(id);
 
+/// The default resort's id as stored, or null if there is none.
+Future<String?> readDefaultResort() => defaultResortFile().read();
+
 /// Waits until the default resort is [id], so a relaunch can rely on it.
 Future<void> awaitDefaultResort(String id) async {
   final file = defaultResortFile();

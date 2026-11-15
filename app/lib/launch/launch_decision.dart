@@ -16,4 +16,6 @@ final resortToReopenProvider = FutureProvider<Resort?>(
     defaultId: await ref.watch(defaultResortFileProvider).read(),
     saved: await ref.watch(savedCatalogueAtLaunchProvider.future),
   ),
+  // Riverpod retries a failed provider by default, which would hold the launch screen.
+  retry: (_, _) => null,
 );

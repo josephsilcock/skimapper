@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,6 +78,38 @@ void main() {
 
       expect(logged.where((line) => line.contains('launch:')), [
         matches(appRunRecordLine('launch: shows the list')),
+      ]);
+    },
+  );
+
+  testWidgets(
+    'a launch decision that fails shows the list, is recorded, and releases the first frame',
+    (tester) async {
+      tester.binding.resetFirstFrameSent();
+
+      final logged = await runRecordDuring(() async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              resortToReopenProvider.overrideWith(
+                (ref) => Future.error(const FileSystemException('unreadable')),
+              ),
+            ],
+            child: const SkimapperApp(),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+      });
+
+      expect(find.text('SkiMapper'), findsOneWidget);
+      expect(tester.binding.sendFramesToEngine, isTrue);
+      expect(logged.where((line) => line.contains('launch:')), [
+        matches(
+          appRunRecordLine(
+            'launch: decision failed, shows the list: .*unreadable.*',
+          ),
+        ),
       ]);
     },
   );

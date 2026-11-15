@@ -24,7 +24,8 @@ final catalogueFileProvider = Provider<AppSupportFile>(
 AppSupportFile savedCatalogueFile() =>
     AppSupportFile.appSupport('catalogue.json');
 
-/// The saved list as read at launch, once; a copy this app can't read counts as nothing saved.
+/// The saved list as read at launch, once, never retried; a copy this app can't read counts as
+/// nothing saved.
 final savedCatalogueAtLaunchProvider = FutureProvider<Catalogue?>((ref) async {
   final saved = await ref.watch(catalogueFileProvider).read();
   if (saved == null) return null;
@@ -32,4 +33,4 @@ final savedCatalogueAtLaunchProvider = FutureProvider<Catalogue?>((ref) async {
     Understood(:final value) => value,
     _ => null,
   };
-});
+}, retry: (_, _) => null);

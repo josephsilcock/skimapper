@@ -26,10 +26,20 @@ class _LaunchGateState extends ConsumerState<LaunchGate> {
   }
 
   Future<void> _decide() async {
-    final reopened = await ref.read(resortToReopenProvider.future);
-    recordRun(_outcome(reopened));
+    try {
+      final reopened = await ref.read(resortToReopenProvider.future);
+      recordRun(_outcome(reopened));
+      _show(reopened);
+    } catch (failure) {
+      recordRun('launch: decision failed, shows the list: $failure');
+      _show(null);
+    } finally {
+      WidgetsBinding.instance.allowFirstFrame();
+    }
+  }
+
+  void _show(Resort? reopened) {
     if (mounted) setState(() => _decision = (reopened: reopened));
-    WidgetsBinding.instance.allowFirstFrame();
   }
 
   static String _outcome(Resort? reopened) => switch (reopened) {
