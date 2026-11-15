@@ -3,7 +3,7 @@
 Bugs and suggestions. Delete entries when resolved.
 Feature IDs reference [FEATURES.md](FEATURES.md).
 
-**Next free IDs**: `F24`, `B5`, `C13`.
+**Next free IDs**: `F24`, `B6`, `C15`.
 ID prefixes: 
 - `F` = feature
 - `B` = bug
@@ -54,6 +54,7 @@ below that gets picked up out of turn should say why in its spec.
 ## Bugs
 
 - **B4** The unreachable-endpoint E2E (now the first-launch test in `endpoint_scripted`, formerly `endpoint_stopped`) passed on CI by coincidence before B2's fix: its "unreachable" line appeared because the first fetch hit the same first-launch UI freeze, not because a closed port was refused. Its pass is now real, but CI's first launch still has thin headroom (app-side fetch measured 4.4-8.0 s, endpoint-side 0.6-2.4 s, on the first launch after each install); watch for a recurrence. A second symptom of the same cold-start stall: on a freshly booted emulator `catalogue_serving` on Android once aborted with "Expected 3 tests, received 2" (the app's event loop 14-25 s late, and `resort_list_test` never requested by the native side); a rerun on the warm emulator is the check. **Recurred 2026-10-24** on main's sweep (run 40105890900, iOS), before F1 retired the group: `endpoint_malformed`'s first fetch logged `event loop late by 4889 ms` then `unreachable (timeout after 3000 ms) in 4514 ms` against a ready endpoint. To be fixed later.
+- **B5** A launch read that throws a non-format I/O error stalls the resort list: the launch gate shows the list, but `ResortList._launch` throws on the same saved-catalogue read before it accepts the quiet fetch, so the list stays in its initial state and the error surfaces only as an uncaught microtask error. Inherited from F1's identical read; very unlikely. Found at F4's review.
 
 ---
 
@@ -61,6 +62,8 @@ below that gets picked up out of turn should say why in its spec.
 
 - **C1** The service behind the app is protected from abuse: heavy or automated use is limited, AI scrapers are refused, and resort data can only be reached through the service.
 - **C2** The service can tell requests from genuine installs of the app apart from others, so it can refuse anything that isn't the real app.
+- **C13** Patrol launch helpers share one home: `launchApp` (launch and return the launch-decision run-record line) sits in `support/default_resort.dart` beside the default-resort preconditions, and the 12 older tests still call `$.pumpWidget(const SkimapperApp())` directly. Move it to `support/launch.dart` and move the older tests onto it. Found at F4's review.
+- **C14** `AppSupportFile` write ordering is per instance and `clear()` is not chained on the write chain; `defaultResortFile()` and `savedCatalogueFile()` mint a fresh instance, with a fresh chain, per call. Nothing is wrong while only the providers create app instances and only E2E helpers call `clear()`, but a future direct caller would silently lose the ordering guarantee. Found at F4's review.
 - **C3** Failures in the service and its daily refresh are noticed and reported, with enough detail to find and fix the cause quickly. Depends on F20.
 - **C6** Skeleton hardening: a missing `ENDPOINT_URL`/`ENDPOINT_TIMEOUT_MS` define shows a loading or misleading "could not be reached" state instead of a clear failure.
 - **C8** A non-technical stakeholder can see what the automated tests cover, so they know what still needs testing by hand. Today the only view is the per-layer summary table `tools/sweep/report.ts` writes to a GitHub Actions step summary, with the raw results buried in the uploaded artefacts: developer-facing, and inside GitHub.
