@@ -29,11 +29,15 @@ class FakeNativeMap {
   int? _viewId;
   bool _waitForMapRequested = false;
   final List<MethodCall> _cameraMoves = [];
+  final List<String> _mapCalls = [];
 
   /// The camera updates the map asked the native side for, in order.
   List<Object?> get cameraMoves => [
     for (final call in _cameraMoves) (call.arguments as Map)['cameraUpdate'],
   ];
+
+  /// The methods the map called on the native side, in order.
+  List<String> get mapCalls => List.unmodifiable(_mapCalls);
 
   bool get waitForMapRequested => _waitForMapRequested;
 
@@ -70,6 +74,7 @@ class FakeNativeMap {
   }
 
   Future<Object?> _handleMapCall(MethodCall call) async {
+    _mapCalls.add(call.method);
     switch (call.method) {
       case 'map#waitForMap':
         _waitForMapRequested = true;

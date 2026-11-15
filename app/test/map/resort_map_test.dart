@@ -53,6 +53,21 @@ void main() {
   });
 
   testWidgets(
+    'once its style loads, the map only frames the camera: it adds no layers that leaving it could interrupt',
+    (tester) async {
+      final nativeMap = FakeNativeMap(tester);
+      await tester.pumpWidget(_resortMap());
+      await tester.pump();
+      final callsBeforeStyle = nativeMap.mapCalls.length;
+
+      await nativeMap.sendToMap('map#onStyleLoaded');
+      await tester.pump();
+
+      expect(nativeMap.mapCalls.skip(callsBeforeStyle), ['camera#move']);
+    },
+  );
+
+  testWidgets(
     'the map pans, zooms and rotates with a compass, never tilts, and ignores taps',
     (tester) async {
       FakeNativeMap(tester);
