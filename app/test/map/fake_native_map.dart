@@ -29,10 +29,14 @@ class FakeNativeMap {
   int? _viewId;
   bool _waitForMapRequested = false;
   final List<Object?> _cameraMoves = [];
+  final List<String> _hostCallsMade = [];
 
   /// The camera updates the map asked the native side for, in order, each as the fields Pigeon
   /// sends it with, nested types included.
   List<Object?> get cameraMoves => List.unmodifiable(_cameraMoves);
+
+  /// The host calls the map made on the native side, in order.
+  List<String> get hostCallsMade => List.unmodifiable(_hostCallsMade);
 
   bool get waitForMapRequested => _waitForMapRequested;
 
@@ -97,6 +101,7 @@ class FakeNativeMap {
   void _serveHostCalls() {
     for (final MapEntry(key: method, value: answer) in _hostCalls.entries) {
       _messenger.setMockMessageHandler(_hostChannel(method), (message) async {
+        _hostCallsMade.add(method);
         // A call without arguments sends none, not an empty list.
         final args = _codec.decodeMessage(message) as List<Object?>? ?? [];
         return _codec.encodeMessage([await answer(args)]);

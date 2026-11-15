@@ -44,6 +44,9 @@ class ResortMapState extends State<ResortMap> {
     tiltGesturesEnabled: false,
     // The plugin can't turn MapLibre's attribution button off; the credits bar credits the data.
     attributionButtonMargins: const Point(-200, -200),
+    // Everything is drawn by the style. The plugin's annotation layers would be added after the
+    // style loads, and leaving the map while that's still going throws.
+    annotationOrder: const [],
     onMapCreated: (created) => controller = created,
     onStyleLoadedCallback: _frameWholeResort,
   );
