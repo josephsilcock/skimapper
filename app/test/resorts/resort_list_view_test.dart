@@ -154,33 +154,6 @@ void main() {
   );
 
   testWidgets(
-    'the newest understood answer is the one saved, even when an earlier save is slow',
-    (tester) async {
-      final directory = Directory.systemTemp.createTempSync('slow-store-');
-      addTearDown(() => directory.deleteSync(recursive: true));
-      final slowFirstSave = _SlowFirstWrite(() async => directory);
-      final served = _servedFile()..writeAsStringSync(jsonEncode(_catalogue));
-      final pulled = jsonEncode(
-        _catalogueOf(['Paradiski', 'Évasion Mont-Blanc']),
-      );
-      await tester.pumpWidget(
-        _resortList(
-          endpoint: _answeringFrom(served.path),
-          store: slowFirstSave,
-        ),
-      );
-      await pumpUntilFound(tester, find.text('Paradiski'));
-
-      served.writeAsStringSync(pulled);
-      await _pullDown(tester);
-      await pumpUntilFound(tester, find.text('Évasion Mont-Blanc'));
-      await _letTimePass(tester, const Duration(seconds: 2));
-
-      expect(await tester.runAsync(slowFirstSave.read), pulled);
-    },
-  );
-
-  testWidgets(
     'a fast failed launch fetch never beats a slow saved read to the screen',
     (tester) async {
       final directory = Directory.systemTemp.createTempSync('slow-read-');
@@ -568,20 +541,6 @@ class _SlowRead extends AppSupportFile {
   Future<String?> read() async {
     await Future<void>.delayed(const Duration(seconds: 1));
     return super.read();
-  }
-}
-
-/// A store whose first save takes a second longer than the rest.
-class _SlowFirstWrite extends AppSupportFile {
-  _SlowFirstWrite(Future<Directory> Function() directory)
-    : super('catalogue.json', directory);
-
-  var _writes = 0;
-
-  @override
-  Future<void> write(String body) async {
-    if (_writes++ == 0) await Future<void>.delayed(const Duration(seconds: 1));
-    await super.write(body);
   }
 }
 

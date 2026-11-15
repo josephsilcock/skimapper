@@ -1,10 +1,6 @@
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../endpoint/contract_envelope.dart';
-import '../endpoint/run_record.dart';
 import '../storage/app_support_file.dart';
 import 'catalogue.dart';
 import 'catalogue_document.dart';
@@ -63,7 +59,6 @@ class ResortList extends Notifier<ResortListState> {
   /// Fetches are numbered as they start; the newest applied understood answer's number.
   var _fetchesStarted = 0;
   var _newestApplied = 0;
-  Future<void> _saves = Future.value();
 
   /// The skier's pull.
   Future<void> refresh() async =>
@@ -100,7 +95,7 @@ class ResortList extends Notifier<ResortListState> {
       case Understood(:final body, :final value):
         _newestApplied = generation;
         state = state.showing(value);
-        await _save(body);
+        await _store.write(body);
       case Incompatible() || Failed():
         state = _notUnderstood(outcome, trigger);
     }
@@ -118,24 +113,4 @@ class ResortList extends Notifier<ResortListState> {
     (_, _, _Trigger.skier) => state.withFailedRefresh(),
     (_, _, _Trigger.quietLaunch) => state,
   };
-
-  /// Saves run one at a time, in the order their answers were applied, so the newest lands last.
-  Future<void> _save(String body) => _saves = _saves.then((_) => _write(body));
-
-  /// A failed save keeps the list shown and the previous copy saved; it is reported, not shown.
-  Future<void> _write(String body) async {
-    try {
-      await _store.write(body);
-    } on FileSystemException catch (failure, stack) {
-      recordRun('catalogue save failed: ${failure.message}');
-      FlutterError.reportError(
-        FlutterErrorDetails(
-          exception: failure,
-          stack: stack,
-          library: 'resorts',
-          context: ErrorDescription('while saving the catalogue'),
-        ),
-      );
-    }
-  }
 }

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skimapper/storage/app_support_file.dart';
 
@@ -40,5 +41,45 @@ void main() {
 
     expect(String.fromCharCodes(readUnderWay.readSync(100)), 'old copy');
     expect(await store.read(), 'new copy');
+  });
+
+  test(
+    'writes land in the order they were made, even when an earlier one is slow',
+    () async {
+      var directoryLookups = 0;
+      final slowFirst = AppSupportFile('default-resort', () async {
+        if (directoryLookups++ == 0) {
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+        }
+        return directory;
+      });
+
+      final first = slowFirst.write('paradiski');
+      final second = slowFirst.write('espace-san-bernardo');
+      await Future.wait([first, second]);
+
+      expect(await slowFirst.read(), 'espace-san-bernardo');
+    },
+  );
+
+  test('a failed write is reported, not thrown, keeps the previous copy, and later writes land', () async {
+    var lookups = 0;
+    final failingOnce = AppSupportFile('default-resort', () async {
+      if (++lookups == 2) throw StateError('no app support directory');
+      return directory;
+    });
+    final reported = <FlutterErrorDetails>[];
+    final originalOnError = FlutterError.onError;
+    FlutterError.onError = reported.add;
+    addTearDown(() => FlutterError.onError = originalOnError);
+
+    await failingOnce.write('paradiski');
+    await failingOnce.write('espace-san-bernardo');
+
+    expect(reported.single.exception, isA<StateError>());
+    expect(await failingOnce.read(), 'paradiski');
+
+    await failingOnce.write('les-3-vallees');
+    expect(await failingOnce.read(), 'les-3-vallees');
   });
 }
