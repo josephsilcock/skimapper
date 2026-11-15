@@ -216,4 +216,4 @@ Surface-less work rides inside these slices, with unit or widget tests, because 
 
 ## Resume
 
-All four slices are closed (db66f0a, 219f203, ba8342a, plus slice 4; logs in `test-results/tdd/F4/`). What's left in /implement is the hand-off: confirm the refactor pass, capture the demo pack (a `DELEGATE` handback under /run-pipeline), publish it as `test-results/demo/F4/pack.html`, then the completion report. Every E2E group ran green on both platforms at its slice close: `catalogue_serving` 11/11, `endpoint_scripted` 10/10, `catalogue_unknown_version` 1/1.
+All four slices are closed (db66f0a, 219f203, ba8342a, 105747c; logs in `test-results/tdd/F4/`). What's left in /implement is the hand-off: confirm the refactor pass, capture the demo pack (a `DELEGATE` handback under /run-pipeline), publish it as `test-results/demo/F4/pack.html`, then the completion report. Every E2E group ran green on both platforms at its slice close: `catalogue_serving` 11/11, `endpoint_scripted` 10/10, `catalogue_unknown_version` 1/1.
